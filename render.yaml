@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: jarvis-web-ai
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node web-server.js
+    healthCheckPath: /api/status
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGIN
+        value: https://anuveytq-sys.github.io
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
