@@ -56,20 +56,57 @@
   }
 
   async function camera() {
-    if (!navigator.mediaDevices?.getUserMedia) return say("Camera access is not supported by this browser.");
+    if (!navigator.mediaDevices?.getUserMedia) return say("Camera access is not supported in this browser. Try opening JARVIS in Safari over HTTPS.");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      const overlay = document.createElement("div");
+      overlay.id = "jarvis-camera-overlay";
+      Object.assign(overlay.style, {
+        position: "fixed", inset: "0", zIndex: "2147483646",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: "14px", padding: "18px", boxSizing: "border-box",
+        background: "rgba(0,0,0,.94)"
+      });
       const video = document.createElement("video");
-      video.autoplay = true; video.playsInline = true; video.srcObject = stream;
-      Object.assign(video.style, { position: "fixed", inset: "12% 12% 22% 12%", width: "76%", height: "66%", objectFit: "cover", zIndex: 9999, border: "1px solid #00eaff", background: "#000" });
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = true;
+      video.srcObject = stream;
+      Object.assign(video.style, {
+        display: "block", width: "min(94vw, 900px)", maxHeight: "72vh",
+        objectFit: "contain", background: "#000", border: "2px solid #00eaff",
+        borderRadius: "12px"
+      });
       const close = document.createElement("button");
-      close.textContent = "CLOSE CAMERA";
-      Object.assign(close.style, { position: "fixed", left: "50%", bottom: "7%", transform: "translateX(-50%)", zIndex: 10000, padding: "12px 18px", background: "#03182b", color: "#9cefff", border: "1px solid #00eaff" });
-      const stop = () => { stream.getTracks().forEach(t => t.stop()); video.remove(); close.remove(); };
-      close.onclick = stop;
-      document.body.append(video, close);
-      return say("Camera opened in the browser. Camera permission was requested.");
-    } catch (_) { return say("Camera permission was not granted or the camera is unavailable."); }
+      close.type = "button";
+      close.textContent = "✕  CLOSE CAMERA";
+      close.setAttribute("aria-label", "Close camera and stop camera stream");
+      Object.assign(close.style, {
+        position: "relative", zIndex: "2147483647", display: "block",
+        padding: "15px 24px", minHeight: "52px", borderRadius: "10px",
+        background: "#b91c1c", color: "#fff", border: "2px solid #fff",
+        font: "bold 16px system-ui, sans-serif", cursor: "pointer",
+        boxShadow: "0 0 18px rgba(255,0,0,.45)"
+      });
+      const hint = document.createElement("div");
+      hint.textContent = "Your camera is active. Press CLOSE CAMERA to turn it off.";
+      Object.assign(hint.style, { color: "#fff", font: "14px system-ui, sans-serif", textAlign: "center" });
+      const stop = () => {
+        stream.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+        overlay.remove();
+        document.removeEventListener("keydown", onKeyDown);
+      };
+      const onKeyDown = event => { if (event.key === "Escape") stop(); };
+      close.addEventListener("click", stop);
+      overlay.addEventListener("click", event => { if (event.target === overlay) stop(); });
+      document.addEventListener("keydown", onKeyDown);
+      overlay.append(video, close, hint);
+      document.body.appendChild(overlay);
+      return say("Camera opened. Use the red CLOSE CAMERA button to turn it off.");
+    } catch (_) {
+      return say("Camera permission was not granted or the camera is unavailable.");
+    }
   }
 
   async function handleLocal(command) {
