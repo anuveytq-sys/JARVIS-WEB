@@ -28,6 +28,160 @@
     } catch (_) {}
   }
 
+
+  // Optional personal Gemini key: kept in this browser tab's session storage
+  // and sent directly to Google, never to the JARVIS backend.
+  const USER_KEY_SLOT = "jarvisPersonalGeminiKey";
+  const GEMINI_MODEL = "gemini-3.8-flash";
+  const getPersonalKey = () => {
+    try { return sessionStorage.getItem(USER_KEY_SLOT) || ""; } catch (_) { return ""; }
+  };
+
+  function addSettingsUI() {
+    if (document.getElementById("jarvis-settings-trigger")) return;
+    const button = document.createElement("button");
+    button.id = "jarvis-settings-trigger";
+    button.type = "button";
+    button.textContent = "⚙ SETTINGS";
+    button.setAttribute("aria-label", "JARVIS settings");
+    Object.assign(button.style, {
+      position: "fixed", top: "86px", right: "16px", zIndex: "2147483647",
+      padding: "10px 13px", borderRadius: "9px", border: "1px solid #00d9ff",
+      background: "rgba(2,18,37,.96)", color: "#baf7ff", font: "bold 12px system-ui,sans-serif",
+      letterSpacing: "1px", boxShadow: "0 0 14px rgba(0,217,255,.22)", cursor: "pointer"
+    });
+
+    const modal = document.createElement("div");
+    modal.id = "jarvis-settings-modal";
+    Object.assign(modal.style, {
+      position: "fixed", inset: "0", zIndex: "2147483647", display: "none",
+      alignItems: "center", justifyContent: "center", padding: "18px",
+      boxSizing: "border-box", background: "rgba(0,4,12,.88)", backdropFilter: "blur(8px)"
+    });
+
+    const card = document.createElement("section");
+    Object.assign(card.style, {
+      width: "min(100%, 480px)", boxSizing: "border-box", padding: "22px",
+      border: "1px solid #00d9ff", borderRadius: "14px", color: "#d8fbff",
+      background: "linear-gradient(145deg, rgba(2,31,59,.99), rgba(0,8,20,.99))",
+      boxShadow: "0 0 30px rgba(0,217,255,.2)", font: "14px/1.5 system-ui,sans-serif"
+    });
+    const heading = document.createElement("h2");
+    heading.textContent = "JARVIS SETTINGS";
+    Object.assign(heading.style, { margin: "0 0 8px", color: "#62f5ff", fontSize: "19px", letterSpacing: "2px" });
+    const intro = document.createElement("p");
+    intro.textContent = "Add your own Gemini API key to use AI directly from this phone/browser. Your key is kept only in this tab's session storage and is sent directly to Google, not to the JARVIS server.";
+    Object.assign(intro.style, { margin: "0 0 12px", color: "#b6dce7" });
+    const warning = document.createElement("p");
+    warning.textContent = "Security: a browser key is not fully secret. Use only your own key, restrict it to the Gemini API where possible, never share this device/session, and check your usage limits. Free usage and limits depend on Google's current terms.";
+    Object.assign(warning.style, { margin: "0 0 14px", color: "#ffdca8", fontSize: "12px" });
+    const label = document.createElement("label");
+    label.textContent = "Gemini API key";
+    Object.assign(label.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
+    const input = document.createElement("input");
+    input.type = "password";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.placeholder = "Paste your own Gemini API key";
+    input.value = getPersonalKey();
+    Object.assign(input.style, {
+      width: "100%", boxSizing: "border-box", padding: "12px", marginBottom: "12px",
+      borderRadius: "8px", border: "1px solid #287b91", background: "#00101f",
+      color: "#fff", font: "14px system-ui,sans-serif"
+    });
+    const status = document.createElement("p");
+    status.setAttribute("role", "status");
+    status.textContent = getPersonalKey() ? "A personal key is active in this tab." : "No personal key saved in this tab.";
+    Object.assign(status.style, { minHeight: "22px", margin: "0 0 12px", color: "#baf7ff", overflowWrap: "anywhere" });
+    const row = document.createElement("div");
+    Object.assign(row.style, { display: "flex", flexWrap: "wrap", gap: "8px" });
+    const makeButton = (text, color) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = text;
+      Object.assign(b.style, {
+        flex: "1 1 120px", minHeight: "42px", padding: "10px", borderRadius: "8px",
+        border: "1px solid " + color, background: "rgba(0,0,0,.35)", color: "#fff",
+        font: "bold 12px system-ui,sans-serif", cursor: "pointer"
+      });
+      return b;
+    };
+    const save = makeButton("TEST & SAVE", "#00d9ff");
+    const remove = makeButton("REMOVE KEY", "#ff6b6b");
+    const close = makeButton("CLOSE", "#527b8a");
+    const closeModal = () => { modal.style.display = "none"; };
+    close.addEventListener("click", closeModal);
+    modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && modal.style.display === "flex") closeModal(); });
+    button.addEventListener("click", () => {
+      input.value = getPersonalKey();
+      status.textContent = getPersonalKey() ? "A personal key is active in this tab." : "No personal key saved in this tab.";
+      modal.style.display = "flex";
+      input.focus();
+    });
+    save.addEventListener("click", async () => {
+      const key = input.value.trim();
+      if (!key) { status.textContent = "Paste your Gemini API key first."; status.style.color = "#ffd0d0"; return; }
+      save.disabled = true;
+      status.textContent = "Testing key with Google…";
+      status.style.color = "#baf7ff";
+      try {
+        const response = await originalFetch("https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          body: JSON.stringify({ contents: [{ parts: [{ text: "Reply with exactly: JARVIS connection successful." }] }], generationConfig: { maxOutputTokens: 30 } })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const message = data?.error?.message || ("Google returned HTTP " + response.status);
+          throw new Error(message);
+        }
+        sessionStorage.setItem(USER_KEY_SLOT, key);
+        status.textContent = "Connected! Your key is saved for this browser tab. Try asking JARVIS a question.";
+        status.style.color = "#9dffcb";
+        showReply("Personal Gemini key tested successfully. JARVIS AI will use your key in this tab.");
+      } catch (error) {
+        status.textContent = "Key test failed: " + (error?.message || "network error") + ". Check the key, model access, quota, and browser connection.";
+        status.style.color = "#ffd0d0";
+      } finally {
+        save.disabled = false;
+      }
+    });
+    remove.addEventListener("click", () => {
+      try { sessionStorage.removeItem(USER_KEY_SLOT); } catch (_) {}
+      input.value = "";
+      status.textContent = "Personal key removed from this browser tab.";
+      status.style.color = "#baf7ff";
+      showReply("Personal Gemini key removed. JARVIS will use its configured backend if available.");
+    });
+    row.append(save, remove, close);
+    card.append(heading, intro, warning, label, input, status, row);
+    modal.appendChild(card);
+    document.body.append(button, modal);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addSettingsUI, { once: true });
+  else addSettingsUI();
+
+  async function askPersonalGemini(command) {
+    const key = getPersonalKey();
+    if (!key) return null;
+    const response = await originalFetch("https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: "You are JARVIS, a helpful, clear, concise personal AI assistant. Answer the user's question directly. Do not claim to control the phone or access live information unless a tool actually provides it." }] },
+        contents: [{ role: "user", parts: [{ text: command }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 700 }
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data?.error?.message || ("Google Gemini returned HTTP " + response.status));
+    const answer = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
+    if (!answer) throw new Error("Gemini returned no text. Check safety filters, model access, or quota.");
+    return answer;
+  }
+
   const say = (text) => ({ ok: true, reply: text });
   const isAny = (text, words) => words.some(w => text.includes(w));
 
@@ -153,8 +307,21 @@
           showReply(local.reply);
           return new Response(JSON.stringify(local), { status: 200, headers: { "Content-Type": "application/json" } });
         }
+        const personalKey = getPersonalKey();
+        if (personalKey) {
+          try {
+            const answer = await askPersonalGemini(command);
+            const result = { ok: true, reply: answer };
+            showReply(answer);
+            return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
+          } catch (error) {
+            const result = { ok: false, reply: "Personal Gemini request failed: " + (error?.message || "unknown error") + ". Open ⚙ SETTINGS to check your key or remove it to use the JARVIS server." };
+            showReply(result.reply, "error");
+            return new Response(JSON.stringify(result), { status: 502, headers: { "Content-Type": "application/json" } });
+          }
+        }
         if (!API_BASE) {
-          const result = { ok: false, reply: "The JARVIS AI backend is not connected. Open the site using the backend URL." };
+          const result = { ok: false, reply: "The JARVIS AI backend is not connected. Open ⚙ SETTINGS to add your own Gemini API key, or open the site using the backend URL." };
           showReply(result.reply, "error");
           return new Response(JSON.stringify(result), { status: 503, headers: { "Content-Type": "application/json" } });
         }
