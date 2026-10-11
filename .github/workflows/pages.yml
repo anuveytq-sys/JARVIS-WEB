@@ -1,0 +1,59 @@
+name: Publish JARVIS GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Pages site from original HUD
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp public/index.html _site/index.html
+          cp docs/jarvis-web.js _site/jarvis-web.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('_site/index.html')
+          s = p.read_text(encoding='utf-8')
+          marker = '</body>'
+          injection = '<script src="./jarvis-web.js"></script>\n'
+          if injection not in s:
+              s = s.replace(marker, injection + marker, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+          touch _site/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
