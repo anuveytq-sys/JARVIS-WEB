@@ -39,6 +39,33 @@
 
   function addSettingsUI() {
     if (document.getElementById("jarvis-settings-trigger")) return;
+    const responsiveStyle = document.createElement("style");
+    responsiveStyle.id = "jarvis-settings-responsive-style";
+    responsiveStyle.textContent = `
+      #jarvis-settings-trigger { touch-action: manipulation; }
+      #jarvis-settings-modal { overflow-y: auto; }
+      #jarvis-settings-modal section { max-height: calc(100dvh - 36px); overflow-y: auto; }
+      #jarvis-settings-modal input, #jarvis-settings-modal button { font-size: 14px; }
+      @media (min-width: 768px) {
+        #jarvis-settings-trigger {
+          top: 88px !important; right: 28px !important; padding: 11px 16px !important;
+          font-size: 13px !important;
+        }
+        #jarvis-settings-modal { padding: 32px !important; }
+        #jarvis-settings-modal section {
+          width: min(560px, calc(100vw - 64px)) !important;
+          padding: 28px !important; max-height: calc(100dvh - 64px) !important;
+        }
+        #jarvis-settings-modal input { font-size: 15px !important; }
+        #jarvis-settings-modal button { min-height: 44px !important; }
+      }
+      @media (max-width: 767px) {
+        #jarvis-settings-trigger { top: 86px !important; right: 12px !important; }
+        #jarvis-settings-modal section { padding: 18px !important; }
+      }
+    `;
+    document.head.appendChild(responsiveStyle);
+
     const button = document.createElement("button");
     button.id = "jarvis-settings-trigger";
     button.type = "button";
