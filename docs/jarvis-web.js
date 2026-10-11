@@ -199,7 +199,7 @@
           option.textContent = m.label && m.label !== m.id ? m.label + " (" + m.id + ")" : m.id;
           modelSelect.appendChild(option);
         });
-        const preferred = [getPersonalModel(), DEFAULT_MODEL, "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+        const preferred = [modelSelect.value, getPersonalModel(), DEFAULT_MODEL, "gemini-3.6-flash", "gemini-3.5-flash-lite"];
         const chosen = preferred.find(id => models.some(m => m.id === id)) || models[0].id;
         modelSelect.value = chosen;
         status.textContent = models.length + " compatible Gemini text models found. Testing " + chosen + "…";
