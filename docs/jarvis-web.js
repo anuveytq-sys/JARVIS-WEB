@@ -32,9 +32,14 @@
   // Optional personal Gemini key: kept in this browser tab's session storage
   // and sent directly to Google, never to the JARVIS backend.
   const USER_KEY_SLOT = "jarvisPersonalGeminiKey";
-  const GEMINI_MODEL = "gemini-3.8-flash";
+  const USER_MODEL_SLOT = "jarvisPersonalGeminiModel";
+  const AVAILABLE_MODELS_SLOT = "jarvisAvailableGeminiModels";
+  const DEFAULT_MODEL = "gemini-3.8-flash";
   const getPersonalKey = () => {
     try { return sessionStorage.getItem(USER_KEY_SLOT) || ""; } catch (_) { return ""; }
+  };
+  const getPersonalModel = () => {
+    try { return sessionStorage.getItem(USER_MODEL_SLOT) || DEFAULT_MODEL; } catch (_) { return DEFAULT_MODEL; }
   };
 
   function addSettingsUI() {
@@ -97,7 +102,7 @@
     heading.textContent = "JARVIS SETTINGS";
     Object.assign(heading.style, { margin: "0 0 8px", color: "#62f5ff", fontSize: "19px", letterSpacing: "2px" });
     const intro = document.createElement("p");
-    intro.textContent = "Add your own Gemini API key to use AI directly from this phone/browser. Your key is kept only in this tab's session storage and is sent directly to Google, not to the JARVIS server.";
+    intro.textContent = "Add your own Gemini API key, discover the compatible Gemini text models available to that key, and choose one. Your key is kept only in this tab's session storage and is sent directly to Google, not to the JARVIS server.";
     Object.assign(intro.style, { margin: "0 0 12px", color: "#b6dce7" });
     const warning = document.createElement("p");
     warning.textContent = "Security: a browser key is not fully secret. Use only your own key, restrict it to the Gemini API where possible, never share this device/session, and check your usage limits. Free usage and limits depend on Google's current terms.";
@@ -115,6 +120,26 @@
       width: "100%", boxSizing: "border-box", padding: "12px", marginBottom: "12px",
       borderRadius: "8px", border: "1px solid #287b91", background: "#00101f",
       color: "#fff", font: "14px system-ui,sans-serif"
+    });
+    const modelLabel = document.createElement("label");
+    modelLabel.textContent = "Gemini model (compatible text models)";
+    Object.assign(modelLabel.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
+    const modelSelect = document.createElement("select");
+    modelSelect.id = "jarvis-gemini-model";
+    modelSelect.setAttribute("aria-label", "Choose Gemini model");
+    Object.assign(modelSelect.style, {
+      display: "block", width: "100%", boxSizing: "border-box", padding: "12px",
+      marginBottom: "12px", borderRadius: "8px", border: "1px solid #287b91",
+      background: "#00101f", color: "#fff", font: "14px system-ui,sans-serif"
+    });
+    const initialModel = getPersonalModel();
+    const initialOption = document.createElement("option");
+    initialOption.value = initialModel;
+    initialOption.textContent = initialModel + " (current/default — test key to load available models)";
+    modelSelect.appendChild(initialOption);
+    modelSelect.value = initialModel;
+    modelSelect.addEventListener("change", () => {
+      try { sessionStorage.setItem(USER_MODEL_SLOT, modelSelect.value); } catch (_) {}
     });
     const status = document.createElement("p");
     status.setAttribute("role", "status");
@@ -150,39 +175,75 @@
       const key = input.value.trim();
       if (!key) { status.textContent = "Paste your Gemini API key first."; status.style.color = "#ffd0d0"; return; }
       save.disabled = true;
-      status.textContent = "Testing key with Google…";
+      status.textContent = "Checking which Gemini models your key can access…";
       status.style.color = "#baf7ff";
       try {
-        const response = await originalFetch("https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent", {
+        const listResponse = await originalFetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=100", {
+          method: "GET",
+          headers: { "x-goog-api-key": key }
+        });
+        const listData = await listResponse.json().catch(() => ({}));
+        if (!listResponse.ok) {
+          throw new Error(listData?.error?.message || ("Google model list returned HTTP " + listResponse.status));
+        }
+        const models = (listData.models || [])
+          .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
+          .map(m => ({ id: String(m.name || "").replace(/^models\//, ""), label: String(m.displayName || m.name || "").trim() }))
+          .filter(m => m.id && !/(embedding|aqa|image|tts|audio|transcri|veo|robotics)/i.test(m.id))
+          .filter((m, i, all) => all.findIndex(x => x.id === m.id) === i);
+        if (!models.length) throw new Error("Google did not list any compatible text-generation models for this key.");
+        modelSelect.replaceChildren();
+        models.forEach(m => {
+          const option = document.createElement("option");
+          option.value = m.id;
+          option.textContent = m.label && m.label !== m.id ? m.label + " (" + m.id + ")" : m.id;
+          modelSelect.appendChild(option);
+        });
+        const preferred = [getPersonalModel(), DEFAULT_MODEL, "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+        const chosen = preferred.find(id => models.some(m => m.id === id)) || models[0].id;
+        modelSelect.value = chosen;
+        status.textContent = models.length + " compatible Gemini text models found. Testing " + chosen + "…";
+        const testResponse = await originalFetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(chosen) + ":generateContent", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": key },
           body: JSON.stringify({ contents: [{ parts: [{ text: "Reply with exactly: JARVIS connection successful." }] }], generationConfig: { maxOutputTokens: 30 } })
         });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          const message = data?.error?.message || ("Google returned HTTP " + response.status);
-          throw new Error(message);
+        const testData = await testResponse.json().catch(() => ({}));
+        if (!testResponse.ok) {
+          try { sessionStorage.setItem(AVAILABLE_MODELS_SLOT, JSON.stringify(models.map(m => m.id))); } catch (_) {}
+          throw new Error((testData?.error?.message || ("Google returned HTTP " + testResponse.status)) + ". Choose another model from the list and press TEST & SAVE again.");
         }
         sessionStorage.setItem(USER_KEY_SLOT, key);
-        status.textContent = "Connected! Your key is saved for this browser tab. Try asking JARVIS a question.";
+        sessionStorage.setItem(USER_MODEL_SLOT, chosen);
+        sessionStorage.setItem(AVAILABLE_MODELS_SLOT, JSON.stringify(models.map(m => m.id)));
+        status.textContent = "Connected! " + models.length + " compatible models found. Selected: " + chosen + ". You can change the model above and press TEST & SAVE.";
         status.style.color = "#9dffcb";
-        showReply("Personal Gemini key tested successfully. JARVIS AI will use your key in this tab.");
+        showReply("Personal Gemini key tested successfully with " + chosen + ". JARVIS will use the selected model in this tab.");
       } catch (error) {
-        status.textContent = "Key test failed: " + (error?.message || "network error") + ". Check the key, model access, quota, and browser connection.";
+        status.textContent = "Key/model test failed: " + (error?.message || "network error") + ". Check the key, selected model, quota, and browser connection.";
         status.style.color = "#ffd0d0";
       } finally {
         save.disabled = false;
       }
     });
     remove.addEventListener("click", () => {
-      try { sessionStorage.removeItem(USER_KEY_SLOT); } catch (_) {}
+      try {
+        sessionStorage.removeItem(USER_KEY_SLOT);
+        sessionStorage.removeItem(USER_MODEL_SLOT);
+        sessionStorage.removeItem(AVAILABLE_MODELS_SLOT);
+      } catch (_) {}
       input.value = "";
+      modelSelect.replaceChildren();
+      const resetOption = document.createElement("option");
+      resetOption.value = DEFAULT_MODEL;
+      resetOption.textContent = DEFAULT_MODEL + " (default — test key to load available models)";
+      modelSelect.appendChild(resetOption);
       status.textContent = "Personal key removed from this browser tab.";
       status.style.color = "#baf7ff";
       showReply("Personal Gemini key removed. JARVIS will use its configured backend if available.");
     });
     row.append(save, remove, close);
-    card.append(heading, intro, warning, label, input, status, row);
+    card.append(heading, intro, warning, label, input, modelLabel, modelSelect, status, row);
     modal.appendChild(card);
     document.body.append(button, modal);
   }
@@ -193,7 +254,8 @@
   async function askPersonalGemini(command) {
     const key = getPersonalKey();
     if (!key) return null;
-    const response = await originalFetch("https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent", {
+    const model = getPersonalModel();
+    const response = await originalFetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
