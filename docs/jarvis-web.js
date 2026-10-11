@@ -1,23 +1,42 @@
-/* JARVIS GitHub Pages web capabilities.
-   Loaded by the Pages build after the original HUD script.
-   No Gemini key is stored here. */
+/* JARVIS GitHub Pages browser bridge.
+   Displays replies on-screen as well as using the original HUD speech.
+   No API keys or secrets are stored in this file. */
 (() => {
   const API_BASE = (new URLSearchParams(location.search).get("api") || localStorage.getItem("jarvisApiBase") || "").replace(/\/+$/, "");
   const originalFetch = window.fetch.bind(window);
 
+  // Visible diagnostics and replies: useful on mobile where speech may be silent.
+  let panel;
+  function showReply(message, state = "reply") {
+    try {
+      if (!panel) {
+        panel = document.createElement("div");
+        panel.id = "jarvis-web-bridge-panel";
+        Object.assign(panel.style, {
+          position: "fixed", left: "50%", bottom: "18px", transform: "translateX(-50%)",
+          width: "min(88vw, 620px)", boxSizing: "border-box", padding: "12px 16px",
+          zIndex: "2147483647", background: "rgba(2, 12, 28, 0.96)",
+          color: "#baf7ff", border: "1px solid #00d9ff", borderRadius: "10px",
+          boxShadow: "0 0 18px rgba(0,217,255,.28)", font: "14px/1.45 system-ui, sans-serif",
+          whiteSpace: "pre-wrap", overflowWrap: "anywhere", display: "block"
+        });
+        document.body.appendChild(panel);
+      }
+      panel.textContent = message;
+      panel.style.borderColor = state === "error" ? "#ff6b6b" : "#00d9ff";
+      panel.style.color = state === "error" ? "#ffd0d0" : "#baf7ff";
+    } catch (_) {}
+  }
+
   const say = (text) => ({ ok: true, reply: text });
   const isAny = (text, words) => words.some(w => text.includes(w));
 
-  function openUrl(url) {
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
+  function openUrl(url) { window.open(url, "_blank", "noopener,noreferrer"); }
 
   async function browserStorage() {
     if (!navigator.storage?.estimate) return say("Browser storage information is not available in this browser.");
     const { usage = 0, quota = 0 } = await navigator.storage.estimate();
-    const used = (usage / 1024 / 1024).toFixed(1);
-    const total = (quota / 1024 / 1024).toFixed(1);
-    return say(`This browser is using about ${used} MB of available browser storage, with an estimated quota of ${total} MB.`);
+    return say(`This browser is using about ${(usage / 1048576).toFixed(1)} MB, with an estimated browser-storage quota of ${(quota / 1048576).toFixed(1)} MB.`);
   }
 
   async function temperature() {
@@ -30,11 +49,8 @@
           const r = await originalFetch(url);
           const data = await r.json();
           const temp = data?.current?.temperature_2m;
-          const unit = data?.current_units?.temperature_2m || "°C";
-          resolve(say(temp == null ? "I could not get the current temperature." : `The current temperature near you is ${temp}${unit}.`));
-        } catch (_) {
-          resolve(say("I could not reach the weather service right now."));
-        }
+          resolve(say(temp == null ? "I could not get the current temperature." : `The current temperature near you is ${temp}${data?.current_units?.temperature_2m || "°C"}.`));
+        } catch (_) { resolve(say("I could not reach the weather service right now.")); }
       }, () => resolve(say("Location permission is needed to get your local temperature.")), { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
     });
   }
@@ -45,10 +61,10 @@
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       const video = document.createElement("video");
       video.autoplay = true; video.playsInline = true; video.srcObject = stream;
-      Object.assign(video.style, { position: "fixed", inset: "12% 12% 22% 12%", width: "76%", height: "66%", objectFit: "cover", zIndex: 9999, border: "1px solid #00eaff", boxShadow: "0 0 35px #008cff", background: "#000" });
+      Object.assign(video.style, { position: "fixed", inset: "12% 12% 22% 12%", width: "76%", height: "66%", objectFit: "cover", zIndex: 9999, border: "1px solid #00eaff", background: "#000" });
       const close = document.createElement("button");
       close.textContent = "CLOSE CAMERA";
-      Object.assign(close.style, { position: "fixed", left: "50%", bottom: "7%", transform: "translateX(-50%)", zIndex: 10000, padding: "12px 18px", background: "#03182b", color: "#9cefff", border: "1px solid #00eaff", letterSpacing: "2px" });
+      Object.assign(close.style, { position: "fixed", left: "50%", bottom: "7%", transform: "translateX(-50%)", zIndex: 10000, padding: "12px 18px", background: "#03182b", color: "#9cefff", border: "1px solid #00eaff" });
       const stop = () => { stream.getTracks().forEach(t => t.stop()); video.remove(); close.remove(); };
       close.onclick = stop;
       document.body.append(video, close);
@@ -58,7 +74,6 @@
 
   async function handleLocal(command) {
     const text = command.toLowerCase().trim();
-
     if (isAny(text, ["what time", "current time", "tell me the time", "time now", "time"])) {
       return say(`The current time is ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}.`);
     }
@@ -66,8 +81,7 @@
       return say(`Today is ${new Date().toLocaleDateString([], { weekday: "long", year: "numeric", month: "long", day: "numeric" })}.`);
     }
     if (isAny(text, ["storage", "disk space", "how much storage", "browser storage"])) return browserStorage();
-    if (isAny(text, ["temperature", "how hot", "how cold", "weather" ])) return temperature();
-
+    if (isAny(text, ["temperature", "how hot", "how cold", "weather"])) return temperature();
     if (isAny(text, ["open youtube", "youtube"])) { openUrl("https://www.youtube.com/"); return say("Opening YouTube."); }
     if (isAny(text, ["open google maps", "google maps", "open maps"])) { openUrl("https://maps.google.com/"); return say("Opening Google Maps."); }
     if (text === "open google" || text === "google" || text.includes("search google")) { openUrl("https://www.google.com/"); return say("Opening Google."); }
@@ -80,24 +94,48 @@
       return say("Opening the browser file picker. A website cannot access your device's full file manager without permission.");
     }
     if (isAny(text, ["open camera", "camera", "take a photo"])) return camera();
-
     return null;
   }
 
+  showReply("JARVIS web bridge loaded. Type “What time is it?” into the command box to test.", "reply");
+
   window.fetch = async function(input, init) {
     const url = typeof input === "string" ? input : input?.url || "";
-    if (url.endsWith("/api/command") && init?.method === "POST") {
+    const method = (init?.method || (typeof Request !== "undefined" && input instanceof Request ? input.method : "GET")).toUpperCase();
+    if (url.endsWith("/api/command") && method === "POST") {
       let body = {};
-      try { body = JSON.parse(init.body || "{}"); } catch (_) {}
+      try {
+        if (init?.body) body = JSON.parse(init.body);
+        else if (typeof Request !== "undefined" && input instanceof Request) body = await input.clone().json();
+      } catch (_) {}
       const command = String(body.command || "").trim();
-      const local = await handleLocal(command);
-      if (local) return new Response(JSON.stringify(local), { status: 200, headers: { "Content-Type": "application/json" } });
-
-      if (!API_BASE) {
-        return new Response(JSON.stringify({ ok: false, reply: "The JARVIS AI backend is not connected yet. Add the secure backend URL with ?api=... after deploying it." }), { status: 503, headers: { "Content-Type": "application/json" } });
+      showReply("JARVIS is processing: " + (command || "(empty command)"));
+      try {
+        const local = await handleLocal(command);
+        if (local) {
+          showReply(local.reply);
+          return new Response(JSON.stringify(local), { status: 200, headers: { "Content-Type": "application/json" } });
+        }
+        if (!API_BASE) {
+          const result = { ok: false, reply: "The JARVIS AI backend is not connected. Open the site using the backend URL." };
+          showReply(result.reply, "error");
+          return new Response(JSON.stringify(result), { status: 503, headers: { "Content-Type": "application/json" } });
+        }
+        const response = await originalFetch(API_BASE + "/api/command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command })
+        });
+        let data;
+        try { data = await response.clone().json(); }
+        catch (_) { data = { reply: "The AI server returned an unreadable response (HTTP " + response.status + ")." }; }
+        showReply(data.reply || ("AI server responded with HTTP " + response.status), response.ok ? "reply" : "error");
+        return response;
+      } catch (error) {
+        const result = { ok: false, reply: "JARVIS connection failed: " + (error?.message || "unknown network error") };
+        showReply(result.reply, "error");
+        return new Response(JSON.stringify(result), { status: 502, headers: { "Content-Type": "application/json" } });
       }
-      const target = `${API_BASE}/api/command`;
-      return originalFetch(target, init);
     }
     return originalFetch(input, init);
   };
