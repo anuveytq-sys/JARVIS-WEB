@@ -1,31 +1,29 @@
 # JARVIS Web Deployment Guide
 
-This guide explains how to deploy the separate web-compatible entry point without changing the original `server.js`.
+## GitHub Pages frontend
 
-## Files added for web hosting
+A separate copy of the JARVIS HUD is now in `docs/index.html`. The original `public/index.html`, `server.js`, and `gemini.cjs` have not been modified as part of the Pages frontend setup.
 
-- `web-server.js` — separate web-hosting entry point.
-- `render.yaml` — Render service configuration.
-- `WEB_DEPLOYMENT.md` — this guide.
+To publish the frontend:
 
-## Deploy using Render
+1. Open this repository's **Settings → Pages**.
+2. Under **Build and deployment**, choose **Deploy from a branch**.
+3. Select branch `main` and folder `/docs`, then save.
+4. After GitHub Pages finishes publishing, the expected site URL is:
+   `https://anuveytq-sys.github.io/JARVIS-WEB/`
 
-1. Sign in to Render and choose **New +** → **Web Service**.
-2. Connect your GitHub account and select `anuveytq-sys/JARVIS-WEB`.
-3. Use these settings:
-   - **Runtime:** Node
-   - **Build command:** `npm install`
-   - **Start command:** `node web-server.js`
-4. In the service's **Environment** settings, add `GEMINI_API_KEY` with your own Gemini API key. Keep it private; do not put it in source code or commit it to GitHub.
-5. Deploy and check the service logs for startup errors.
+## Backend and AI
 
-You can also try the included `render.yaml` as a Blueprint configuration if it is present in the repository root.
+GitHub Pages cannot run Node.js, keep a server-side Gemini key, or execute backend commands. The existing backend files (`server.js` and `gemini.cjs`) remain in the repository for local use, but they are **not automatically hosted by GitHub Pages**.
 
-## Important limitations and security
+The Pages HUD accepts a separately hosted backend base URL via the `?api=` query parameter, for example:
+`https://anuveytq-sys.github.io/JARVIS-WEB/?api=https://YOUR-SECURE-BACKEND.example`
 
-- This is a Node.js backend, so GitHub Pages alone cannot run the complete app.
-- AI responses depend on a valid API key, supported model availability, provider quotas, and current pricing. Do not assume API use is always free.
-- Browser voice input/output depends on browser support and microphone permissions.
-- Commands executed by the backend run on the hosting server, not on a visitor's phone or computer.
-- **Do not expose this app publicly as-is.** The original backend includes operating-system command execution and was designed for trusted local use. Before making it public, add authentication, restrict or remove command-execution routes, validate inputs, and apply rate limits. A hosted version may otherwise let strangers trigger actions on the server.
-- Deployment has not been confirmed by this guide; check logs and test carefully before sharing the site.
+That is only a connection mechanism, not a deployed backend. Replace the example with a real backend URL only after a secure backend has been prepared and deployed.
+
+## Security and API key
+
+- The Gemini API key must be stored as a private environment variable on the backend host, never in `docs/index.html`, a URL, or a public GitHub commit.
+- The API key you posted in chat should be treated as exposed. Revoke it in Google AI Studio / Google Cloud and create a replacement only when needed. Do not send the replacement in chat.
+- The current local backend includes operating-system command execution. Do not expose it publicly as-is. Add authentication and restrict command-execution features first; commands on a hosted server would run on that server, not on the visitor's device.
+- The GitHub Pages frontend can display the HUD and use browser voice capabilities, but AI commands will not work until a compatible secured backend is connected.
