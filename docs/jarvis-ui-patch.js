@@ -1,6 +1,5 @@
 /* JARVIS web compatibility/UI patch. Loaded before the main bridge. */
 (() => {
-  // Keep the diagnostics/reply bridge above the main command controls.
   const style = document.createElement("style");
   style.id = "jarvis-ui-patch-style";
   style.textContent = `
@@ -19,11 +18,12 @@
   `;
   (document.head || document.documentElement).appendChild(style);
 
-  // HARD FORCE Gemini 2.5 Flash. This is intentionally not just a default:
-  // even if an older session has another model saved, reset it to 2.5 Flash.
-  const FORCED_GEMINI_MODEL = "gemini-2.5-flash";
+  // JARVIS uses one supported production model everywhere.
+  // Clear old 2.5/other selections from earlier versions.
+  const FORCED_GEMINI_MODEL = "gemini-3.8-flash";
   try {
     sessionStorage.setItem("jarvisPersonalGeminiModel", FORCED_GEMINI_MODEL);
+    sessionStorage.removeItem("jarvisAvailableGeminiModels");
   } catch (_) {}
 
   // Browser-safe app launcher. Native apps cannot be opened reliably on every
@@ -56,8 +56,6 @@
       window.location.assign(url);
       return;
     }
-    // Try a normal new tab first. If the browser blocks the popup, fall back
-    // to the same tab so the command still works.
     const win = window.open(url, "_blank", "noopener,noreferrer");
     if (!win) window.location.assign(url);
   };
@@ -74,8 +72,7 @@
   window.fetch = async function(input, init = {}) {
     let url = typeof input === "string" ? input : input?.url || "";
 
-    // Force every Gemini generateContent request made by this page to 2.5 Flash.
-    // This catches old saved model settings and any model selected in Settings.
+    // Force every direct Gemini request made by the page to Gemini 3.8 Flash.
     if (/^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/[^/]+:generateContent(?:\?.*)?$/i.test(url)) {
       url = url.replace(/(\/v1beta\/models\/)[^/]+(:generateContent(?:\?.*)?)$/i, "$1" + FORCED_GEMINI_MODEL + "$2");
       try { sessionStorage.setItem("jarvisPersonalGeminiModel", FORCED_GEMINI_MODEL); } catch (_) {}
@@ -90,8 +87,6 @@
         for (const [name, target, aliases] of apps) {
           const openIntent = /^(open|launch|start|go to|show|take me to|navigate to)\b/.test(command);
           if (openIntent && aliases.some(alias => command === alias || command.includes(" " + alias) || command.includes(alias + " "))) {
-            // Spotify commonly gets popup-blocked when the command comes from
-            // voice recognition, so deliberately use a same-tab navigation.
             open(target, name === "spotify");
             return launcherReply(name);
           }
