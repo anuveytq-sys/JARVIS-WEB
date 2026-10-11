@@ -2,25 +2,39 @@
 
 This folder contains a separate GitHub Pages copy of the existing JARVIS HUD.
 
-- `index.html` is copied from `public/index.html`; the original file is not changed.
+- `index.html` is copied from `public/index.html`; the original file is unchanged.
 - The visual HUD and browser voice features run in the browser.
-- The frontend does **not** contain a Gemini API key.
-- GitHub Pages only hosts static files. It cannot run the Node.js AI backend or execute operating-system commands.
+- The frontend contains no Gemini API key.
+- GitHub Pages hosts only static files; it cannot run Node.js or execute device commands.
 
-## Publish the page
+## 1. Publish the frontend
 
-In the GitHub repository, open **Settings → Pages**. Under **Build and deployment**, choose **Deploy from a branch**, select branch `main`, and select folder `/docs`. Save and wait for GitHub Pages to publish.
+In the GitHub repository, open **Settings → Pages**. Under **Build and deployment**, choose **Deploy from a branch**, select branch `main` and folder `/docs`, then save.
 
-The expected URL is:
-
+Expected site URL:
 `https://anuveytq-sys.github.io/JARVIS-WEB/`
 
-## Connect an AI backend later
+## 2. Deploy the AI backend separately
 
-Once a separately hosted, secured backend is ready, open the page with its base URL in the `api` query parameter, for example:
+The repository now includes `web-server.js` and `render.yaml` for a separate Render backend.
 
-`https://anuveytq-sys.github.io/JARVIS-WEB/?api=https://YOUR-SECURE-BACKEND.example`
+1. Sign in to Render and create a **Blueprint** from this GitHub repository, or create a Node web service manually.
+2. For a manual service, use build command `npm install` and start command `node web-server.js`.
+3. Add `GEMINI_API_KEY` as a private environment variable in Render. Do not commit the key to GitHub or paste it into the website.
+4. Keep `ALLOWED_ORIGIN` set to `https://anuveytq-sys.github.io`.
+5. After deployment, copy the backend's Render URL (for example, `https://your-service.onrender.com`).
 
-Replace the example host with the actual backend URL. Do not paste a Gemini API key into this URL, into HTML/JavaScript, or into a public GitHub file.
+Then open the Pages site with that backend URL:
+`https://anuveytq-sys.github.io/JARVIS-WEB/?api=https://YOUR-REAL-BACKEND.onrender.com`
 
-**Security:** the existing local backend includes operating-system command features intended for trusted local use. Do not expose those routes publicly without authentication and a careful security review. A hosted backend's OS commands would run on the hosting server, not on a visitor's device.
+Replace the example backend host with your actual Render URL.
+
+## What the public backend supports
+
+The new `web-server.js` is intentionally a **safe web AI mode**. It provides Gemini chat, status, and basic endpoint compatibility. It does not run shell commands, open apps, or read files on the hosting server. Those desktop features remain part of the original local `server.js` and cannot control a visitor's device through GitHub Pages.
+
+The backend uses a basic per-IP request limit and origin check, but this is not a complete production security system. Monitor usage and configure quotas/billing controls with your AI provider. Free hosting may sleep or have usage limits.
+
+## API key safety
+
+The Gemini key posted in chat should be treated as exposed. Revoke it in Google AI Studio / Google Cloud and create a replacement. Add the replacement only to Render's private environment settings—never to HTML, a URL, or a public GitHub commit.
