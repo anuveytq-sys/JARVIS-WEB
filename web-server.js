@@ -3,24 +3,28 @@ import { GoogleGenAI } from "@google/genai";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "https://anuveytq-sys.github.io";
+const ALLOWED_ORIGINS = new Set([
+  "https://anuveytq-sys.github.io",
+  (process.env.ALLOWED_ORIGIN || "").trim()
+].filter(Boolean));
 const MAX_REQUESTS_PER_MINUTE = 20;
 const requestCounts = new Map();
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "16kb" }));
 
-// Only allow browser requests from the published GitHub Pages site by default.
+// Allow the published GitHub Pages origin and any explicitly configured origin.
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin === ALLOWED_ORIGIN) {
-    res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+  const allowed = !origin || ALLOWED_ORIGINS.has(origin);
+  if (origin && allowed) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   }
-  if (req.method === "OPTIONS") return res.sendStatus(origin === ALLOWED_ORIGIN ? 204 : 403);
-  if (origin && origin !== ALLOWED_ORIGIN) return res.status(403).json({ ok: false, error: "Origin not allowed." });
+  if (req.method === "OPTIONS") return res.sendStatus(allowed ? 204 : 403);
+  if (!allowed) return res.status(403).json({ ok: false, error: "Origin not allowed." });
   next();
 });
 
