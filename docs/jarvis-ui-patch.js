@@ -19,17 +19,15 @@
   `;
   (document.head || document.documentElement).appendChild(style);
 
-  // Make Gemini 2.5 Flash the default personal-key model before the main
-  // bridge reads its session setting. Users can still choose another model
-  // from the Settings model list after discovery.
+  // HARD FORCE Gemini 2.5 Flash. This is intentionally not just a default:
+  // even if an older session has another model saved, reset it to 2.5 Flash.
+  const FORCED_GEMINI_MODEL = "gemini-2.5-flash";
   try {
-    if (!sessionStorage.getItem("jarvisPersonalGeminiModel")) {
-      sessionStorage.setItem("jarvisPersonalGeminiModel", "gemini-2.5-flash");
-    }
+    sessionStorage.setItem("jarvisPersonalGeminiModel", FORCED_GEMINI_MODEL);
   } catch (_) {}
 
   // Browser-safe app launcher. Native apps cannot be opened reliably on every
-  // device, so JARVIS uses the official web version as a universal fallback.
+  // device, so JARVIS uses official web versions as the universal fallback.
   const apps = [
     ["youtube", "https://www.youtube.com/", ["youtube", "yt"]],
     ["google", "https://www.google.com/", ["google search", "google"]],
@@ -53,7 +51,16 @@
     ["zoom", "https://zoom.us/join", ["zoom"]]
   ];
 
-  const open = (url) => window.open(url, "_blank", "noopener,noreferrer");
+  const open = (url, sameTab = false) => {
+    if (sameTab) {
+      window.location.assign(url);
+      return;
+    }
+    // Try a normal new tab first. If the browser blocks the popup, fall back
+    // to the same tab so the command still works.
+    const win = window.open(url, "_blank", "noopener,noreferrer");
+    if (!win) window.location.assign(url);
+  };
   const clean = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
   const originalFetch = window.fetch.bind(window);
 
@@ -65,7 +72,17 @@
   }
 
   window.fetch = async function(input, init = {}) {
-    const url = typeof input === "string" ? input : input?.url || "";
+    let url = typeof input === "string" ? input : input?.url || "";
+
+    // Force every Gemini generateContent request made by this page to 2.5 Flash.
+    // This catches old saved model settings and any model selected in Settings.
+    if (/^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/[^/]+:generateContent(?:\?.*)?$/i.test(url)) {
+      url = url.replace(/(\/v1beta\/models\/)[^/]+(:generateContent(?:\?.*)?)$/i, "$1" + FORCED_GEMINI_MODEL + "$2");
+      try { sessionStorage.setItem("jarvisPersonalGeminiModel", FORCED_GEMINI_MODEL); } catch (_) {}
+      if (typeof input === "string") input = url;
+      else input = new Request(url, input);
+    }
+
     if (url.endsWith("/api/command") && String(init.method || "GET").toUpperCase() === "POST") {
       try {
         const body = typeof init.body === "string" ? JSON.parse(init.body) : null;
@@ -73,7 +90,9 @@
         for (const [name, target, aliases] of apps) {
           const openIntent = /^(open|launch|start|go to|show|take me to|navigate to)\b/.test(command);
           if (openIntent && aliases.some(alias => command === alias || command.includes(" " + alias) || command.includes(alias + " "))) {
-            open(target);
+            // Spotify commonly gets popup-blocked when the command comes from
+            // voice recognition, so deliberately use a same-tab navigation.
+            open(target, name === "spotify");
             return launcherReply(name);
           }
         }
