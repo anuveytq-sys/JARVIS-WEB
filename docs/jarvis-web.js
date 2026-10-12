@@ -25,6 +25,11 @@
       panel.textContent = message;
       panel.style.borderColor = state === "error" ? "#ff6b6b" : "#00d9ff";
       panel.style.color = state === "error" ? "#ffd0d0" : "#baf7ff";
+      // Speak every final result shown in the panel using the selected JARVIS voice.
+      // Processing/status updates are intentionally silent.
+      if (state !== "processing" && String(message || "").trim()) {
+        applyJarvisVoice(message);
+      }
     } catch (_) {}
   }
 
@@ -72,9 +77,20 @@
     const parts = selected.split("|");
     return { pitch: Number(parts[2]), rate: Number(parts[3]) };
   }
+  let lastSpokenText = "";
+  let lastSpokenAt = 0;
   function applyJarvisVoice(text) {
     if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
-    const utterance = new SpeechSynthesisUtterance(String(text || ""));
+    const spokenText = String(text || "").trim();
+    if (!spokenText) return false;
+    // The original HUD also calls speak() after receiving the same response.
+    // Deduplicate that second call so iOS does not cancel speech just as it starts.
+    const now = Date.now();
+    if (spokenText === lastSpokenText && now - lastSpokenAt < 2500) return true;
+    lastSpokenText = spokenText;
+    lastSpokenAt = now;
+    if (window.__jarvisVoiceStop) return false;
+    const utterance = new SpeechSynthesisUtterance(spokenText);
     const voice = findJarvisVoice();
     if (voice) { utterance.voice = voice; utterance.lang = voice.lang || "en-US"; }
     else utterance.lang = "en-US";
@@ -82,6 +98,15 @@
     utterance.rate = Math.min(1.15, Math.max(0.65, profile ? profile.rate : getVoiceRate()));
     utterance.pitch = Math.min(1.2, Math.max(0.5, profile ? profile.pitch : getVoicePitch()));
     utterance.volume = 1;
+    // Retry once voices finish loading; some mobile browsers initially return none.
+    if (!voice && window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        if (!window.__jarvisVoiceStop) window.speechSynthesis.speak(utterance);
+      };
+      window.speechSynthesis.cancel();
+      return true;
+    }
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
     return true;
@@ -766,7 +791,7 @@
         else if (typeof Request !== "undefined" && input instanceof Request) body = await input.clone().json();
       } catch (_) {}
       const command = String(body.command || "").trim();
-      showReply("JARVIS is processing: " + (command || "(empty command)"));
+      showReply("JARVIS is processing: " + (command || "(empty command)"), "processing");
       try {
         const local = await handleLocal(command);
         if (local) {
