@@ -6,15 +6,15 @@
     /* Compact, scrollable answer box: leaves more of the centre core visible. */
     #jarvis-web-bridge-panel {
       position: fixed !important;
-      left: 24px !important;
+      left: 12px !important;
       right: auto !important;
-      top: 48% !important;
+      top: 24% !important;
       bottom: auto !important;
-      transform: translateY(-50%) !important;
-      width: 158px !important;
-      min-height: 60px !important;
-      max-height: 128px !important;
-      padding: 10px 11px !important;
+      transform: none !important;
+      width: 128px !important;
+      min-height: 48px !important;
+      max-height: 108px !important;
+      padding: 8px 9px !important;
       box-sizing: border-box !important;
       overflow-x: hidden !important;
       overflow-y: auto !important;
@@ -23,7 +23,7 @@
       touch-action: pan-y !important;
       pointer-events: auto !important;
       z-index: 2147483630 !important;
-      font-size: 9px !important;
+      font-size: 8.5px !important;
       line-height: 1.45 !important;
       border-radius: 8px !important;
     }
@@ -46,13 +46,16 @@
 
     @media (max-width: 767px) {
       #jarvis-web-bridge-panel {
-        left: 12px !important;
-        top: 48% !important;
-        width: 150px !important;
-        min-height: 58px !important;
-        max-height: 112px !important;
-        padding: 9px 10px !important;
-        font-size: 8.5px !important;
+        left: 8px !important;
+        right: auto !important;
+        top: 16% !important;
+        bottom: auto !important;
+        transform: none !important;
+        width: 112px !important;
+        min-height: 44px !important;
+        max-height: 96px !important;
+        padding: 7px 8px !important;
+        font-size: 8px !important;
       }
       #commandForm.command-area {
         bottom: 30px !important;
