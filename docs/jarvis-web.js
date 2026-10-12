@@ -227,8 +227,19 @@
     Object.assign(openRouterStatus.style, { margin: "0 0 10px", color: "#baf7ff", fontSize: "12px", overflowWrap: "anywhere" });
     const openRouterButtons = document.createElement("div");
     Object.assign(openRouterButtons.style, { display: "flex", flexWrap: "wrap", gap: "8px" });
-    const openRouterTest = makeButton("TEST OPENROUTER", "#00d9ff");
-    const openRouterRemove = makeButton("REMOVE OPENROUTER KEY", "#ff6b6b");
+    const makeOpenRouterButton = (text, color) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = text;
+      Object.assign(b.style, {
+        flex: "1 1 120px", minHeight: "42px", padding: "10px", borderRadius: "8px",
+        border: "1px solid " + color, background: "rgba(0,0,0,.35)", color: "#fff",
+        font: "bold 12px system-ui,sans-serif", cursor: "pointer"
+      });
+      return b;
+    };
+    const openRouterTest = makeOpenRouterButton("TEST OPENROUTER", "#00d9ff");
+    const openRouterRemove = makeOpenRouterButton("REMOVE OPENROUTER KEY", "#ff6b6b");
     openRouterTest.addEventListener("click", async () => {
       const key = openRouterKeyInput.value.trim();
       const model = openRouterModelInput.value.trim() || DEFAULT_OPENROUTER_MODEL;
