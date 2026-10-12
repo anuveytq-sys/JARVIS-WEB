@@ -115,10 +115,10 @@
     heading.textContent = "JARVIS SETTINGS";
     Object.assign(heading.style, { margin: "0 0 8px", color: "#62f5ff", fontSize: "19px", letterSpacing: "2px" });
     const intro = document.createElement("p");
-    intro.textContent = "Add your own Gemini API key, discover the compatible Gemini text models available to that key, and choose one. Your key is kept only in this tab's session storage and is sent directly to Google, not to the JARVIS server.";
+    intro.textContent = "Choose AUTO, OpenRouter, personal Gemini, or the hosted JARVIS backend. Personal keys are kept in this browser tab's session storage and sent directly to the selected AI provider, not to the JARVIS server.";
     Object.assign(intro.style, { margin: "0 0 12px", color: "#b6dce7" });
     const warning = document.createElement("p");
-    warning.textContent = "Security: a browser key is not fully secret. Use only your own key, restrict it to the Gemini API where possible, never share this device/session, and check your usage limits. Free usage and limits depend on Google's current terms.";
+    warning.textContent = "Security: keys used in a browser are not fully secret and can be exposed to someone using this device or inspecting browser traffic. Use only your own keys, set a strict usage/credit limit in the provider dashboard, do not share this browser session, and remove keys when finished.";
     Object.assign(warning.style, { margin: "0 0 14px", color: "#ffdca8", fontSize: "12px" });
     const providerLabel = document.createElement("label");
     providerLabel.textContent = "AI provider";
