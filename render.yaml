@@ -12,4 +12,4 @@ services:
       - key: ALLOWED_ORIGIN
         value: https://anuveytq-sys.github.io
       - key: GEMINI_MODEL
-        value: gemini-3.8-flash
+        value: gemini-2.5-flash
