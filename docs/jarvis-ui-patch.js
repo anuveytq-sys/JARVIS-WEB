@@ -614,4 +614,34 @@
     }
   })();
 
+
+  // Capture camera commands before the original HUD submits them to the AI backend.
+  // This ensures "Hey Jarvis, click a photo" reaches the local camera handler.
+  document.addEventListener("submit", function(event) {
+    const form = event.target;
+    if (!form || form.id !== "commandForm") return;
+    const input = document.getElementById("commandInput");
+    const raw = String(input && input.value || "").trim();
+    const command = raw.replace(/^\\s*(?:(?:hey|hello|hi)\\s+)?jarvis[, ]*/i, "").replace(/[.!?]+$/, "").trim();
+    if (/^(?:open|launch|start|show|turn on)(?: the)? camera$/i.test(command)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      ensureCameraUI();
+      startJarvisCamera();
+      return;
+    }
+    if (/^(?:(?:please )?(?:click|take|capture|snap)(?: a| the)? photo|(?:please )?take (?:a )?picture|capture photo|click photo)$/i.test(command)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!jarvisCameraStream) {
+        ensureCameraUI();
+        startJarvisCamera();
+        if (jarvisCameraStatus) jarvisCameraStatus.textContent = "Camera opened. Allow permission, then say “Hey Jarvis, click a photo” again.";
+        return;
+      }
+      captureJarvisPhoto();
+    }
+  }, true);
+
+
 })();
