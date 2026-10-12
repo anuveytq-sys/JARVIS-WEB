@@ -35,6 +35,19 @@
   const USER_MODEL_SLOT = "jarvisPersonalGeminiModel";
   const AVAILABLE_MODELS_SLOT = "jarvisAvailableGeminiModels";
   const DEFAULT_MODEL = "gemini-3.8-flash";
+  const OPENROUTER_KEY_SLOT = "jarvisOpenRouterKey";
+  const OPENROUTER_MODEL_SLOT = "jarvisOpenRouterModel";
+  const AI_PROVIDER_SLOT = "jarvisAIProvider";
+  const DEFAULT_OPENROUTER_MODEL = "openrouter/free";
+  const getOpenRouterKey = () => {
+    try { return sessionStorage.getItem(OPENROUTER_KEY_SLOT) || ""; } catch (_) { return ""; }
+  };
+  const getOpenRouterModel = () => {
+    try { return sessionStorage.getItem(OPENROUTER_MODEL_SLOT) || DEFAULT_OPENROUTER_MODEL; } catch (_) { return DEFAULT_OPENROUTER_MODEL; }
+  };
+  const getAIProvider = () => {
+    try { return sessionStorage.getItem(AI_PROVIDER_SLOT) || "auto"; } catch (_) { return "auto"; }
+  };
   const getPersonalKey = () => {
     try { return sessionStorage.getItem(USER_KEY_SLOT) || ""; } catch (_) { return ""; }
   };
@@ -107,6 +120,33 @@
     const warning = document.createElement("p");
     warning.textContent = "Security: a browser key is not fully secret. Use only your own key, restrict it to the Gemini API where possible, never share this device/session, and check your usage limits. Free usage and limits depend on Google's current terms.";
     Object.assign(warning.style, { margin: "0 0 14px", color: "#ffdca8", fontSize: "12px" });
+    const providerLabel = document.createElement("label");
+    providerLabel.textContent = "AI provider";
+    Object.assign(providerLabel.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
+    const providerSelect = document.createElement("select");
+    providerSelect.id = "jarvis-ai-provider";
+    [
+      ["auto", "AUTO — OpenRouter first, then Gemini, then backend"],
+      ["openrouter", "OpenRouter"],
+      ["gemini", "Personal Gemini"],
+      ["backend", "Hosted JARVIS backend"]
+    ].forEach(([value, text]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = text;
+      providerSelect.appendChild(option);
+    });
+    providerSelect.value = getAIProvider();
+    Object.assign(providerSelect.style, {
+      display: "block", width: "100%", boxSizing: "border-box", padding: "12px",
+      marginBottom: "14px", borderRadius: "8px", border: "1px solid #287b91",
+      background: "#00101f", color: "#fff", font: "14px system-ui,sans-serif"
+    });
+    providerSelect.addEventListener("change", () => {
+      try { sessionStorage.setItem(AI_PROVIDER_SLOT, providerSelect.value); } catch (_) {}
+      status.textContent = "Selected AI provider: " + providerSelect.options[providerSelect.selectedIndex].textContent + ".";
+    });
+
     const label = document.createElement("label");
     label.textContent = "Gemini API key";
     Object.assign(label.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
@@ -141,6 +181,121 @@
     modelSelect.addEventListener("change", () => {
       try { sessionStorage.setItem(USER_MODEL_SLOT, modelSelect.value); } catch (_) {}
     });
+    const openRouterSection = document.createElement("div");
+    Object.assign(openRouterSection.style, {
+      margin: "4px 0 14px", padding: "14px", border: "1px solid #287b91",
+      borderRadius: "10px", background: "rgba(0,10,24,.72)"
+    });
+    const openRouterHeading = document.createElement("h3");
+    openRouterHeading.textContent = "SECOND AI // OPENROUTER";
+    Object.assign(openRouterHeading.style, { margin: "0 0 6px", color: "#62f5ff", fontSize: "14px", letterSpacing: "1px" });
+    const openRouterInfo = document.createElement("p");
+    openRouterInfo.textContent = "Use OpenRouter to ask questions with models from different providers. The default model router is openrouter/free; you can enter another model ID from OpenRouter's model catalog.";
+    Object.assign(openRouterInfo.style, { margin: "0 0 10px", color: "#b6dce7", fontSize: "12px" });
+    const openRouterKeyLabel = document.createElement("label");
+    openRouterKeyLabel.textContent = "OpenRouter API key";
+    Object.assign(openRouterKeyLabel.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
+    const openRouterKeyInput = document.createElement("input");
+    openRouterKeyInput.type = "password";
+    openRouterKeyInput.autocomplete = "off";
+    openRouterKeyInput.spellcheck = false;
+    openRouterKeyInput.placeholder = "Paste your OpenRouter key (sk-or-...)";
+    openRouterKeyInput.value = getOpenRouterKey();
+    Object.assign(openRouterKeyInput.style, {
+      width: "100%", boxSizing: "border-box", padding: "12px", marginBottom: "10px",
+      borderRadius: "8px", border: "1px solid #287b91", background: "#00101f",
+      color: "#fff", font: "14px system-ui,sans-serif"
+    });
+    const openRouterModelLabel = document.createElement("label");
+    openRouterModelLabel.textContent = "OpenRouter model ID";
+    Object.assign(openRouterModelLabel.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
+    const openRouterModelInput = document.createElement("input");
+    openRouterModelInput.type = "text";
+    openRouterModelInput.autocomplete = "off";
+    openRouterModelInput.spellcheck = false;
+    openRouterModelInput.value = getOpenRouterModel();
+    openRouterModelInput.placeholder = "openrouter/free";
+    Object.assign(openRouterModelInput.style, {
+      width: "100%", boxSizing: "border-box", padding: "12px", marginBottom: "10px",
+      borderRadius: "8px", border: "1px solid #287b91", background: "#00101f",
+      color: "#fff", font: "14px system-ui,sans-serif"
+    });
+    const openRouterStatus = document.createElement("p");
+    openRouterStatus.id = "jarvis-openrouter-status";
+    openRouterStatus.setAttribute("role", "status");
+    openRouterStatus.textContent = getOpenRouterKey() ? "An OpenRouter key is saved in this tab." : "No OpenRouter key saved in this tab.";
+    Object.assign(openRouterStatus.style, { margin: "0 0 10px", color: "#baf7ff", fontSize: "12px", overflowWrap: "anywhere" });
+    const openRouterButtons = document.createElement("div");
+    Object.assign(openRouterButtons.style, { display: "flex", flexWrap: "wrap", gap: "8px" });
+    const openRouterTest = makeButton("TEST OPENROUTER", "#00d9ff");
+    const openRouterRemove = makeButton("REMOVE OPENROUTER KEY", "#ff6b6b");
+    openRouterTest.addEventListener("click", async () => {
+      const key = openRouterKeyInput.value.trim();
+      const model = openRouterModelInput.value.trim() || DEFAULT_OPENROUTER_MODEL;
+      if (!key) {
+        openRouterStatus.textContent = "Paste your OpenRouter API key first.";
+        openRouterStatus.style.color = "#ffd0d0";
+        return;
+      }
+      openRouterTest.disabled = true;
+      openRouterStatus.textContent = "Testing OpenRouter connection…";
+      openRouterStatus.style.color = "#baf7ff";
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+      try {
+        const response = await originalFetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + key,
+            "Content-Type": "application/json",
+            "HTTP-Referer": location.origin,
+            "X-OpenRouter-Title": "JARVIS Web"
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: "You are JARVIS, a helpful personal AI assistant." },
+              { role: "user", content: "Reply with exactly: JARVIS OpenRouter connection successful." }
+            ],
+            max_tokens: 40
+          }),
+          signal: controller.signal
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data?.error?.message || ("OpenRouter returned HTTP " + response.status));
+        const answer = data?.choices?.[0]?.message?.content;
+        if (!answer) throw new Error("OpenRouter returned no text. Check the model ID and account limits.");
+        sessionStorage.setItem(OPENROUTER_KEY_SLOT, key);
+        sessionStorage.setItem(OPENROUTER_MODEL_SLOT, model);
+        sessionStorage.setItem(AI_PROVIDER_SLOT, "openrouter");
+        providerSelect.value = "openrouter";
+        openRouterStatus.textContent = "Connected! Model: " + model + ". OpenRouter is selected as JARVIS's AI provider.";
+        openRouterStatus.style.color = "#9dffcb";
+        showReply("OpenRouter connection successful. JARVIS is now using " + model + ".");
+      } catch (error) {
+        const message = error?.name === "AbortError" ? "Request timed out after 20 seconds." : (error?.message || "network error");
+        openRouterStatus.textContent = "OpenRouter test failed: " + message + " Check the key, model ID, available credits/free-model limits, and connection.";
+        openRouterStatus.style.color = "#ffd0d0";
+      } finally {
+        clearTimeout(timer);
+        openRouterTest.disabled = false;
+      }
+    });
+    openRouterRemove.addEventListener("click", () => {
+      try { sessionStorage.removeItem(OPENROUTER_KEY_SLOT); sessionStorage.removeItem(OPENROUTER_MODEL_SLOT); } catch (_) {}
+      openRouterKeyInput.value = "";
+      openRouterModelInput.value = DEFAULT_OPENROUTER_MODEL;
+      openRouterStatus.textContent = "OpenRouter key removed from this browser tab.";
+      openRouterStatus.style.color = "#baf7ff";
+      if (providerSelect.value === "openrouter") {
+        providerSelect.value = getPersonalKey() ? "gemini" : "backend";
+        try { sessionStorage.setItem(AI_PROVIDER_SLOT, providerSelect.value); } catch (_) {}
+      }
+      showReply("OpenRouter key removed from this tab.");
+    });
+    openRouterButtons.append(openRouterTest, openRouterRemove);
+    openRouterSection.append(openRouterHeading, openRouterInfo, openRouterKeyLabel, openRouterKeyInput, openRouterModelLabel, openRouterModelInput, openRouterStatus, openRouterButtons);
+
     const status = document.createElement("p");
     status.setAttribute("role", "status");
     status.textContent = getPersonalKey() ? "A personal key is active in this tab." : "No personal key saved in this tab.";
@@ -243,13 +398,43 @@
       showReply("Personal Gemini key removed. JARVIS will use its configured backend if available.");
     });
     row.append(save, remove, close);
-    card.append(heading, intro, warning, label, input, modelLabel, modelSelect, status, row);
+    card.append(heading, intro, warning, providerLabel, providerSelect, label, input, modelLabel, modelSelect, openRouterSection, status, row);
     modal.appendChild(card);
     document.body.append(button, modal);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addSettingsUI, { once: true });
   else addSettingsUI();
+
+  async function askOpenRouter(command) {
+    const key = getOpenRouterKey();
+    if (!key) throw new Error("No OpenRouter key is saved. Open SETTINGS and add your key.");
+    const model = getOpenRouterModel();
+    const response = await originalFetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + key,
+        "Content-Type": "application/json",
+        "HTTP-Referer": location.origin,
+        "X-OpenRouter-Title": "JARVIS Web"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: "You are JARVIS, a helpful, clear, concise personal AI assistant. Answer directly. Do not claim to control the phone or access live information unless a tool actually provides it." },
+          { role: "user", content: command }
+        ],
+        temperature: 0.7,
+        max_tokens: 900
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data?.error?.message || ("OpenRouter returned HTTP " + response.status));
+    const content = data?.choices?.[0]?.message?.content;
+    const answer = Array.isArray(content) ? content.map(part => part?.text || "").join("").trim() : String(content || "").trim();
+    if (!answer) throw new Error("OpenRouter returned no text. Check the model ID and account limits.");
+    return answer;
+  }
 
   async function askPersonalGemini(command) {
     const key = getPersonalKey();
@@ -396,21 +581,42 @@
           showReply(local.reply);
           return new Response(JSON.stringify(local), { status: 200, headers: { "Content-Type": "application/json" } });
         }
+        const provider = getAIProvider();
         const personalKey = getPersonalKey();
-        if (personalKey) {
+        const openRouterKey = getOpenRouterKey();
+        const useOpenRouter = provider === "openrouter" || (provider === "auto" && !!openRouterKey);
+        const useGemini = provider === "gemini" || (provider === "auto" && !openRouterKey && !!personalKey);
+        if (useOpenRouter) {
           try {
-            const answer = await askPersonalGemini(command);
-            const result = { ok: true, reply: answer };
+            const answer = await askOpenRouter(command);
+            const result = { ok: true, reply: answer, provider: "openrouter", model: getOpenRouterModel() };
             showReply(answer);
             return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
           } catch (error) {
-            const result = { ok: false, reply: "Personal Gemini request failed: " + (error?.message || "unknown error") + ". Open ⚙ SETTINGS to check your key or remove it to use the JARVIS server." };
+            const result = { ok: false, reply: "OpenRouter request failed: " + (error?.message || "unknown error") + ". Open ⚙ SETTINGS to check the key/model or choose another AI provider." };
+            showReply(result.reply, "error");
+            return new Response(JSON.stringify(result), { status: 502, headers: { "Content-Type": "application/json" } });
+          }
+        }
+        if (useGemini) {
+          if (!personalKey) {
+            const result = { ok: false, reply: "No personal Gemini key is saved. Open ⚙ SETTINGS and choose AUTO, OpenRouter, or Hosted JARVIS backend." };
+            showReply(result.reply, "error");
+            return new Response(JSON.stringify(result), { status: 503, headers: { "Content-Type": "application/json" } });
+          }
+          try {
+            const answer = await askPersonalGemini(command);
+            const result = { ok: true, reply: answer, provider: "gemini", model: getPersonalModel() };
+            showReply(answer);
+            return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
+          } catch (error) {
+            const result = { ok: false, reply: "Personal Gemini request failed: " + (error?.message || "unknown error") + ". Open ⚙ SETTINGS to check your key or select another AI provider." };
             showReply(result.reply, "error");
             return new Response(JSON.stringify(result), { status: 502, headers: { "Content-Type": "application/json" } });
           }
         }
         if (!API_BASE) {
-          const result = { ok: false, reply: "The JARVIS AI backend is not connected. Open ⚙ SETTINGS to add your own Gemini API key, or open the site using the backend URL." };
+          const result = { ok: false, reply: "The JARVIS AI backend is not connected. Open ⚙ SETTINGS to add an OpenRouter or Gemini key, or open the site using the backend URL." };
           showReply(result.reply, "error");
           return new Response(JSON.stringify(result), { status: 503, headers: { "Content-Type": "application/json" } });
         }
