@@ -220,7 +220,31 @@
     if (url.endsWith("/api/command") && String(init.method || "GET").toUpperCase() === "POST") {
       try {
         const body = typeof init.body === "string" ? JSON.parse(init.body) : null;
-        const command = clean(body?.command);
+        const rawCommand = String(body?.command || "").trim();
+        const command = clean(rawCommand);
+
+        // YouTube voice action: extract the requested title/topic and open its
+        // YouTube results directly. Universal links may hand off to the YouTube
+        // app when the device/browser permits it; otherwise results open in web.
+        // A YouTube Data API key is not configured, so this does not guess a video ID.
+        const youtubeIntent = rawCommand.match(/^\\s*(?:(?:hey|hello|hi)\\s+jarvis[, ]*)?(?:please\\s+)?(?:open|play|watch|find|show)\\s+(.+?)\\s+(?:video\\s+)?(?:on|in)\\s+youtube\\s*[.!?]*\\s*$/i)
+          || rawCommand.match(/^\\s*(?:(?:hey|hello|hi)\\s+jarvis[, ]*)?(?:please\\s+)?(?:play|watch)\\s+(.+?)\\s*[.!?]*\\s*$/i);
+        if (youtubeIntent) {
+          let query = String(youtubeIntent[1] || "").trim()
+            .replace(/^(?:the\\s+)?(?:video\\s+)?/i, "")
+            .replace(/\\s+(?:video\\s+)?(?:on|in)\\s+youtube\\s*$/i, "")
+            .replace(/[.!?]+$/, "").trim();
+          if (query && !/^(this|that|the video|a video|video)$/i.test(query)) {
+            const youtubeUrl = "https://www.youtube.com/results?search_query=" + encodeURIComponent(query);
+            open(youtubeUrl, true);
+            return launcherReply("YouTube search for " + query);
+          }
+          if (/^(this|that|the video|a video|video)$/i.test(query)) {
+            open("https://www.youtube.com/", true);
+            return launcherReply("YouTube. Please say the video title or topic to search for");
+          }
+        }
+
         for (const [name, target, aliases] of apps) {
           const openIntent = /^(open|launch|start|go to|show|take me to|navigate to)\b/.test(command);
           if (openIntent && aliases.some(alias => command === alias || command.includes(" " + alias) || command.includes(alias + " "))) {
