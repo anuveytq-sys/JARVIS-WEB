@@ -38,7 +38,7 @@ jobs:
           p = Path('_site/index.html')
           s = p.read_text(encoding='utf-8')
           marker = '</body>'
-          injection = '<script src="./jarvis-ui-patch.js?v=panel-scroll-20261012"></script>\n<script src="./jarvis-web.js?v=panel-scroll-20261012"></script>\n'
+          injection = '<script src="./jarvis-ui-patch.js?v=panel-safe-corner-20261012"></script>\n<script src="./jarvis-web.js?v=panel-safe-corner-20261012"></script>\n'
           if injection not in s:
               s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
