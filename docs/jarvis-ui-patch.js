@@ -227,22 +227,36 @@
         // YouTube results directly. Universal links may hand off to the YouTube
         // app when the device/browser permits it; otherwise results open in web.
         // A YouTube Data API key is not configured, so this does not guess a video ID.
-        const youtubeIntent = rawCommand.match(/^\\s*(?:(?:hey|hello|hi)\\s+jarvis[, ]*)?(?:please\\s+)?(?:open|play|watch|find|show)\\s+(.+?)\\s+(?:video\\s+)?(?:on|in)\\s+youtube\\s*[.!?]*\\s*$/i)
-          || rawCommand.match(/^\\s*(?:(?:hey|hello|hi)\\s+jarvis[, ]*)?(?:please\\s+)?(?:play|watch)\\s+(.+?)\\s*[.!?]*\\s*$/i);
-        if (youtubeIntent) {
-          let query = String(youtubeIntent[1] || "").trim()
+        const spokenCommand = rawCommand.replace(/^\\s*(?:(?:hey|hello|hi)\\s+)?jarvis[, ]*/i, "").trim();
+        const youtubePatterns = [
+          /^(?:please\\s+)?(?:open|play|watch|find|show|search(?:\\s+for)?)\\s+(.+?)\\s+(?:video\\s+)?(?:on|in)\\s+youtube[.!?]*$/i,
+          /^(?:please\\s+)?(?:open|play|watch|find|show)\\s+(?:the\\s+)?(?:latest|newest|most recent)\\s+(?:video\\s+)?(?:from|by|of)\\s+(.+?)[.!?]*$/i,
+          /^(?:please\\s+)?(?:open|play|watch)\\s+(.+?)[.!?]*$/i
+        ];
+        let youtubeQuery = "";
+        const mentionsYouTube = /\\byoutube\\b/i.test(spokenCommand);
+        for (const pattern of youtubePatterns) {
+          const match = spokenCommand.match(pattern);
+          if (match) {
+            youtubeQuery = String(match[1] || "").trim();
+            break;
+          }
+        }
+        if (youtubeQuery && (mentionsYouTube || /^(?:open|play|watch|find|show|search)\\b/i.test(spokenCommand))) {
+          youtubeQuery = youtubeQuery
             .replace(/^(?:the\\s+)?(?:video\\s+)?/i, "")
-            .replace(/\\s+(?:video\\s+)?(?:on|in)\\s+youtube\\s*$/i, "")
             .replace(/[.!?]+$/, "").trim();
-          if (query && !/^(this|that|the video|a video|video)$/i.test(query)) {
-            const youtubeUrl = "https://www.youtube.com/results?search_query=" + encodeURIComponent(query);
+          // Preserve phrases such as "latest video of MrBeast" as a search
+          // unless a simpler title/topic is explicitly spoken.
+          if (youtubeQuery && !/^(this|that|the video|a video|video)$/i.test(youtubeQuery)) {
+            const youtubeUrl = "https://www.youtube.com/results?search_query=" + encodeURIComponent(youtubeQuery);
             open(youtubeUrl, true);
-            return launcherReply("YouTube search for " + query);
+            return launcherReply("Opening YouTube results for " + youtubeQuery + ". Select the matching video to play.");
           }
-          if (/^(this|that|the video|a video|video)$/i.test(query)) {
-            open("https://www.youtube.com/", true);
-            return launcherReply("YouTube. Please say the video title or topic to search for");
-          }
+        }
+        if (/^(?:open|launch|start|go to)\\s+youtube[.!?]*$/i.test(spokenCommand)) {
+          open("https://www.youtube.com/", true);
+          return launcherReply("Opening YouTube. Tell me the video title or topic to search for.");
         }
 
         for (const [name, target, aliases] of apps) {
@@ -429,7 +443,7 @@
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const phrase = String(event.results[i][0]?.transcript || "")
             .toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
-          if (/\b(hello|hi) jarvis\b/.test(phrase)) {
+          if (/\b(?:hey\s+)?jarvis\b/.test(phrase)) {
             startCommandCapture();
             return;
           }
