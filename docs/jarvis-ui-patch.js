@@ -3,15 +3,27 @@
   const style = document.createElement("style");
   style.id = "jarvis-ui-patch-style";
   style.textContent = `
-    /* Keep the reply/diagnostic panel above the command controls. */
+    /* Small status/result box: left side, between the NEURAL MATRIX and VOICE CHANNEL panels. */
     #jarvis-web-bridge-panel {
-      bottom: 148px !important;
-      max-height: min(18vh, 140px) !important;
+      position: fixed !important;
+      left: 24px !important;
+      right: auto !important;
+      top: 48% !important;
+      bottom: auto !important;
+      transform: translateY(-50%) !important;
+      width: 190px !important;
+      min-height: 72px !important;
+      max-height: 150px !important;
+      padding: 12px 13px !important;
+      box-sizing: border-box !important;
       overflow-y: auto !important;
       pointer-events: none !important;
+      z-index: 2147483630 !important;
+      font-size: 10px !important;
+      line-height: 1.45 !important;
+      border-radius: 8px !important;
     }
 
-    /* Raise the original command bar so Android/browser navigation areas cannot cover it. */
     #commandForm.command-area {
       bottom: 34px !important;
       z-index: 2147483640 !important;
@@ -21,7 +33,6 @@
     #commandForm.command-area .btn {
       touch-action: manipulation !important;
     }
-
     #commandInput {
       position: relative !important;
       z-index: 2147483641 !important;
@@ -31,9 +42,13 @@
 
     @media (max-width: 767px) {
       #jarvis-web-bridge-panel {
-        bottom: 142px !important;
-        width: min(91vw, 620px) !important;
-        max-height: 17vh !important;
+        left: 12px !important;
+        top: 48% !important;
+        width: 178px !important;
+        min-height: 68px !important;
+        max-height: 130px !important;
+        padding: 10px 11px !important;
+        font-size: 9px !important;
       }
       #commandForm.command-area {
         bottom: 30px !important;
@@ -60,7 +75,6 @@
     sessionStorage.removeItem("jarvisAvailableGeminiModels");
   } catch (_) {}
 
-  /* Browser-safe app launcher. Android wrapper also tries native apps first. */
   const apps = [
     ["youtube", "https://www.youtube.com/", ["youtube", "yt"]],
     ["google", "https://www.google.com/", ["google search", "google"]],
@@ -85,10 +99,7 @@
   ];
 
   const open = (url, sameTab = false) => {
-    if (sameTab) {
-      window.location.assign(url);
-      return;
-    }
+    if (sameTab) return window.location.assign(url);
     const win = window.open(url, "_blank", "noopener,noreferrer");
     if (!win) window.location.assign(url);
   };
@@ -102,22 +113,15 @@
     });
   }
 
-  /*
-   * Replace the old Settings test flow with a single deterministic 2.5 Flash
-   * test. This avoids the model-discovery request that could remain pending
-   * and guarantees the UI reaches success or a bounded error state.
-   */
   function installGemini25Settings() {
     const modal = document.getElementById("jarvis-settings-modal");
     if (!modal) return false;
-
     const input = modal.querySelector('input[type="password"]');
     const select = modal.querySelector("#jarvis-gemini-model");
     const status = modal.querySelector('[role="status"]');
     const buttons = Array.from(modal.querySelectorAll("button"));
     const oldSave = buttons.find(b => /TEST\s*&\s*SAVE/i.test(b.textContent || ""));
     if (!input || !status || !oldSave) return false;
-
     if (oldSave.dataset.gemini25Installed === "1") return true;
     oldSave.dataset.gemini25Installed = "1";
 
@@ -134,7 +138,6 @@
     const save = oldSave.cloneNode(true);
     save.dataset.gemini25Installed = "1";
     oldSave.replaceWith(save);
-
     save.addEventListener("click", async () => {
       const key = input.value.trim();
       if (!key) {
@@ -142,60 +145,41 @@
         status.style.color = "#ffd0d0";
         return;
       }
-
       save.disabled = true;
       status.textContent = "Testing Gemini 2.5 Flash…";
       status.style.color = "#baf7ff";
-
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15000);
-
       try {
         const response = await nativeFetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/" +
-          FORCED_GEMINI_MODEL + ":generateContent",
+          "https://generativelanguage.googleapis.com/v1beta/models/" + FORCED_GEMINI_MODEL + ":generateContent",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-goog-api-key": key
-            },
+            headers: { "Content-Type": "application/json", "x-goog-api-key": key },
             body: JSON.stringify({
-              contents: [{
-                role: "user",
-                parts: [{ text: "Reply with exactly: JARVIS connection successful." }]
-              }],
+              contents: [{ role: "user", parts: [{ text: "Reply with exactly: JARVIS connection successful." }] }],
               generationConfig: { maxOutputTokens: 30 }
             }),
             signal: controller.signal
           }
         );
-
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data?.error?.message || ("Google returned HTTP " + response.status));
+          const raw = data?.error?.message || ("Google returned HTTP " + response.status);
+          if (/no longer available to new users|limited access|actively used/i.test(raw)) {
+            throw new Error("Google is restricting Gemini 2.5 Flash for this API project. The model is still active, but this key/project is not currently eligible for 2.5 access.");
+          }
+          throw new Error(raw);
         }
-
-        const answer = (data?.candidates?.[0]?.content?.parts || [])
-          .map(p => p.text || "").join("").trim();
+        const answer = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
         if (!answer) throw new Error("Gemini returned no text.");
-
         sessionStorage.setItem("jarvisPersonalGeminiKey", key);
         sessionStorage.setItem("jarvisPersonalGeminiModel", FORCED_GEMINI_MODEL);
-        sessionStorage.setItem(
-          "jarvisAvailableGeminiModels",
-          JSON.stringify([FORCED_GEMINI_MODEL])
-        );
-
+        sessionStorage.setItem("jarvisAvailableGeminiModels", JSON.stringify([FORCED_GEMINI_MODEL]));
         status.textContent = "Connected successfully to Gemini 2.5 Flash. JARVIS is ready.";
         status.style.color = "#9dffcb";
-
         const panel = document.getElementById("jarvis-web-bridge-panel");
-        if (panel) {
-          panel.textContent = "Gemini 2.5 Flash connection successful. JARVIS is ready.";
-          panel.style.borderColor = "#00d9ff";
-          panel.style.color = "#baf7ff";
-        }
+        if (panel) panel.textContent = "Gemini 2.5 Flash connection successful. JARVIS is ready.";
       } catch (error) {
         const message = error?.name === "AbortError"
           ? "Gemini 2.5 Flash test timed out after 15 seconds. Check your internet connection and try again."
@@ -207,7 +191,6 @@
         save.disabled = false;
       }
     });
-
     return true;
   }
 
@@ -221,29 +204,19 @@
 
   window.fetch = async function(input, init = {}) {
     let url = typeof input === "string" ? input : input?.url || "";
-
-    /* Force every direct Gemini generateContent request made by JARVIS to 2.5 Flash. */
     if (/^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/[^/]+:generateContent(?:\?.*)?$/i.test(url)) {
-      url = url.replace(
-        /(\/v1beta\/models\/)[^/]+(:generateContent(?:\?.*)?)$/i,
-        "$1" + FORCED_GEMINI_MODEL + "$2"
-      );
-      try {
-        sessionStorage.setItem("jarvisPersonalGeminiModel", FORCED_GEMINI_MODEL);
-      } catch (_) {}
+      url = url.replace(/(\/v1beta\/models\/)[^/]+(:generateContent(?:\?.*)?)$/i, "$1" + FORCED_GEMINI_MODEL + "$2");
+      try { sessionStorage.setItem("jarvisPersonalGeminiModel", FORCED_GEMINI_MODEL); } catch (_) {}
       if (typeof input === "string") input = url;
       else input = new Request(url, input);
     }
-
-    if (url.endsWith("/api/command") &&
-        String(init.method || "GET").toUpperCase() === "POST") {
+    if (url.endsWith("/api/command") && String(init.method || "GET").toUpperCase() === "POST") {
       try {
         const body = typeof init.body === "string" ? JSON.parse(init.body) : null;
         const command = clean(body?.command);
         for (const [name, target, aliases] of apps) {
           const openIntent = /^(open|launch|start|go to|show|take me to|navigate to)\b/.test(command);
-          if (openIntent && aliases.some(alias =>
-              command === alias || command.includes(" " + alias) || command.includes(alias + " "))) {
+          if (openIntent && aliases.some(alias => command === alias || command.includes(" " + alias) || command.includes(alias + " "))) {
             open(target, name === "spotify");
             return launcherReply(name);
           }
@@ -254,7 +227,6 @@
         }
       } catch (_) {}
     }
-
     return nativeFetch(input, init);
   };
 })();
