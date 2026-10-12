@@ -114,6 +114,110 @@
     .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
   const nativeFetch = window.fetch.bind(window);
 
+  // Browser camera feature: permission-based live preview, shutter button,
+  // voice-triggered capture, and a downloadable photo. Camera access requires HTTPS.
+  let jarvisCameraStream = null;
+  let jarvisCameraModal = null;
+  let jarvisCameraVideo = null;
+  let jarvisCameraStatus = null;
+  let jarvisCameraCaptureButton = null;
+
+  function ensureCameraUI() {
+    if (jarvisCameraModal) return;
+    const style = document.createElement("style");
+    style.textContent = `
+      #jarvis-camera-modal { position:fixed; inset:0; z-index:2147483647; display:none;
+        align-items:center; justify-content:center; padding:16px; box-sizing:border-box;
+        background:rgba(0,8,20,.94); color:#c9fbff; font-family:system-ui,sans-serif; }
+      #jarvis-camera-card { width:min(92vw,520px); max-height:92vh; overflow:auto;
+        border:1px solid #00dfff; border-radius:14px; padding:14px; box-sizing:border-box;
+        background:linear-gradient(145deg,#06182a,#020811); box-shadow:0 0 28px #00aaff55; text-align:center; }
+      #jarvis-camera-video { display:block; width:100%; max-height:58vh; object-fit:contain;
+        background:#000; border-radius:9px; }
+      #jarvis-camera-preview { display:none; width:100%; max-height:58vh; object-fit:contain;
+        margin-top:8px; border-radius:9px; }
+      .jarvis-camera-btn { border:1px solid #00dfff; border-radius:8px; padding:10px 14px;
+        margin:8px 4px 0; background:#06243a; color:#d9fcff; font-weight:700; }
+      #jarvis-camera-status { min-height:1.4em; font-size:12px; overflow-wrap:anywhere; }
+    `;
+    document.head.appendChild(style);
+    jarvisCameraModal = document.createElement("div");
+    jarvisCameraModal.id = "jarvis-camera-modal";
+    jarvisCameraModal.innerHTML = `
+      <section id="jarvis-camera-card" role="dialog" aria-modal="true" aria-label="JARVIS Camera">
+        <h2 style="margin:4px 0 10px;letter-spacing:2px">JARVIS CAMERA</h2>
+        <video id="jarvis-camera-video" autoplay playsinline muted></video>
+        <img id="jarvis-camera-preview" alt="Captured photo preview">
+        <div id="jarvis-camera-status" role="status">Requesting camera permission…</div>
+        <button class="jarvis-camera-btn" id="jarvis-camera-start" type="button">START CAMERA</button>
+        <button class="jarvis-camera-btn" id="jarvis-camera-capture" type="button">CLICK PHOTO</button>
+        <a class="jarvis-camera-btn" id="jarvis-camera-download" style="display:none;text-decoration:none" href="#" download="jarvis-photo.png">SAVE PHOTO</a>
+        <button class="jarvis-camera-btn" id="jarvis-camera-close" type="button">CLOSE CAMERA</button>
+      </section>`;
+    document.body.appendChild(jarvisCameraModal);
+    jarvisCameraVideo = jarvisCameraModal.querySelector("#jarvis-camera-video");
+    jarvisCameraStatus = jarvisCameraModal.querySelector("#jarvis-camera-status");
+    jarvisCameraCaptureButton = jarvisCameraModal.querySelector("#jarvis-camera-capture");
+    jarvisCameraModal.querySelector("#jarvis-camera-start").addEventListener("click", startJarvisCamera);
+    jarvisCameraCaptureButton.addEventListener("click", captureJarvisPhoto);
+    jarvisCameraModal.querySelector("#jarvis-camera-close").addEventListener("click", closeJarvisCamera);
+  }
+
+  async function startJarvisCamera() {
+    ensureCameraUI();
+    jarvisCameraModal.style.display = "flex";
+    jarvisCameraStatus.textContent = "Allow camera access if your browser asks.";
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera access is not supported here. Open JARVIS over HTTPS in a supported browser.");
+      }
+      if (jarvisCameraStream) jarvisCameraStream.getTracks().forEach(track => track.stop());
+      jarvisCameraStream = await navigator.mediaDevices.getUserMedia({
+        audio: false, video: { facingMode: { ideal: "environment" } }
+      });
+      jarvisCameraVideo.srcObject = jarvisCameraStream;
+      await jarvisCameraVideo.play().catch(() => {});
+      jarvisCameraVideo.style.display = "block";
+      jarvisCameraModal.querySelector("#jarvis-camera-preview").style.display = "none";
+      jarvisCameraStatus.textContent = "Camera ready. Say “Jarvis, click a photo” or tap CLICK PHOTO.";
+    } catch (error) {
+      jarvisCameraStatus.textContent = "Could not start camera: " +
+        (error && error.message ? error.message : "permission denied") +
+        ". Tap START CAMERA and allow permission.";
+    }
+  }
+
+  function captureJarvisPhoto() {
+    ensureCameraUI();
+    if (!jarvisCameraStream || !jarvisCameraVideo || !jarvisCameraVideo.videoWidth) {
+      jarvisCameraStatus.textContent = "Camera is not ready yet. Tap START CAMERA and allow permission first.";
+      return false;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = jarvisCameraVideo.videoWidth;
+    canvas.height = jarvisCameraVideo.videoHeight;
+    canvas.getContext("2d").drawImage(jarvisCameraVideo, 0, 0, canvas.width, canvas.height);
+    const preview = jarvisCameraModal.querySelector("#jarvis-camera-preview");
+    const download = jarvisCameraModal.querySelector("#jarvis-camera-download");
+    const dataUrl = canvas.toDataURL("image/png");
+    preview.src = dataUrl;
+    preview.style.display = "block";
+    download.href = dataUrl;
+    download.download = "jarvis-photo-" + new Date().toISOString().replace(/[:.]/g, "-") + ".png";
+    download.style.display = "inline-block";
+    jarvisCameraStatus.textContent = "Photo captured! Tap SAVE PHOTO to save it to your device.";
+    return true;
+  }
+
+  function closeJarvisCamera() {
+    if (jarvisCameraStream) {
+      jarvisCameraStream.getTracks().forEach(track => track.stop());
+      jarvisCameraStream = null;
+    }
+    if (jarvisCameraVideo) jarvisCameraVideo.srcObject = null;
+    if (jarvisCameraModal) jarvisCameraModal.style.display = "none";
+  }
+
   function launcherReply(name) {
     return new Response(JSON.stringify({ ok: true, reply: `Opening ${name}.` }), {
       status: 200, headers: { "Content-Type": "application/json" }
@@ -222,6 +326,18 @@
         const body = typeof init.body === "string" ? JSON.parse(init.body) : null;
         const rawCommand = String(body?.command || "").trim();
         const command = clean(rawCommand);
+        // Camera commands are handled locally in the browser; no photo is uploaded.
+        const spokenCameraCommand = rawCommand.replace(/^\\s*(?:(?:hey|hello|hi)\\s+)?jarvis[, ]*/i, "").trim();
+        if (/^(?:open|launch|start|show|turn on)(?: the)? camera[.!?]*$/i.test(spokenCameraCommand)) {
+          ensureCameraUI();
+          startJarvisCamera();
+          return launcherReply("the camera. Allow camera permission, then tap CLICK PHOTO or say “Jarvis, click a photo”.");
+        }
+        if (/^(?:(?:please )?(?:click|take|capture|snap)(?: a| the)? photo|(?:please )?take (?:a )?picture|capture photo)[.!?]*$/i.test(spokenCameraCommand)) {
+          if (captureJarvisPhoto()) return launcherReply("Photo captured. Tap SAVE PHOTO in the camera window to save it.");
+          return launcherReply("The camera is not ready. Say “Jarvis, open camera”, allow permission, and try again.");
+        }
+
 
         // YouTube voice action: extract the requested title/topic and open its
         // YouTube results directly. Universal links may hand off to the YouTube
