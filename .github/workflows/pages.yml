@@ -21,6 +21,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate browser JavaScript
+        run: |
+          node --check docs/jarvis-web.js
+          node --check docs/jarvis-ui-patch.js
+
       - name: Build Pages site from original HUD
         run: |
           rm -rf _site
