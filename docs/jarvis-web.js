@@ -39,6 +39,51 @@
   const OPENROUTER_MODEL_SLOT = "jarvisOpenRouterModel";
   const AI_PROVIDER_SLOT = "jarvisAIProvider";
   const DEFAULT_OPENROUTER_MODEL = "openrouter/free";
+  const VOICE_NAME_SLOT = "jarvisVoiceName";
+  const VOICE_RATE_SLOT = "jarvisVoiceRate";
+  const VOICE_PITCH_SLOT = "jarvisVoicePitch";
+  const getVoiceName = () => { try { return sessionStorage.getItem(VOICE_NAME_SLOT) || "auto-male"; } catch (_) { return "auto-male"; } };
+  const getVoiceRate = () => { try { return Number(sessionStorage.getItem(VOICE_RATE_SLOT) || 0.88); } catch (_) { return 0.88; } };
+  const getVoicePitch = () => { try { return Number(sessionStorage.getItem(VOICE_PITCH_SLOT) || 0.72); } catch (_) { return 0.72; } };
+  function getEnglishVoices() {
+    if (!("speechSynthesis" in window)) return [];
+    return window.speechSynthesis.getVoices().filter(v => /^en([_-]|$)/i.test(v.lang));
+  }
+  function findJarvisVoice(preference = getVoiceName()) {
+    const voices = getEnglishVoices();
+    if (preference && preference !== "auto-male") return voices.find(v => v.name === preference) || voices[0];
+    const maleHints = /david|daniel|mark|guy|eric|roger|alex|fred|tom|male|microsoft.*(david|guy|mark|ryan)|google.*(uk english male|us english)/i;
+    return voices.find(v => maleHints.test(v.name)) || voices.find(v => /en[-_]?(US|GB|AU|IN)/i.test(v.lang)) || voices[0];
+  }
+  function applyJarvisVoice(text) {
+    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
+    const utterance = new SpeechSynthesisUtterance(String(text || ""));
+    const voice = findJarvisVoice();
+    if (voice) { utterance.voice = voice; utterance.lang = voice.lang || "en-US"; }
+    else utterance.lang = "en-US";
+    utterance.rate = Math.min(1.15, Math.max(0.65, getVoiceRate()));
+    utterance.pitch = Math.min(1.2, Math.max(0.5, getVoicePitch()));
+    utterance.volume = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    return true;
+  }
+  // The original HUD's sendCommand() calls speak(reply). Replace its browser
+  // speech function so all AI replies use the chosen JARVIS voice consistently.
+  const installJarvisVoice = () => {
+    if (typeof window.speak === "function" && !window.speak.__jarvisVoiceOverride) {
+      const voiceSpeak = function(text) { applyJarvisVoice(text); };
+      voiceSpeak.__jarvisVoiceOverride = true;
+      window.speak = voiceSpeak;
+    }
+  };
+  installJarvisVoice();
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      installJarvisVoice();
+      window.dispatchEvent(new CustomEvent("jarvis-voices-updated"));
+    };
+  }
   const getOpenRouterKey = () => {
     try { return sessionStorage.getItem(OPENROUTER_KEY_SLOT) || ""; } catch (_) { return ""; }
   };
@@ -120,6 +165,100 @@
     const warning = document.createElement("p");
     warning.textContent = "Security: keys used in a browser are not fully secret and can be exposed to someone using this device or inspecting browser traffic. Use only your own keys, set a strict usage/credit limit in the provider dashboard, do not share this browser session, and remove keys when finished.";
     Object.assign(warning.style, { margin: "0 0 14px", color: "#ffdca8", fontSize: "12px" });
+    const voiceSection = document.createElement("div");
+    Object.assign(voiceSection.style, {
+      margin: "4px 0 14px", padding: "14px", border: "1px solid #287b91",
+      borderRadius: "10px", background: "rgba(0,10,24,.72)"
+    });
+    const voiceHeading = document.createElement("h3");
+    voiceHeading.textContent = "VOICE SYSTEM // JARVIS";
+    Object.assign(voiceHeading.style, { margin: "0 0 6px", color: "#62f5ff", fontSize: "14px", letterSpacing: "1px" });
+    const voiceInfo = document.createElement("p");
+    voiceInfo.textContent = "Uses your browser/device's available English voices. The default prefers a lower-pitched voice when available; exact voice options depend on your device.";
+    Object.assign(voiceInfo.style, { margin: "0 0 10px", color: "#b6dce7", fontSize: "12px" });
+    const voiceLabel = document.createElement("label");
+    voiceLabel.textContent = "Voice";
+    Object.assign(voiceLabel.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
+    const voiceSelect = document.createElement("select");
+    voiceSelect.id = "jarvis-voice-select";
+    Object.assign(voiceSelect.style, {
+      display: "block", width: "100%", boxSizing: "border-box", padding: "12px",
+      marginBottom: "12px", borderRadius: "8px", border: "1px solid #287b91",
+      background: "#00101f", color: "#fff", font: "14px system-ui,sans-serif"
+    });
+    const populateVoices = () => {
+      const prior = getVoiceName();
+      voiceSelect.replaceChildren();
+      const auto = document.createElement("option");
+      auto.value = "auto-male";
+      auto.textContent = "AUTO — lower-pitched English voice when available";
+      voiceSelect.appendChild(auto);
+      getEnglishVoices().forEach(v => {
+        const option = document.createElement("option");
+        option.value = v.name;
+        option.textContent = v.name + " (" + v.lang + ")" + (v.default ? " — device default" : "");
+        voiceSelect.appendChild(option);
+      });
+      voiceSelect.value = Array.from(voiceSelect.options).some(o => o.value === prior) ? prior : "auto-male";
+    };
+    voiceSelect.value = getVoiceName();
+    voiceSelect.addEventListener("change", () => {
+      try { sessionStorage.setItem(VOICE_NAME_SLOT, voiceSelect.value); } catch (_) {}
+      voiceStatus.textContent = "Voice preference saved for this tab.";
+    });
+    const rateLabel = document.createElement("label");
+    rateLabel.textContent = "Speaking speed";
+    Object.assign(rateLabel.style, { display: "block", marginBottom: "4px", color: "#62f5ff" });
+    const rateInput = document.createElement("input");
+    rateInput.type = "range"; rateInput.min = "0.65"; rateInput.max = "1.05"; rateInput.step = "0.05"; rateInput.value = String(getVoiceRate());
+    rateInput.style.width = "100%";
+    const pitchLabel = document.createElement("label");
+    pitchLabel.textContent = "Voice depth (lower = deeper)";
+    Object.assign(pitchLabel.style, { display: "block", margin: "8px 0 4px", color: "#62f5ff" });
+    const pitchInput = document.createElement("input");
+    pitchInput.type = "range"; pitchInput.min = "0.5"; pitchInput.max = "1"; pitchInput.step = "0.05"; pitchInput.value = String(getVoicePitch());
+    pitchInput.style.width = "100%";
+    const voiceStatus = document.createElement("p");
+    voiceStatus.setAttribute("role", "status");
+    voiceStatus.textContent = ("speechSynthesis" in window) ? "Browser speech is available. Test the selected voice below." : "This browser does not support speech synthesis.";
+    Object.assign(voiceStatus.style, { margin: "8px 0 10px", color: "#baf7ff", fontSize: "12px" });
+    const voiceButtonRow = document.createElement("div");
+    Object.assign(voiceButtonRow.style, { display: "flex", gap: "8px", flexWrap: "wrap" });
+    const voiceTest = makeVoiceButton("TEST JARVIS VOICE");
+    const voiceStop = makeVoiceButton("STOP SPEAKING");
+    function makeVoiceButton(text) {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = text;
+      Object.assign(b.style, {
+        flex: "1 1 130px", minHeight: "42px", padding: "10px", borderRadius: "8px",
+        border: "1px solid #00d9ff", background: "rgba(0,0,0,.35)", color: "#fff",
+        font: "bold 12px system-ui,sans-serif", cursor: "pointer"
+      });
+      return b;
+    }
+    const saveVoiceSliders = () => {
+      try { sessionStorage.setItem(VOICE_RATE_SLOT, rateInput.value); sessionStorage.setItem(VOICE_PITCH_SLOT, pitchInput.value); } catch (_) {}
+      voiceStatus.textContent = "Voice settings saved for this tab.";
+    };
+    rateInput.addEventListener("input", saveVoiceSliders);
+    pitchInput.addEventListener("input", saveVoiceSliders);
+    voiceTest.addEventListener("click", () => {
+      if (!applyJarvisVoice("Hello. I am JARVIS. Voice systems online. How may I assist you?")) {
+        voiceStatus.textContent = "Speech is unavailable in this browser. Try Safari or Chrome with sound enabled.";
+      } else {
+        const selected = findJarvisVoice();
+        voiceStatus.textContent = "Speaking with " + (selected ? selected.name : "the device default voice") + ". If it does not sound deep enough, select another available voice.";
+      }
+    });
+    voiceStop.addEventListener("click", () => {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      voiceStatus.textContent = "Speech stopped.";
+    });
+    voiceButtonRow.append(voiceTest, voiceStop);
+    voiceSection.append(voiceHeading, voiceInfo, voiceLabel, voiceSelect, rateLabel, rateInput, pitchLabel, pitchInput, voiceStatus, voiceButtonRow);
+    window.addEventListener("jarvis-voices-updated", populateVoices);
+    if ("speechSynthesis" in window) setTimeout(populateVoices, 250);
+
     const providerLabel = document.createElement("label");
     providerLabel.textContent = "AI provider";
     Object.assign(providerLabel.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
@@ -409,7 +548,7 @@
       showReply("Personal Gemini key removed. JARVIS will use its configured backend if available.");
     });
     row.append(save, remove, close);
-    card.append(heading, intro, warning, providerLabel, providerSelect, label, input, modelLabel, modelSelect, openRouterSection, status, row);
+    card.append(heading, intro, warning, voiceSection, providerLabel, providerSelect, label, input, modelLabel, modelSelect, openRouterSection, status, row);
     modal.appendChild(card);
     document.body.append(button, modal);
   }
