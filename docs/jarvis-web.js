@@ -45,15 +45,32 @@
   const getVoiceName = () => { try { return sessionStorage.getItem(VOICE_NAME_SLOT) || "auto-male"; } catch (_) { return "auto-male"; } };
   const getVoiceRate = () => { try { return Number(sessionStorage.getItem(VOICE_RATE_SLOT) || 0.88); } catch (_) { return 0.88; } };
   const getVoicePitch = () => { try { return Number(sessionStorage.getItem(VOICE_PITCH_SLOT) || 0.72); } catch (_) { return 0.72; } };
+  const feminineVoiceHints = /female|woman|samantha|victoria|karen|susan|zira|hazel|sara(h)?|aria|jenny|libby|natasha|moira|tessa|fiona|ava|allison|joanna|kendra|kimberly|salli|ivy|emma|olivia|serena|monica|luciana|kate|amelie|helena|linda|mary|lisa|nicole|catherine|veena|priya|lekha/i;
+  const masculineVoiceHints = /david|daniel|mark|guy|eric|roger|alex|fred|tom|male|microsoft.*(david|guy|mark|ryan)|google.*(uk english male|us english)|aaron|arthur|bruce|george|james|lee|liam|matthew|michael|oliver|paul|rishi|ryan|thomas/i;
   function getEnglishVoices() {
     if (!("speechSynthesis" in window)) return [];
-    return window.speechSynthesis.getVoices().filter(v => /^en([_-]|$)/i.test(v.lang));
+    const voices = window.speechSynthesis.getVoices().filter(v => /^en([_-]|$)/i.test(v.lang));
+    const likelyMasculine = voices.filter(v => masculineVoiceHints.test(v.name) && !feminineVoiceHints.test(v.name));
+    const notExplicitlyFeminine = voices.filter(v => !feminineVoiceHints.test(v.name));
+    return likelyMasculine.length ? likelyMasculine : notExplicitlyFeminine;
+  }
+  function getBaseJarvisVoice(preference = getVoiceName()) {
+    const voices = getEnglishVoices();
+    if (preference && preference.startsWith("profile|")) {
+      const baseName = preference.split("|")[1];
+      return voices.find(v => v.name === baseName) || voices[0];
+    }
+    if (preference && preference !== "auto-male") return voices.find(v => v.name === preference) || voices[0];
+    return voices.find(v => masculineVoiceHints.test(v.name)) || voices.find(v => /en[-_]?(US|GB|AU|IN)/i.test(v.lang)) || voices[0];
   }
   function findJarvisVoice(preference = getVoiceName()) {
-    const voices = getEnglishVoices();
-    if (preference && preference !== "auto-male") return voices.find(v => v.name === preference) || voices[0];
-    const maleHints = /david|daniel|mark|guy|eric|roger|alex|fred|tom|male|microsoft.*(david|guy|mark|ryan)|google.*(uk english male|us english)/i;
-    return voices.find(v => maleHints.test(v.name)) || voices.find(v => /en[-_]?(US|GB|AU|IN)/i.test(v.lang)) || voices[0];
+    return getBaseJarvisVoice(preference);
+  }
+  function getSelectedVoiceProfile() {
+    const selected = getVoiceName();
+    if (!selected.startsWith("profile|")) return null;
+    const parts = selected.split("|");
+    return { pitch: Number(parts[2]), rate: Number(parts[3]) };
   }
   function applyJarvisVoice(text) {
     if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
@@ -61,8 +78,9 @@
     const voice = findJarvisVoice();
     if (voice) { utterance.voice = voice; utterance.lang = voice.lang || "en-US"; }
     else utterance.lang = "en-US";
-    utterance.rate = Math.min(1.15, Math.max(0.65, getVoiceRate()));
-    utterance.pitch = Math.min(1.2, Math.max(0.5, getVoicePitch()));
+    const profile = getSelectedVoiceProfile();
+    utterance.rate = Math.min(1.15, Math.max(0.65, profile ? profile.rate : getVoiceRate()));
+    utterance.pitch = Math.min(1.2, Math.max(0.5, profile ? profile.pitch : getVoicePitch()));
     utterance.volume = 1;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
@@ -85,10 +103,16 @@
     };
   }
   const getOpenRouterKey = () => {
-    try { return sessionStorage.getItem(OPENROUTER_KEY_SLOT) || ""; } catch (_) { return ""; }
+    try {
+      const saved = localStorage.getItem(OPENROUTER_KEY_SLOT);
+      if (saved) return saved;
+      const oldSessionKey = sessionStorage.getItem(OPENROUTER_KEY_SLOT);
+      if (oldSessionKey) { localStorage.setItem(OPENROUTER_KEY_SLOT, oldSessionKey); return oldSessionKey; }
+      return "";
+    } catch (_) { try { return sessionStorage.getItem(OPENROUTER_KEY_SLOT) || ""; } catch (_) { return ""; } }
   };
   const getOpenRouterModel = () => {
-    try { return sessionStorage.getItem(OPENROUTER_MODEL_SLOT) || DEFAULT_OPENROUTER_MODEL; } catch (_) { return DEFAULT_OPENROUTER_MODEL; }
+    try { return localStorage.getItem(OPENROUTER_MODEL_SLOT) || sessionStorage.getItem(OPENROUTER_MODEL_SLOT) || DEFAULT_OPENROUTER_MODEL; } catch (_) { return DEFAULT_OPENROUTER_MODEL; }
   };
   const getAIProvider = () => {
     try { return sessionStorage.getItem(AI_PROVIDER_SLOT) || "auto"; } catch (_) { return "auto"; }
@@ -160,7 +184,7 @@
     heading.textContent = "JARVIS SETTINGS";
     Object.assign(heading.style, { margin: "0 0 8px", color: "#62f5ff", fontSize: "19px", letterSpacing: "2px" });
     const intro = document.createElement("p");
-    intro.textContent = "Choose AUTO, OpenRouter, personal Gemini, or the hosted JARVIS backend. Personal keys are kept in this browser tab's session storage and sent directly to the selected AI provider, not to the JARVIS server.";
+    intro.textContent = "Choose AUTO, OpenRouter, personal Gemini, or the hosted JARVIS backend. Your OpenRouter key is saved in this browser on this device and sent directly to OpenRouter, not to the JARVIS server.";
     Object.assign(intro.style, { margin: "0 0 12px", color: "#b6dce7" });
     const warning = document.createElement("p");
     warning.textContent = "Security: keys used in a browser are not fully secret and can be exposed to someone using this device or inspecting browser traffic. Use only your own keys, set a strict usage/credit limit in the provider dashboard, do not share this browser session, and remove keys when finished.";
@@ -174,7 +198,7 @@
     voiceHeading.textContent = "VOICE SYSTEM // JARVIS";
     Object.assign(voiceHeading.style, { margin: "0 0 6px", color: "#62f5ff", fontSize: "14px", letterSpacing: "1px" });
     const voiceInfo = document.createElement("p");
-    voiceInfo.textContent = "Uses your browser/device's available English voices. The default prefers a lower-pitched voice when available; exact voice options depend on your device.";
+    voiceInfo.textContent = "Choose from 25 JARVIS deep-voice profiles. These use your device's best available English voice with different lower-pitch/speed settings; the underlying natural voice still depends on your device.";
     Object.assign(voiceInfo.style, { margin: "0 0 10px", color: "#b6dce7", fontSize: "12px" });
     const voiceLabel = document.createElement("label");
     voiceLabel.textContent = "Voice";
@@ -193,13 +217,28 @@
       auto.value = "auto-male";
       auto.textContent = "AUTO — lower-pitched English voice when available";
       voiceSelect.appendChild(auto);
-      getEnglishVoices().forEach(v => {
+      const baseVoices = getEnglishVoices();
+      const profiles = [
+        [0.50,0.78],[0.50,0.84],[0.50,0.90],[0.50,0.96],[0.55,0.78],
+        [0.55,0.84],[0.55,0.90],[0.55,0.96],[0.60,0.78],[0.60,0.84],
+        [0.60,0.90],[0.60,0.96],[0.65,0.78],[0.65,0.84],[0.65,0.90],
+        [0.65,0.96],[0.70,0.78],[0.70,0.84],[0.70,0.90],[0.70,0.96],
+        [0.75,0.78],[0.75,0.84],[0.75,0.90],[0.80,0.84],[0.80,0.90]
+      ];
+      const base = baseVoices.find(v => masculineVoiceHints.test(v.name)) || baseVoices[0];
+      if (base) profiles.forEach(([pitch, rate], i) => {
+        const option = document.createElement("option");
+        option.value = "profile|" + base.name + "|" + pitch + "|" + rate;
+        option.textContent = "JARVIS Deep " + String(i + 1).padStart(2, "0") + " — " + base.name + " (depth " + pitch.toFixed(2) + ")";
+        voiceSelect.appendChild(option);
+      });
+      baseVoices.forEach(v => {
         const option = document.createElement("option");
         option.value = v.name;
         option.textContent = v.name + " (" + v.lang + ")" + (v.default ? " — device default" : "");
         voiceSelect.appendChild(option);
       });
-      voiceSelect.value = Array.from(voiceSelect.options).some(o => o.value === prior) ? prior : "auto-male";
+      voiceSelect.value = Array.from(voiceSelect.options).some(o => o.value === prior) ? prior : (base ? "profile|" + base.name + "|0.60|0.84" : "auto-male");
     };
     voiceSelect.value = getVoiceName();
     voiceSelect.addEventListener("change", () => {
@@ -362,7 +401,7 @@
     const openRouterStatus = document.createElement("p");
     openRouterStatus.id = "jarvis-openrouter-status";
     openRouterStatus.setAttribute("role", "status");
-    openRouterStatus.textContent = getOpenRouterKey() ? "An OpenRouter key is saved in this tab." : "No OpenRouter key saved in this tab.";
+    openRouterStatus.textContent = getOpenRouterKey() ? "An OpenRouter key is saved on this device in this browser." : "No OpenRouter key saved in this browser.";
     Object.assign(openRouterStatus.style, { margin: "0 0 10px", color: "#baf7ff", fontSize: "12px", overflowWrap: "anywhere" });
     const openRouterButtons = document.createElement("div");
     Object.assign(openRouterButtons.style, { display: "flex", flexWrap: "wrap", gap: "8px" });
@@ -415,6 +454,8 @@
         if (!response.ok) throw new Error(data?.error?.message || ("OpenRouter returned HTTP " + response.status));
         const answer = data?.choices?.[0]?.message?.content;
         if (!answer) throw new Error("OpenRouter returned no text. Check the model ID and account limits.");
+        localStorage.setItem(OPENROUTER_KEY_SLOT, key);
+        localStorage.setItem(OPENROUTER_MODEL_SLOT, model);
         sessionStorage.setItem(OPENROUTER_KEY_SLOT, key);
         sessionStorage.setItem(OPENROUTER_MODEL_SLOT, model);
         sessionStorage.setItem(AI_PROVIDER_SLOT, "openrouter");
@@ -432,16 +473,16 @@
       }
     });
     openRouterRemove.addEventListener("click", () => {
-      try { sessionStorage.removeItem(OPENROUTER_KEY_SLOT); sessionStorage.removeItem(OPENROUTER_MODEL_SLOT); } catch (_) {}
+      try { localStorage.removeItem(OPENROUTER_KEY_SLOT); localStorage.removeItem(OPENROUTER_MODEL_SLOT); sessionStorage.removeItem(OPENROUTER_KEY_SLOT); sessionStorage.removeItem(OPENROUTER_MODEL_SLOT); } catch (_) {}
       openRouterKeyInput.value = "";
       openRouterModelInput.value = DEFAULT_OPENROUTER_MODEL;
-      openRouterStatus.textContent = "OpenRouter key removed from this browser tab.";
+      openRouterStatus.textContent = "OpenRouter key removed from this browser.";
       openRouterStatus.style.color = "#baf7ff";
       if (providerSelect.value === "openrouter") {
         providerSelect.value = getPersonalKey() ? "gemini" : "backend";
         try { sessionStorage.setItem(AI_PROVIDER_SLOT, providerSelect.value); } catch (_) {}
       }
-      showReply("OpenRouter key removed from this tab.");
+      showReply("OpenRouter key removed from this browser.");
     });
     openRouterButtons.append(openRouterTest, openRouterRemove);
     openRouterSection.append(openRouterHeading, openRouterInfo, openRouterKeyLabel, openRouterKeyInput, openRouterModelLabel, openRouterModelInput, openRouterStatus, openRouterButtons);
