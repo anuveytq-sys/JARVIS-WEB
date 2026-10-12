@@ -9,7 +9,7 @@ const ALLOWED_ORIGINS = new Set([
 ].filter(Boolean));
 const MAX_REQUESTS_PER_MINUTE = 20;
 const requestCounts = new Map();
-const JARVIS_MODEL = "gemini-3.8-flash";
+const JARVIS_MODEL = "gemini-2.5-flash";
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "16kb" }));
@@ -67,7 +67,7 @@ app.post("/api/command", async (req, res) => {
     return res.json({ ok: true, reply: response.text || "I couldn't generate a response. Please try again.", model: JARVIS_MODEL });
   } catch (error) {
     console.error("[JARVIS AI] Request failed:", error?.message || error);
-    return res.status(502).json({ ok: false, reply: "My AI core is temporarily unavailable. Please try again later." });
+    return res.status(502).json({ ok: false, reply: "My Gemini 2.5 Flash core is temporarily unavailable. Please check the backend Gemini key/model access and try again." });
   }
 });
 
@@ -77,8 +77,9 @@ app.get("/api/timers", (_req, res) => {
 
 app.post("/api/voice", (_req, res) => {
   res.json({ ok: true, reply: "Voice recognition runs in your browser when supported." });
+
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`JARVIS web AI backend listening on port ${PORT}`);
+  console.log(`JARVIS web AI backend listening on port ${PORT} using ${JARVIS_MODEL}`);
 });
