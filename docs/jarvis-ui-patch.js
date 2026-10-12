@@ -3,7 +3,7 @@
   const style = document.createElement("style");
   style.id = "jarvis-ui-patch-style";
   style.textContent = `
-    /* Small status/result box: left side, between the NEURAL MATRIX and VOICE CHANNEL panels. */
+    /* Compact, scrollable answer box: leaves more of the centre core visible. */
     #jarvis-web-bridge-panel {
       position: fixed !important;
       left: 24px !important;
@@ -11,15 +11,19 @@
       top: 48% !important;
       bottom: auto !important;
       transform: translateY(-50%) !important;
-      width: 190px !important;
-      min-height: 72px !important;
-      max-height: 150px !important;
-      padding: 12px 13px !important;
+      width: 158px !important;
+      min-height: 60px !important;
+      max-height: 128px !important;
+      padding: 10px 11px !important;
       box-sizing: border-box !important;
+      overflow-x: hidden !important;
       overflow-y: auto !important;
-      pointer-events: none !important;
+      overscroll-behavior: contain !important;
+      -webkit-overflow-scrolling: touch !important;
+      touch-action: pan-y !important;
+      pointer-events: auto !important;
       z-index: 2147483630 !important;
-      font-size: 10px !important;
+      font-size: 9px !important;
       line-height: 1.45 !important;
       border-radius: 8px !important;
     }
@@ -44,11 +48,11 @@
       #jarvis-web-bridge-panel {
         left: 12px !important;
         top: 48% !important;
-        width: 178px !important;
-        min-height: 68px !important;
-        max-height: 130px !important;
-        padding: 10px 11px !important;
-        font-size: 9px !important;
+        width: 150px !important;
+        min-height: 58px !important;
+        max-height: 112px !important;
+        padding: 9px 10px !important;
+        font-size: 8.5px !important;
       }
       #commandForm.command-area {
         bottom: 30px !important;
