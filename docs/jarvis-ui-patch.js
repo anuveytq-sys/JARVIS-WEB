@@ -236,4 +236,228 @@
     }
     return nativeFetch(input, init);
   };
+
+  // Optional hands-free wake word. This is isolated from the Settings UI and
+  // uses the existing command form for normal commands.
+  (() => {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition || document.getElementById("jarvis-wake-word-toggle")) return;
+
+    let wakeRecognition = null;
+    let commandRecognition = null;
+    let wakeEnabled = false;
+    let commandInProgress = false;
+    let stoppedByUser = false;
+    let restartTimer = 0;
+
+    const wakeStyle = document.createElement("style");
+    wakeStyle.textContent = `
+      #jarvis-wake-word-toggle {
+        position: fixed; right: 12px; bottom: 84px; z-index: 2147483642;
+        border: 1px solid #00d9ff; border-radius: 8px; padding: 8px 10px;
+        background: rgba(2,18,37,.96); color: #baf7ff;
+        font: 700 10px/1.3 system-ui,sans-serif; letter-spacing: .4px;
+        box-shadow: 0 0 12px rgba(0,217,255,.18); touch-action: manipulation;
+      }
+      body.jarvis-voice-stopped #jarvis-web-bridge-panel { display: none !important; }
+      @media (max-width: 767px) {
+        #jarvis-wake-word-toggle { right: 8px; bottom: 82px; font-size: 9px; }
+      }
+    `;
+    (document.head || document.documentElement).appendChild(wakeStyle);
+
+    const toggle = document.createElement("button");
+    toggle.id = "jarvis-wake-word-toggle";
+    toggle.type = "button";
+    toggle.textContent = "ENABLE WAKE WORD";
+    toggle.setAttribute("aria-label", "Enable JARVIS wake word listening");
+    document.body.appendChild(toggle);
+
+    function setStatus(text) {
+      toggle.textContent = text;
+      toggle.setAttribute("aria-label", text);
+    }
+
+    function resetHud() {
+      document.body.classList.remove("listening", "thinking");
+      const ids = [
+        ["coreState", "STANDBY"],
+        ["voiceStatus", "READY"],
+        ["systemStatus", "SYSTEM ONLINE"]
+      ];
+      for (const [id, value] of ids) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+    }
+
+    function cancelCurrentActivity() {
+      stoppedByUser = true;
+      commandInProgress = false;
+      clearTimeout(restartTimer);
+      try { commandRecognition?.abort(); } catch (_) {}
+      try { wakeRecognition?.abort(); } catch (_) {}
+      try { window.speechSynthesis?.cancel(); } catch (_) {}
+      try { window.__jarvisVoiceStop = true; } catch (_) {}
+      document.body.classList.add("jarvis-voice-stopped");
+      const input = document.getElementById("commandInput");
+      if (input) input.value = "";
+      resetHud();
+      setStatus(wakeEnabled ? "WAKE WORD: ON" : "WAKE WORD: OFF");
+      if (wakeEnabled) scheduleWakeRestart(900);
+    }
+
+    function scheduleWakeRestart(delay = 700) {
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(() => {
+        if (wakeEnabled && !commandInProgress) startWakeRecognition();
+      }, delay);
+    }
+
+    function startCommandCapture() {
+      commandInProgress = true;
+      stoppedByUser = false;
+      document.body.classList.remove("jarvis-voice-stopped");
+      try { window.__jarvisVoiceStop = false; } catch (_) {}
+      try { wakeRecognition?.abort(); } catch (_) {}
+
+      commandRecognition = new Recognition();
+      commandRecognition.lang = "en-US";
+      commandRecognition.continuous = false;
+      commandRecognition.interimResults = false;
+      commandRecognition.maxAlternatives = 1;
+
+      commandRecognition.onstart = () => {
+        const core = document.getElementById("coreState");
+        const status = document.getElementById("voiceStatus");
+        const system = document.getElementById("systemStatus");
+        document.body.classList.add("listening");
+        if (core) core.textContent = "LISTENING";
+        if (status) status.textContent = "LISTENING";
+        if (system) system.textContent = "VOICE ACTIVE";
+        setStatus("LISTENING FOR COMMAND");
+      };
+
+      commandRecognition.onresult = event => {
+        const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
+        const normalized = transcript.toLowerCase().replace(/[.!?,]/g, "").trim();
+        if (/^(stop|stop jarvis|cancel|cancel task|stop everything)$/.test(normalized)) {
+          cancelCurrentActivity();
+          return;
+        }
+        if (!transcript) {
+          commandInProgress = false;
+          resetHud();
+          scheduleWakeRestart();
+          return;
+        }
+
+        const input = document.getElementById("commandInput");
+        const form = document.getElementById("commandForm");
+        if (!input || !form) {
+          commandInProgress = false;
+          setStatus("COMMAND BOX NOT FOUND");
+          scheduleWakeRestart();
+          return;
+        }
+        input.value = transcript;
+        // Submit through the original JARVIS command handler, preserving existing behavior.
+        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        commandInProgress = false;
+        setStatus("COMMAND SENT");
+        scheduleWakeRestart(1800);
+      };
+
+      commandRecognition.onerror = event => {
+        commandInProgress = false;
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setStatus("MIC PERMISSION NEEDED");
+          wakeEnabled = false;
+          return;
+        }
+        scheduleWakeRestart(900);
+      };
+      commandRecognition.onend = () => {
+        if (commandInProgress) {
+          commandInProgress = false;
+          resetHud();
+          scheduleWakeRestart(700);
+        }
+      };
+
+      try { commandRecognition.start(); }
+      catch (_) {
+        commandInProgress = false;
+        scheduleWakeRestart(900);
+      }
+    }
+
+    function startWakeRecognition() {
+      if (!wakeEnabled || commandInProgress) return;
+      try { wakeRecognition?.abort(); } catch (_) {}
+      wakeRecognition = new Recognition();
+      wakeRecognition.lang = "en-US";
+      wakeRecognition.continuous = true;
+      wakeRecognition.interimResults = true;
+      wakeRecognition.maxAlternatives = 1;
+
+      wakeRecognition.onresult = event => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const phrase = String(event.results[i][0]?.transcript || "")
+            .toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+          if (/\b(hello|hi) jarvis\b/.test(phrase)) {
+            startCommandCapture();
+            return;
+          }
+        }
+      };
+      wakeRecognition.onerror = event => {
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          wakeEnabled = false;
+          setStatus("MIC PERMISSION NEEDED");
+        } else if (wakeEnabled && !commandInProgress) {
+          scheduleWakeRestart(1200);
+        }
+      };
+      wakeRecognition.onend = () => {
+        if (wakeEnabled && !commandInProgress) scheduleWakeRestart(500);
+      };
+      try {
+        wakeRecognition.start();
+        setStatus("WAKE WORD: ON");
+      } catch (_) {
+        setStatus("TAP TO RETRY WAKE WORD");
+      }
+    }
+
+    toggle.addEventListener("click", () => {
+      if (wakeEnabled) {
+        wakeEnabled = false;
+        try { wakeRecognition?.abort(); } catch (_) {}
+        try { commandRecognition?.abort(); } catch (_) {}
+        setStatus("ENABLE WAKE WORD");
+        return;
+      }
+      if (!Recognition) {
+        setStatus("VOICE NOT SUPPORTED");
+        return;
+      }
+      wakeEnabled = true;
+      stoppedByUser = false;
+      document.body.classList.remove("jarvis-voice-stopped");
+      try { window.__jarvisVoiceStop = false; } catch (_) {}
+      startWakeRecognition();
+    });
+
+    // Keep a spoken "stop" effective even if an AI reply was still pending.
+    const originalSpeak = window.speechSynthesis?.speak?.bind(window.speechSynthesis);
+    if (originalSpeak && !window.speechSynthesis.__jarvisStopGuard) {
+      window.speechSynthesis.speak = function(utterance) {
+        if (window.__jarvisVoiceStop) return;
+        return originalSpeak(utterance);
+      };
+      window.speechSynthesis.__jarvisStopGuard = true;
+    }
+  })();
+
 })();
