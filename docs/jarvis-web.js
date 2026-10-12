@@ -276,6 +276,7 @@
       return b;
     }
     const saveVoiceSliders = () => {
+      if (voiceSelect.value.startsWith("profile|")) voiceSelect.value = "auto-male";
       try { sessionStorage.setItem(VOICE_RATE_SLOT, rateInput.value); sessionStorage.setItem(VOICE_PITCH_SLOT, pitchInput.value); } catch (_) {}
       voiceStatus.textContent = "Voice settings saved for this tab.";
     };
