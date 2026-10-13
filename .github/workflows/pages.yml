@@ -51,7 +51,7 @@ jobs:
           if style not in s:
               s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-20261013a"></script>\n<script src="./jarvis-superpowers.js?v=voice-multiaction-20261013a"></script>\n'
+          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-20261013a"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n'
           if injection not in s:
               s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
