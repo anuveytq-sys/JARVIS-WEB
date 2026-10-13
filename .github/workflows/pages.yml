@@ -39,10 +39,15 @@ jobs:
           cp docs/jarvis-camera-fix.js _site/jarvis-camera-fix.js
           cp docs/jarvis-popup-fix.js _site/jarvis-popup-fix.js
           cp docs/jarvis-superpowers.js _site/jarvis-superpowers.js
+          cp docs/jarvis-command-center.css _site/jarvis-command-center.css
           python3 - <<'PY'
           from pathlib import Path
           p = Path('_site/index.html')
           s = p.read_text(encoding='utf-8')
+          head_marker = '</head>'
+          style = '<link rel="stylesheet" href="./jarvis-command-center.css?v=ultra-compact-20261013">\n'
+          if style not in s:
+              s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
           injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-superpowers.js?v=superpowers-v1-20261013"></script>\n'
           if injection not in s:
