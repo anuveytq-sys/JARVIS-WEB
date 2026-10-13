@@ -1,8 +1,8 @@
 /* JARVIS Focus Detector — browser-only, on-device object detection. */
 (() => {
   "use strict";
-  let modal, video, canvas, ctx, stream, model, running = false, frame = 0, loading = false;
-  const ALLOWED = new Set(["person","cell phone","laptop","keyboard","mouse","book","bottle","cup","chair","couch","tv","remote","backpack","handbag","suitcase","umbrella","clock","plant","potted plant","cat","dog","bird","car","bicycle","motorcycle","bus","truck","traffic light","stop sign","banana","apple","orange","sports ball","scissors","toothbrush"]);
+  let modal, video, canvas, ctx, stream, model, running = false, frame = 0, loading = false, previousBoxes = [];
+  const ALLOWED = new Set(["person","cell phone","laptop","keyboard","mouse","book","bottle","cup","chair","couch","tv","remote","backpack","handbag","suitcase","umbrella","clock","plant","potted plant","cat","dog","bird","car","bicycle","motorcycle","bus","truck","traffic light","stop sign","banana","apple","orange","sports ball","scissors"]);
   const LABELS = {"cell phone":"PHONE","laptop":"LAPTOP","potted plant":"PLANT","traffic light":"TRAFFIC LIGHT","sports ball":"BALL","person":"PERSON","bottle":"BOTTLE","cup":"CUP","book":"BOOK","chair":"CHAIR","cat":"CAT","dog":"DOG","car":"CAR","bicycle":"BICYCLE","backpack":"BACKPACK","keyboard":"KEYBOARD","mouse":"MOUSE","tv":"SCREEN","bird":"BIRD","apple":"APPLE","banana":"BANANA"};
   function build() {
     if (modal) return;
@@ -19,7 +19,7 @@
     `;
     document.head.appendChild(style);
     modal=document.createElement("div"); modal.id="jarvis-focus-detector";
-    modal.innerHTML='<section id="jarvis-focus-card" role="dialog" aria-modal="true" aria-label="JARVIS object detector"><h2>JARVIS // FOCUS DETECTOR</h2><p style="font-size:12px;color:#9bcbd8;margin:0 0 10px">Highlights selected, clearly visible objects only. Detection runs in this browser; camera access requires your permission.</p><div id="jarvis-focus-stage"><video id="jarvis-focus-video" autoplay playsinline muted></video><canvas id="jarvis-focus-overlay"></canvas></div><div id="jarvis-focus-status" role="status">Ready. Tap START DETECTOR to allow camera access.</div><button class="jarvis-focus-btn" id="jarvis-focus-start">START DETECTOR</button><button class="jarvis-focus-btn" id="jarvis-focus-close">CLOSE</button></section>';
+    modal.innerHTML='<section id="jarvis-focus-card" role="dialog" aria-modal="true" aria-label="JARVIS object detector"><h2>JARVIS // FOCUS DETECTOR</h2><p style="font-size:12px;color:#9bcbd8;margin:0 0 10px">Recognises supported COCO object categories only. Small items such as pens and chewing gum are not supported reliably; camera access requires your permission.</p><div id="jarvis-focus-stage"><video id="jarvis-focus-video" autoplay playsinline muted></video><canvas id="jarvis-focus-overlay"></canvas></div><div id="jarvis-focus-status" role="status">Ready. Tap START DETECTOR to allow camera access.</div><button class="jarvis-focus-btn" id="jarvis-focus-start">START DETECTOR</button><button class="jarvis-focus-btn" id="jarvis-focus-close">CLOSE</button></section>';
     document.body.appendChild(modal);
     video=modal.querySelector("#jarvis-focus-video"); canvas=modal.querySelector("#jarvis-focus-overlay"); ctx=canvas.getContext("2d");
     modal.querySelector("#jarvis-focus-start").addEventListener("click", start);
@@ -55,7 +55,20 @@
         const w=video.videoWidth,h=video.videoHeight;
         if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
         ctx.clearRect(0,0,w,h);
-        const chosen=predictions.filter(p=>ALLOWED.has(p.class)&&p.score>=0.62)
+        const candidates=predictions.filter(p=>ALLOWED.has(p.class)&&p.score>=0.76);
+        const overlap=(a,b)=>{
+          const [ax,ay,aw,ah]=a,[bx,by,bw,bh]=b;
+          const ix=Math.max(0,Math.min(ax+aw,bx+bw)-Math.max(ax,bx));
+          const iy=Math.max(0,Math.min(ay+ah,by+bh)-Math.max(ay,by));
+          const inter=ix*iy, union=aw*ah+bw*bh-inter;
+          return union>0?inter/union:0;
+        };
+        const tracked=candidates.map(p=>{
+          const old=previousBoxes.find(q=>q.class===p.class&&overlap(q.bbox,p.bbox)>=0.25);
+          return {...p,streak:old?old.streak+1:1};
+        });
+        previousBoxes=tracked.map(p=>({class:p.class,bbox:p.bbox,streak:p.streak}));
+        const chosen=tracked.filter(p=>p.streak>=3)
           .sort((a,b)=>b.score-a.score).slice(0,3);
         for(const p of chosen){
           const [x,y,bw,bh]=p.bbox; const label=LABELS[p.class]||p.class.toUpperCase();
@@ -64,12 +77,12 @@
           const text=label+" "+Math.round(p.score*100)+"%";const th=Math.max(24,w/28);const tw=ctx.measureText(text).width+16;
           const ly=Math.max(0,y-th);ctx.fillStyle="rgba(0,18,34,.92)";ctx.fillRect(x,ly,tw,th);ctx.fillStyle="#9ffaff";ctx.fillText(text,x+8,ly+th*.69);
         }
-        status(chosen.length?("TRACKING "+chosen.length+" FOCUSED OBJECT"+(chosen.length>1?"S":"")+" • "+chosen.map(p=>LABELS[p.class]||p.class.toUpperCase()).join(", ")):"Scanning… keep one supported object clearly in view.");
+        status(chosen.length?("TRACKING "+chosen.length+" STABLE OBJECT"+(chosen.length>1?"S":"")+" • "+chosen.map(p=>(LABELS[p.class]||p.class.toUpperCase())+" "+Math.round(p.score*100)+"%").join(", ")):"Scanning… hold a supported object steady. Results appear after 3 consistent frames; pens and chewing gum are not supported categories.");
       }catch(e){status("Detection paused briefly; retrying…");}
     }
     if(running) requestAnimationFrame(detectLoop);
   }
-  function close(){running=false;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(video)video.srcObject=null;if(modal)modal.style.display="none";}
+  function close(){running=false;previousBoxes=[];if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(video)video.srcObject=null;if(modal)modal.style.display="none";}
   function open(){build();modal.style.display="flex";if(!stream)start();}
   window.JARVISDetector={open,start,close};
   document.addEventListener("submit",e=>{
