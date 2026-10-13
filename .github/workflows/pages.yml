@@ -30,6 +30,7 @@ jobs:
           node --check docs/jarvis-superpowers.js
           node --check docs/jarvis-focus-detector.js
           node --check docs/jarvis-velve.js
+          node --check docs/jarvis-velve-fix.js
 
       - name: Build Pages site from original HUD
         run: |
@@ -45,6 +46,7 @@ jobs:
           cp docs/jarvis-command-center.css _site/jarvis-command-center.css
           cp docs/jarvis-velve.css _site/jarvis-velve.css
           cp docs/jarvis-velve.js _site/jarvis-velve.js
+          cp docs/jarvis-velve-fix.js _site/jarvis-velve-fix.js
           python3 - <<'PY'
           from pathlib import Path
           p = Path('_site/index.html')
@@ -54,9 +56,11 @@ jobs:
           if './jarvis-velve.css?v=velve-20261013a' not in s:
               s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261013b"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n<script src="./jarvis-velve.js?v=velve-20261013a"></script>\n'
-          if './jarvis-velve.js?v=velve-20261013a' not in s:
+          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261013b"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n<script src="./jarvis-velve.js?v=velve-20261013b"></script>\n<script src="./jarvis-velve-fix.js?v=velve-launch-fix-20261013a"></script>\n'
+          if './jarvis-velve.js?v=velve-' not in s:
               s = s.replace(marker, injection + marker, 1)
+          elif './jarvis-velve-fix.js?v=velve-launch-fix-20261013a' not in s:
+              s = s.replace(marker, '<script src="./jarvis-velve-fix.js?v=velve-launch-fix-20261013a"></script>\n' + marker, 1)
           p.write_text(s, encoding='utf-8')
           PY
           touch _site/.nojekyll
