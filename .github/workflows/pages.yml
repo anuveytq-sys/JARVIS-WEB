@@ -29,6 +29,7 @@ jobs:
           node --check docs/jarvis-popup-fix.js
           node --check docs/jarvis-superpowers.js
           node --check docs/jarvis-focus-detector.js
+          node --check docs/jarvis-velve.js
 
       - name: Build Pages site from original HUD
         run: |
@@ -42,17 +43,19 @@ jobs:
           cp docs/jarvis-superpowers.js _site/jarvis-superpowers.js
           cp docs/jarvis-focus-detector.js _site/jarvis-focus-detector.js
           cp docs/jarvis-command-center.css _site/jarvis-command-center.css
+          cp docs/jarvis-velve.css _site/jarvis-velve.css
+          cp docs/jarvis-velve.js _site/jarvis-velve.js
           python3 - <<'PY'
           from pathlib import Path
           p = Path('_site/index.html')
           s = p.read_text(encoding='utf-8')
           head_marker = '</head>'
-          style = '<link rel="stylesheet" href="./jarvis-command-center.css?v=wakeword-match-20261013b">\n'
-          if style not in s:
+          style = '<link rel="stylesheet" href="./jarvis-command-center.css?v=wakeword-match-20261013b">\n<link rel="stylesheet" href="./jarvis-velve.css?v=velve-20261013a">\n'
+          if './jarvis-velve.css?v=velve-20261013a' not in s:
               s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261013b"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n'
-          if injection not in s:
+          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261013b"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n<script src="./jarvis-velve.js?v=velve-20261013a"></script>\n'
+          if './jarvis-velve.js?v=velve-20261013a' not in s:
               s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
           PY
