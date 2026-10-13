@@ -6,6 +6,9 @@
   let preview = null;
   let status = null;
   let save = null;
+  let cameraListening = false;
+  let recognition = null;
+  let restarting = false;
 
   function buildCamera() {
     if (modal) return;
@@ -53,7 +56,8 @@
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
       video.srcObject = stream;
       await video.play().catch(() => {});
-      status.textContent = "Camera ready. Say “Hey Jarvis, click a photo” or tap 📸 CLICK PHOTO.";
+      status.textContent = "Camera ready — always listening. Say “click a photo” or “close the camera”.";
+      startCameraListening();
     } catch (e) {
       status.textContent = "Camera permission is required. Tap START CAMERA and allow access.";
     }
@@ -74,12 +78,66 @@
     save.href = data;
     save.download = "jarvis-photo-" + Date.now() + ".jpg";
     save.style.display = "inline-block";
-    status.textContent = "Photo captured! Tap SAVE PHOTO to save it.";
+    status.textContent = "Photo captured! Say “click a photo” for another one, or “close the camera”.";
     return true;
   }
 
   function cleanCommand(value) {
     return String(value || "").replace(/^\s*(?:(?:hey|hello|hi)\s+)?jarvis[, ]*/i, "").replace(/[.!?]+$/, "").trim();
+  }
+
+  function closeCamera() {
+    cameraListening = false;
+    restarting = true;
+    try { recognition?.stop(); } catch (_) {}
+    recognition = null;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    if (video) video.srcObject = null;
+    if (modal) modal.style.display = "none";
+    if (status) status.textContent = "Camera closed.";
+    setTimeout(() => { restarting = false; }, 250);
+  }
+
+  function startCameraListening() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      status.textContent = "Camera ready. Voice listening is not supported here — use 📸 CLICK PHOTO or CLOSE.";
+      return;
+    }
+    cameraListening = true;
+    try { recognition?.stop(); } catch (_) {}
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = navigator.language || "en-US";
+    recognition.onresult = event => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results[i].isFinal) continue;
+        const text = cleanCommand(event.results[i][0]?.transcript || "");
+        if (/^(?:please\s+)?(?:click|take|capture|snap)(?:\s+(?:a|the))?\s+(?:photo|picture)$/i.test(text) || /^click photo$/i.test(text)) {
+          capturePhoto();
+        } else if (/^(?:please\s+)?(?:close|exit|stop|hide)(?:\s+(?:the\s+)?)?camera$/i.test(text) || /^close camera$/i.test(text)) {
+          closeCamera();
+        }
+      }
+    };
+    recognition.onerror = () => {
+      if (cameraListening) restartCameraListening();
+    };
+    recognition.onend = () => {
+      if (cameraListening) restartCameraListening();
+    };
+    try { recognition.start(); } catch (_) { restartCameraListening(); }
+  }
+
+  function restartCameraListening() {
+    if (!cameraListening || restarting) return;
+    restarting = true;
+    setTimeout(() => {
+      restarting = false;
+      if (cameraListening) startCameraListening();
+    }, 300);
   }
 
   document.addEventListener("submit", event => {
@@ -90,7 +148,6 @@
     if (/^(?:open|launch|start|show|turn on)(?: the)? camera$/i.test(command)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      buildCamera();
       startCamera();
       return;
     }
@@ -100,9 +157,16 @@
       if (!modal || modal.style.display !== "flex") startCamera();
       else capturePhoto();
     }
+    if (/^(?:please\s+)?(?:close|exit|stop|hide)(?:\s+(?:the\s+)?)?camera$/i.test(command) || /^close camera$/i.test(command)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeCamera();
+    }
   }, true);
 
   window.addEventListener("beforeunload", () => {
+    cameraListening = false;
     if (stream) stream.getTracks().forEach(t => t.stop());
+    try { recognition?.stop(); } catch (_) {}
   });
 })();
