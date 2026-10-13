@@ -1,0 +1,53 @@
+/* Compact JARVIS Command Center
+   Deliberately small and anchored above the command panel. */
+#jarvis-command-center,
+.jarvis-command-center,
+#jarvis-command-center-panel {
+  position: fixed !important;
+  left: 12px !important;
+  right: auto !important;
+  bottom: 108px !important;
+  top: auto !important;
+  width: min(168px, 42vw) !important;
+  max-width: 168px !important;
+  min-width: 0 !important;
+  padding: 6px 8px !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+  z-index: 2147483000 !important;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+}
+#jarvis-command-center h1,
+#jarvis-command-center h2,
+#jarvis-command-center h3,
+.jarvis-command-center h1,
+.jarvis-command-center h2,
+.jarvis-command-center h3 {
+  font-size: 10px !important;
+  margin: 0 0 3px !important;
+}
+#jarvis-command-center button,
+.jarvis-command-center button,
+#jarvis-command-center input,
+.jarvis-command-center input {
+  min-height: 24px !important;
+  padding: 3px 6px !important;
+  font-size: 10px !important;
+}
+#jarvis-command-center .command-center-grid,
+.jarvis-command-center .command-center-grid {
+  gap: 3px !important;
+}
+@media (max-width: 767px) {
+  #jarvis-command-center,
+  .jarvis-command-center,
+  #jarvis-command-center-panel {
+    left: 8px !important;
+    bottom: 104px !important;
+    width: 150px !important;
+    max-width: 150px !important;
+    padding: 5px 7px !important;
+  }
+}
