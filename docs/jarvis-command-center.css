@@ -1,56 +1,86 @@
 /* Ultra-compact JARVIS Command Center
-   Small like the Wake Word control, anchored just above the command panel. */
-#jarvis-command-center,
-.jarvis-command-center,
-#jarvis-command-center-panel {
+   Match the small Wake Word control and sit in the left corner directly above the command panel. */
+#jarvis-superpowers {
   position: fixed !important;
-  left: 8px !important;
+  left: 6px !important;
   right: auto !important;
-  bottom: 72px !important;
+  bottom: 68px !important;
   top: auto !important;
-  width: 112px !important;
-  max-width: 112px !important;
+  width: 104px !important;
+  max-width: 104px !important;
   min-width: 0 !important;
-  padding: 3px 5px !important;
+  padding: 0 !important;
   margin: 0 !important;
   border-radius: 6px !important;
   box-sizing: border-box !important;
   z-index: 2147483000 !important;
   font-size: 8px !important;
-  line-height: 1.05 !important;
-}
-#jarvis-command-center h1,
-#jarvis-command-center h2,
-#jarvis-command-center h3,
-.jarvis-command-center h1,
-.jarvis-command-center h2,
-.jarvis-command-center h3 {
-  font-size: 8px !important;
-  margin: 0 0 2px !important;
   line-height: 1 !important;
 }
-#jarvis-command-center button,
-.jarvis-command-center button,
-#jarvis-command-center input,
-.jarvis-command-center input {
+
+#jarvis-superpowers .sp-card {
+  border-radius: 6px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#jarvis-superpowers .sp-head {
+  min-height: 22px !important;
+  height: 22px !important;
+  padding: 2px 4px !important;
+  gap: 3px !important;
+  box-sizing: border-box !important;
+  border-radius: 6px !important;
+}
+
+#jarvis-superpowers .sp-title {
+  min-width: 0 !important;
+  font-size: 7px !important;
+  line-height: 1 !important;
+  letter-spacing: .35px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#jarvis-superpowers .sp-head button {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
   min-height: 18px !important;
+  width: auto !important;
   height: 18px !important;
   padding: 1px 4px !important;
-  font-size: 8px !important;
+  margin: 0 !important;
+  border-radius: 5px !important;
+  font-size: 7px !important;
   line-height: 1 !important;
 }
-#jarvis-command-center .command-center-grid,
-.jarvis-command-center .command-center-grid {
-  gap: 2px !important;
+
+#jarvis-superpowers .sp-body {
+  padding: 4px !important;
 }
+
+#jarvis-superpowers button,
+#jarvis-superpowers input {
+  font-size: 8px !important;
+}
+
 @media (max-width: 767px) {
-  #jarvis-command-center,
-  .jarvis-command-center,
-  #jarvis-command-center-panel {
-    left: 6px !important;
-    bottom: 68px !important;
-    width: 105px !important;
-    max-width: 105px !important;
-    padding: 3px 4px !important;
+  #jarvis-superpowers {
+    left: 5px !important;
+    right: auto !important;
+    bottom: 66px !important;
+    width: 100px !important;
+    max-width: 100px !important;
+  }
+
+  #jarvis-superpowers .sp-head {
+    height: 21px !important;
+    min-height: 21px !important;
+    padding: 2px 4px !important;
+  }
+
+  #jarvis-superpowers .sp-title {
+    font-size: 7px !important;
   }
 }
