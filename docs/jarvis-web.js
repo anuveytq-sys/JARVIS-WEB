@@ -815,7 +815,8 @@
 
     // Search YouTube for a channel/video ONLY when the request explicitly says "on YouTube".
     const explicitYouTube = /\bon\s+youtube\b/i.test(text);
-    const youtubeHome = /^(?:(?:hey|hello|ok|okay)\\s+)?jarvis[, ]*\\s*(?:open\\s+)?youtube[.! ]*$/i.test(text)\n      || /^(?:open\\s+)?youtube[.! ]*$/i.test(text);
+    const youtubeHome = /^(?:(?:hey|hello|ok|okay)\s+)?jarvis[, ]*\s*(?:open\s+)?youtube[.! ]*$/i.test(text)
+      || /^(?:open\s+)?youtube[.! ]*$/i.test(text);
     const channelIntent = /\b(channel|youtuber|creator)\b/i.test(text);
     const videoIntent = /\b(play|watch|video|trailer|song|clip)\b/i.test(text);
     const hasOpenIntent = /\b(open|play|watch|show|find|search)\b/i.test(text);
