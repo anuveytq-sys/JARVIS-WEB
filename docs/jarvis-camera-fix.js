@@ -9,6 +9,7 @@
   let cameraListening = false;
   let recognition = null;
   let restarting = false;
+  let lastActionAt = 0;
 
   function buildCamera() {
     if (modal) return;
@@ -56,7 +57,7 @@
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
       video.srcObject = stream;
       await video.play().catch(() => {});
-      status.textContent = "Camera ready — always listening. Say “click a photo” or “close the camera”.";
+      status.textContent = "Camera ready — voice control active. Say “click a photo”, “take a picture”, or “close camera”.";
       startCameraListening();
     } catch (e) {
       status.textContent = "Camera permission is required. Tap START CAMERA and allow access.";
@@ -64,6 +65,9 @@
   }
 
   function capturePhoto() {
+    const now = Date.now();
+    if (now - lastActionAt < 1400) return true;
+    lastActionAt = now;
     if (!stream || !video?.videoWidth) {
       status.textContent = "Camera is not ready. Tap START CAMERA first.";
       return false;
@@ -78,18 +82,42 @@
     save.href = data;
     save.download = "jarvis-photo-" + Date.now() + ".jpg";
     save.style.display = "inline-block";
-    status.textContent = "Photo captured! Say “click a photo” for another one, or “close the camera”.";
+    status.textContent = "Photo captured! Voice control is still listening.";
     return true;
   }
 
+  function normalizeSpeech(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[.,!?;:]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function cleanCommand(value) {
-    return String(value || "").replace(/^\s*(?:(?:hey|hello|hi)\s+)?jarvis[, ]*/i, "").replace(/[.!?]+$/, "").trim();
+    let text = normalizeSpeech(value);
+    text = text.replace(/^(?:hey|hello|hi)?\s*jarvis\b\s*[, ]*/i, "");
+    text = text.replace(/\bplease\b/g, " ").replace(/\s+/g, " ").trim();
+    return text;
+  }
+
+  function isPhotoCommand(value) {
+    const text = cleanCommand(value);
+    if (!text) return false;
+    return /\b(?:click|take|capture|snap)\b.*\b(?:photo|picture|pic)\b/i.test(text)
+      || /\b(?:photo|picture|pic)\b.*\b(?:click|take|capture|snap)\b/i.test(text);
+  }
+
+  function isCloseCommand(value) {
+    const text = cleanCommand(value);
+    return /\b(?:close|exit|stop|hide)\b.*\bcamera\b/i.test(text)
+      || /\bcamera\b.*\b(?:close|exit|stop|hide)\b/i.test(text);
   }
 
   function closeCamera() {
     cameraListening = false;
     restarting = true;
-    try { recognition?.stop(); } catch (_) {}
+    try { recognition?.abort(); } catch (_) {}
     recognition = null;
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = null;
@@ -106,38 +134,58 @@
       return;
     }
     cameraListening = true;
-    try { recognition?.stop(); } catch (_) {}
+    restarting = false;
+    try { recognition?.abort(); } catch (_) {}
     recognition = new SR();
     recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = navigator.language || "en-US";
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
+    recognition.lang = navigator.language || "en-IN";
+
     recognition.onresult = event => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (!event.results[i].isFinal) continue;
-        const text = cleanCommand(event.results[i][0]?.transcript || "");
-        if (/^(?:please\s+)?(?:click|take|capture|snap)(?:\s+(?:a|the))?\s+(?:photo|picture)$/i.test(text) || /^click photo$/i.test(text)) {
-          capturePhoto();
-        } else if (/^(?:please\s+)?(?:close|exit|stop|hide)(?:\s+(?:the\s+)?)?camera$/i.test(text) || /^close camera$/i.test(text)) {
-          closeCamera();
+        const result = event.results[i];
+        const alternatives = [];
+        for (let a = 0; a < Math.min(result.length || 1, 3); a++) {
+          if (result[a]?.transcript) alternatives.push(result[a].transcript);
+        }
+        for (const transcript of alternatives) {
+          if (isPhotoCommand(transcript)) {
+            capturePhoto();
+            return;
+          }
+          if (result.isFinal && isCloseCommand(transcript)) {
+            closeCamera();
+            return;
+          }
         }
       }
     };
-    recognition.onerror = () => {
-      if (cameraListening) restartCameraListening();
+
+    recognition.onerror = event => {
+      if (!cameraListening) return;
+      if (event?.error === "not-allowed" || event?.error === "service-not-allowed") {
+        status.textContent = "Microphone permission is needed for camera voice control. You can still use 📸 CLICK PHOTO.";
+      }
+      restartCameraListening(500);
     };
     recognition.onend = () => {
-      if (cameraListening) restartCameraListening();
+      if (cameraListening) restartCameraListening(250);
     };
-    try { recognition.start(); } catch (_) { restartCameraListening(); }
+    try {
+      recognition.start();
+    } catch (_) {
+      restartCameraListening(500);
+    }
   }
 
-  function restartCameraListening() {
+  function restartCameraListening(delay = 300) {
     if (!cameraListening || restarting) return;
     restarting = true;
     setTimeout(() => {
       restarting = false;
       if (cameraListening) startCameraListening();
-    }, 300);
+    }, delay);
   }
 
   document.addEventListener("submit", event => {
@@ -151,13 +199,14 @@
       startCamera();
       return;
     }
-    if (/^(?:please\s+)?(?:click|take|capture|snap)(?:\s+(?:a|the))?\s+(?:photo|picture)$/i.test(command) || /^click photo$/i.test(command)) {
+    if (isPhotoCommand(command)) {
       event.preventDefault();
       event.stopImmediatePropagation();
       if (!modal || modal.style.display !== "flex") startCamera();
       else capturePhoto();
+      return;
     }
-    if (/^(?:please\s+)?(?:close|exit|stop|hide)(?:\s+(?:the\s+)?)?camera$/i.test(command) || /^close camera$/i.test(command)) {
+    if (isCloseCommand(command)) {
       event.preventDefault();
       event.stopImmediatePropagation();
       closeCamera();
@@ -167,6 +216,6 @@
   window.addEventListener("beforeunload", () => {
     cameraListening = false;
     if (stream) stream.getTracks().forEach(t => t.stop());
-    try { recognition?.stop(); } catch (_) {}
+    try { recognition?.abort(); } catch (_) {}
   });
 })();
