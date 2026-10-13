@@ -8,8 +8,29 @@
   let save = null;
   let cameraListening = false;
   let recognition = null;
+  let commandRecognition = null;
   let restarting = false;
   let lastActionAt = 0;
+  let settingsWasVisible = true;
+  let cameraCommandBusy = false;
+
+  function setSettingsVisible(visible) {
+    const button = document.getElementById("jarvis-settings-trigger");
+    if (!button) {
+      setTimeout(() => setSettingsVisible(visible), 150);
+      return;
+    }
+    if (visible) {
+      button.style.removeProperty("display");
+      button.setAttribute("aria-hidden", "false");
+      button.disabled = false;
+    } else {
+      settingsWasVisible = getComputedStyle(button).display !== "none";
+      button.style.setProperty("display", "none", "important");
+      button.setAttribute("aria-hidden", "true");
+      button.disabled = true;
+    }
+  }
 
   function buildCamera() {
     if (modal) return;
@@ -50,15 +71,17 @@
   async function startCamera() {
     buildCamera();
     modal.style.display = "flex";
+    setSettingsVisible(false);
     status.textContent = "Allow camera access when your browser asks.";
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera access is not supported in this browser.");
+      stopCameraRecognition();
       if (stream) stream.getTracks().forEach(t => t.stop());
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
       video.srcObject = stream;
       await video.play().catch(() => {});
-      status.textContent = "Camera ready — voice control active. Say “click a photo”, “take a picture”, or “close camera”.";
-      startCameraListening();
+      status.textContent = "Camera ready. Say “OK Jarvis, click a photo”, “OK Jarvis, take a picture”, or “OK Jarvis, close camera”.";
+      startCameraWakeRecognition();
     } catch (e) {
       status.textContent = "Camera permission is required. Tap START CAMERA and allow access.";
     }
@@ -82,7 +105,7 @@
     save.href = data;
     save.download = "jarvis-photo-" + Date.now() + ".jpg";
     save.style.display = "inline-block";
-    status.textContent = "Photo captured! Voice control is still listening.";
+    status.textContent = "Photo captured. Camera is waiting for “OK Jarvis” before accepting another voice command.";
     return true;
   }
 
@@ -96,16 +119,22 @@
 
   function cleanCommand(value) {
     let text = normalizeSpeech(value);
-    text = text.replace(/^(?:hey|hello|hi)?\s*jarvis\b\s*[, ]*/i, "");
+    text = text.replace(/^(?:(?:hey|hello|hi|ok|okay)\s+)?jarvis\b\s*[, ]*/i, "");
+    text = text.replace(/^\s*(?:ok|okay)\s+jarvis\b\s*[, ]*/i, "");
     text = text.replace(/\bplease\b/g, " ").replace(/\s+/g, " ").trim();
     return text;
+  }
+
+  function hasWakeWord(value) {
+    return /\b(?:ok|okay|hey|hello|hi)?\s*jarvis\b/i.test(normalizeSpeech(value));
   }
 
   function isPhotoCommand(value) {
     const text = cleanCommand(value);
     if (!text) return false;
-    return /\b(?:click|take|capture|snap)\b.*\b(?:photo|picture|pic)\b/i.test(text)
-      || /\b(?:photo|picture|pic)\b.*\b(?:click|take|capture|snap)\b/i.test(text);
+    return /\b(?:click|take|capture|snap)\b.*\b(?:photo|picture|pic|image)\b/i.test(text)
+      || /\b(?:photo|picture|pic|image)\b.*\b(?:click|take|capture|snap)\b/i.test(text)
+      || /\b(?:take|click|capture|snap)\b.*\b(?:one|a|the)\b.*\b(?:photo|picture|pic|image)\b/i.test(text);
   }
 
   function isCloseCommand(value) {
@@ -114,25 +143,34 @@
       || /\bcamera\b.*\b(?:close|exit|stop|hide)\b/i.test(text);
   }
 
-  function closeCamera() {
+  function stopCameraRecognition() {
     cameraListening = false;
     restarting = true;
+    cameraCommandBusy = false;
     try { recognition?.abort(); } catch (_) {}
+    try { commandRecognition?.abort(); } catch (_) {}
     recognition = null;
+    commandRecognition = null;
+    setTimeout(() => { restarting = false; }, 250);
+  }
+
+  function closeCamera() {
+    stopCameraRecognition();
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = null;
     if (video) video.srcObject = null;
     if (modal) modal.style.display = "none";
     if (status) status.textContent = "Camera closed.";
-    setTimeout(() => { restarting = false; }, 250);
+    setSettingsVisible(true);
   }
 
-  function startCameraListening() {
+  function startCameraWakeRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      status.textContent = "Camera ready. Voice listening is not supported here — use 📸 CLICK PHOTO or CLOSE.";
+      status.textContent = "Camera ready. Voice control is not supported here — use 📸 CLICK PHOTO or CLOSE.";
       return;
     }
+    if (cameraListening) return;
     cameraListening = true;
     restarting = false;
     try { recognition?.abort(); } catch (_) {}
@@ -143,6 +181,7 @@
     recognition.lang = navigator.language || "en-IN";
 
     recognition.onresult = event => {
+      if (!cameraListening || cameraCommandBusy) return;
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         const alternatives = [];
@@ -150,12 +189,8 @@
           if (result[a]?.transcript) alternatives.push(result[a].transcript);
         }
         for (const transcript of alternatives) {
-          if (isPhotoCommand(transcript)) {
-            capturePhoto();
-            return;
-          }
-          if (result.isFinal && isCloseCommand(transcript)) {
-            closeCamera();
+          if (hasWakeWord(transcript)) {
+            startCameraCommandCapture();
             return;
           }
         }
@@ -165,26 +200,68 @@
     recognition.onerror = event => {
       if (!cameraListening) return;
       if (event?.error === "not-allowed" || event?.error === "service-not-allowed") {
-        status.textContent = "Microphone permission is needed for camera voice control. You can still use 📸 CLICK PHOTO.";
+        status.textContent = "Microphone permission is needed for “OK Jarvis” camera voice control. You can still use 📸 CLICK PHOTO.";
       }
-      restartCameraListening(500);
+      restartCameraWakeRecognition(600);
     };
     recognition.onend = () => {
-      if (cameraListening) restartCameraListening(250);
+      if (cameraListening && !cameraCommandBusy) restartCameraWakeRecognition(250);
     };
-    try {
-      recognition.start();
-    } catch (_) {
-      restartCameraListening(500);
-    }
+    try { recognition.start(); }
+    catch (_) { restartCameraWakeRecognition(500); }
   }
 
-  function restartCameraListening(delay = 300) {
-    if (!cameraListening || restarting) return;
+  function startCameraCommandCapture() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR || !cameraListening || cameraCommandBusy) return;
+    cameraCommandBusy = true;
+    try { recognition?.abort(); } catch (_) {}
+    const command = new SR();
+    commandRecognition = command;
+    command.lang = navigator.language || "en-IN";
+    command.continuous = false;
+    command.interimResults = true;
+    command.maxAlternatives = 5;
+    command.onresult = event => {
+      const transcripts = [];
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        for (let a = 0; a < Math.min(result.length || 1, 5); a++) {
+          if (result[a]?.transcript) transcripts.push(result[a].transcript);
+        }
+      }
+      for (const transcript of transcripts) {
+        if (isPhotoCommand(transcript)) {
+          capturePhoto();
+          finishCameraCommand();
+          return;
+        }
+        if (isCloseCommand(transcript)) {
+          closeCamera();
+          return;
+        }
+      }
+    };
+    command.onerror = () => finishCameraCommand();
+    command.onend = () => finishCameraCommand();
+    try { command.start(); }
+    catch (_) { finishCameraCommand(); }
+  }
+
+  function finishCameraCommand() {
+    if (!cameraCommandBusy) return;
+    cameraCommandBusy = false;
+    try { commandRecognition?.abort(); } catch (_) {}
+    commandRecognition = null;
+    if (cameraListening) restartCameraWakeRecognition(250);
+  }
+
+  function restartCameraWakeRecognition(delay = 300) {
+    if (!cameraListening || restarting || cameraCommandBusy) return;
     restarting = true;
     setTimeout(() => {
       restarting = false;
-      if (cameraListening) startCameraListening();
+      if (cameraListening && !cameraCommandBusy) startCameraWakeRecognition();
     }, delay);
   }
 
@@ -214,8 +291,7 @@
   }, true);
 
   window.addEventListener("beforeunload", () => {
-    cameraListening = false;
+    stopCameraRecognition();
     if (stream) stream.getTracks().forEach(t => t.stop());
-    try { recognition?.abort(); } catch (_) {}
   });
 })();
