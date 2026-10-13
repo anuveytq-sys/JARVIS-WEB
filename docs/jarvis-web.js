@@ -765,16 +765,16 @@
     if (isAny(text, ["storage", "disk space", "how much storage", "browser storage"])) return browserStorage();
     if (isAny(text, ["temperature", "how hot", "how cold", "weather"])) return temperature();
     // YouTube-specific requests: open a named video or channel search before the generic YouTube homepage command.
-    const youtubeMention = /\\b(youtube|on youtube)\\b/i.test(text);
-    const channelIntent = /\\b(channel|youtuber|creator)\\b/i.test(text);
-    const videoIntent = /\\b(play|watch|video|trailer|song|clip)\\b/i.test(text);
-    const hasOpenIntent = /\\b(open|play|watch|show|find|search)\\b/i.test(text);
+    const youtubeMention = /\b(youtube|on youtube)\b/i.test(text);
+    const channelIntent = /\b(channel|youtuber|creator)\b/i.test(text);
+    const videoIntent = /\b(play|watch|video|trailer|song|clip)\b/i.test(text);
+    const hasOpenIntent = /\b(open|play|watch|show|find|search)\b/i.test(text);
     if (youtubeMention && hasOpenIntent) {
       let query = text
-        .replace(/\\b(hey|hello|ok|okay|jarvis)\\b/gi, " ")
-        .replace(/\\b(open|play|watch|show|find|search|for|me|please|the|a|an|on|youtube|channel|youtuber|creator|video|trailer|song|clip)\\b/gi, " ")
+        .replace(/\b(hey|hello|ok|okay|jarvis)\b/gi, " ")
+        .replace(/\b(open|play|watch|show|find|search|for|me|please|the|a|an|on|youtube|channel|youtuber|creator|video|trailer|song|clip)\b/gi, " ")
         .replace(/[.,!?]/g, " ")
-        .replace(/\\s+/g, " ")
+        .replace(/\s+/g, " ")
         .trim();
       if (!query) { openUrl("https://www.youtube.com/"); return say("Opening YouTube."); }
       const searchUrl = "https://www.youtube.com/results?search_query=" + encodeURIComponent(query + (channelIntent ? " channel" : ""));
@@ -782,14 +782,14 @@
       return say(channelIntent ? "Searching YouTube for the " + query + " channel." : (videoIntent ? "Finding the YouTube video " + query + "." : "Searching YouTube for " + query + "."));
     }
     // Named requests without saying YouTube: "open MrBeast", "play Minecraft trailer".
-    if (hasOpenIntent && !/\\b(google|maps|gmail|photos|drive|settings|camera|file manager|files)\\b/i.test(text)) {
-      const namedMatch = text.match(/\\b(?:open|play|watch|show|find|search(?:\\s+for)?)\\s+(?:me\\s+)?(.+?)(?:\\s+(?:on\\s+youtube|in\\s+youtube))?$/i);
+    if (hasOpenIntent && !/\b(google|maps|gmail|photos|drive|settings|camera|file manager|files)\b/i.test(text)) {
+      const namedMatch = text.match(/\b(?:open|play|watch|show|find|search(?:\s+for)?)\s+(?:me\s+)?(.+?)(?:\s+(?:on\s+youtube|in\s+youtube))?$/i);
       if (namedMatch && namedMatch[1]) {
         let query = namedMatch[1]
-          .replace(/\\b(hey|hello|ok|okay|jarvis|the|a|an|please|video|channel)\\b/gi, " ")
-          .replace(/[.,!?]/g, " ").replace(/\\s+/g, " ").trim();
-        if (query && /\\b(play|watch|video|trailer|song|clip)\\b/i.test(text)) {
-          query = query.replace(/\\b(video|trailer|song|clip)\\b/gi, " ").replace(/\\s+/g, " ").trim();
+          .replace(/\b(hey|hello|ok|okay|jarvis|the|a|an|please|video|channel)\b/gi, " ")
+          .replace(/[.,!?]/g, " ").replace(/\s+/g, " ").trim();
+        if (query && /\b(play|watch|video|trailer|song|clip)\b/i.test(text)) {
+          query = query.replace(/\b(video|trailer|song|clip)\b/gi, " ").replace(/\s+/g, " ").trim();
           openUrl("https://www.youtube.com/results?search_query=" + encodeURIComponent(query));
           return say("Finding " + query + " on YouTube.");
         }
