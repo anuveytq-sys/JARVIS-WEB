@@ -788,10 +788,10 @@
         let query = namedMatch[1]
           .replace(/\b(hey|hello|ok|okay|jarvis|the|a|an|please|video|channel)\b/gi, " ")
           .replace(/[.,!?]/g, " ").replace(/\s+/g, " ").trim();
-        if (query && /\b(play|watch|video|trailer|song|clip)\b/i.test(text)) {
-          query = query.replace(/\b(video|trailer|song|clip)\b/gi, " ").replace(/\s+/g, " ").trim();
-          openUrl("https://www.youtube.com/results?search_query=" + encodeURIComponent(query));
-          return say("Finding " + query + " on YouTube.");
+        if (query && (channelIntent || /\b(play|watch|video|trailer|song|clip)\b/i.test(text) || !/\bjarvis\b/i.test(text))) {
+          query = query.replace(/\b(video|trailer|song|clip|channel|youtuber|creator)\b/gi, " ").replace(/\s+/g, " ").trim();
+          openUrl("https://www.youtube.com/results?search_query=" + encodeURIComponent(query + (channelIntent ? " channel" : "")));
+          return say(channelIntent ? "Finding the " + query + " channel on YouTube." : "Finding " + query + " on YouTube.");
         }
       }
     }
