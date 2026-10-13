@@ -27,6 +27,7 @@ jobs:
           node --check docs/jarvis-ui-patch.js
           node --check docs/jarvis-camera-fix.js
           node --check docs/jarvis-popup-fix.js
+          node --check docs/jarvis-superpowers.js
 
       - name: Build Pages site from original HUD
         run: |
@@ -37,12 +38,13 @@ jobs:
           cp docs/jarvis-ui-patch.js _site/jarvis-ui-patch.js
           cp docs/jarvis-camera-fix.js _site/jarvis-camera-fix.js
           cp docs/jarvis-popup-fix.js _site/jarvis-popup-fix.js
+          cp docs/jarvis-superpowers.js _site/jarvis-superpowers.js
           python3 - <<'PY'
           from pathlib import Path
           p = Path('_site/index.html')
           s = p.read_text(encoding='utf-8')
           marker = '</body>'
-          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n'
+          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-superpowers.js?v=superpowers-v1-20261013"></script>\n'
           if injection not in s:
               s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
