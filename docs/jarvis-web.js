@@ -764,38 +764,85 @@
     }
     if (isAny(text, ["storage", "disk space", "how much storage", "browser storage"])) return browserStorage();
     if (isAny(text, ["temperature", "how hot", "how cold", "weather"])) return temperature();
-    // YouTube-specific requests: open a named video or channel search before the generic YouTube homepage command.
-    const youtubeMention = /\b(youtube|on youtube)\b/i.test(text);
-    const channelIntent = /\b(channel|youtuber|creator)\b/i.test(text);
-    const videoIntent = /\b(play|watch|video|trailer|song|clip)\b/i.test(text);
-    const hasOpenIntent = /\b(open|play|watch|show|find|search)\b/i.test(text);
-    if (youtubeMention && hasOpenIntent) {
+    // Open named apps/sites first. Generic app names must NEVER fall through to YouTube.
+    // A web page cannot force-launch every native app on every device, so web versions are reliable fallbacks.
+    const appRoutes = [
+      { names: ["chatgpt", "chat gpt", "openai"], url: "https://chatgpt.com/", label: "ChatGPT" },
+      { names: ["chrome", "google chrome"], url: "https://www.google.com/chrome/", label: "Chrome" },
+      { names: ["google gemini", "gemini"], url: "https://gemini.google.com/", label: "Google Gemini" },
+      { names: ["claude"], url: "https://claude.ai/", label: "Claude" },
+      { names: ["copilot", "microsoft copilot"], url: "https://copilot.microsoft.com/", label: "Microsoft Copilot" },
+      { names: ["whatsapp", "whats app"], url: "https://web.whatsapp.com/", label: "WhatsApp" },
+      { names: ["instagram"], url: "https://www.instagram.com/", label: "Instagram" },
+      { names: ["facebook"], url: "https://www.facebook.com/", label: "Facebook" },
+      { names: ["messenger"], url: "https://www.messenger.com/", label: "Messenger" },
+      { names: ["spotify"], url: "https://open.spotify.com/", label: "Spotify" },
+      { names: ["discord"], url: "https://discord.com/app", label: "Discord" },
+      { names: ["netflix"], url: "https://www.netflix.com/", label: "Netflix" },
+      { names: ["reddit"], url: "https://www.reddit.com/", label: "Reddit" },
+      { names: ["twitter", "x"], url: "https://x.com/", label: "X" },
+      { names: ["tiktok", "tik tok"], url: "https://www.tiktok.com/", label: "TikTok" },
+      { names: ["telegram"], url: "https://web.telegram.org/", label: "Telegram" },
+      { names: ["github", "git hub"], url: "https://github.com/", label: "GitHub" },
+      { names: ["notion"], url: "https://www.notion.so/", label: "Notion" },
+      { names: ["zoom"], url: "https://app.zoom.us/", label: "Zoom" },
+      { names: ["google meet", "meet"], url: "https://meet.google.com/", label: "Google Meet" },
+      { names: ["amazon"], url: "https://www.amazon.in/", label: "Amazon" },
+      { names: ["google classroom", "classroom"], url: "https://classroom.google.com/", label: "Google Classroom" },
+      { names: ["google docs", "docs"], url: "https://docs.google.com/", label: "Google Docs" },
+      { names: ["google sheets", "sheets"], url: "https://sheets.google.com/", label: "Google Sheets" },
+      { names: ["google slides", "slides"], url: "https://slides.google.com/", label: "Google Slides" }
+    ];
+    const cleanedCommand = text
+      .replace(/^\\s*(hey|hello|ok|okay)\\s+jarvis[,:]?\\s*/i, "")
+      .replace(/^\\s*jarvis[,:]?\\s*/i, "")
+      .replace(/^\\s*(please\\s+)?(open|launch|start|go to)\\s+/i, "")
+      .replace(/[.!?]+$/g, "").trim();
+    const appRoute = appRoutes.find(route => route.names.some(name =>
+      new RegExp("^" + name.replace(/[.*+?^\\x24{}()|[\\]\\\\]/g, "\\\\$&") + "$", "i").test(cleanedCommand)
+    ));
+    if (appRoute) {
+      // Android Chrome can be targeted with an intent URL. Other apps use their dependable web versions.
+      if (appRoute.label === "Chrome" && /Android/i.test(navigator.userAgent)) {
+        openUrl("intent://www.google.com/#Intent;scheme=https;package=com.android.chrome;end");
+        return say("Trying to open the Chrome app.");
+      }
+      if (appRoute.label === "Chrome" && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        openUrl("googlechrome://navigate?url=https%3A%2F%2Fwww.google.com%2F");
+        return say("Trying to open the Chrome app. If it is not installed, open Chrome from the App Store.");
+      }
+      openUrl(appRoute.url);
+      return say("Opening " + appRoute.label + ".");
+    }
+
+    // Search YouTube for a channel/video ONLY when the request explicitly says "on YouTube".
+    const explicitYouTube = /\\bon\\s+youtube\\b/i.test(text);
+    const youtubeHome = /^\\s*(?:(?:hey|hello|ok|okay)\\s+)?jarvis[, ]*\\s*)?(?:open\\s+)?youtube[.! ]*$/i.test(text)
+      || /^\\s*(?:open\\s+)?youtube[.! ]*$/i.test(text);
+    const channelIntent = /\\b(channel|youtuber|creator)\\b/i.test(text);
+    const videoIntent = /\\b(play|watch|video|trailer|song|clip)\\b/i.test(text);
+    const hasOpenIntent = /\\b(open|play|watch|show|find|search)\\b/i.test(text);
+    if (youtubeHome) {
+      openUrl("https://www.youtube.com/");
+      return say("Opening YouTube.");
+    }
+    if (explicitYouTube && hasOpenIntent) {
       let query = text
-        .replace(/\b(hey|hello|ok|okay|jarvis)\b/gi, " ")
-        .replace(/\b(open|play|watch|show|find|search|for|me|please|the|a|an|on|youtube|channel|youtuber|creator|video|trailer|song|clip)\b/gi, " ")
+        .replace(/\\b(hey|hello|ok|okay|jarvis)\\b/gi, " ")
+        .replace(/\\b(open|play|watch|show|find|search|for|me|please|the|a|an|on|youtube|channel|youtuber|creator|video|trailer|song|clip)\\b/gi, " ")
         .replace(/[.,!?]/g, " ")
-        .replace(/\s+/g, " ")
+        .replace(/\\s+/g, " ")
         .trim();
       if (!query) { openUrl("https://www.youtube.com/"); return say("Opening YouTube."); }
       const searchUrl = "https://www.youtube.com/results?search_query=" + encodeURIComponent(query + (channelIntent ? " channel" : ""));
       openUrl(searchUrl);
       return say(channelIntent ? "Searching YouTube for the " + query + " channel." : (videoIntent ? "Finding the YouTube video " + query + "." : "Searching YouTube for " + query + "."));
     }
-    // Named requests without saying YouTube: "open MrBeast", "play Minecraft trailer".
-    if (hasOpenIntent && !/\b(google|maps|gmail|photos|drive|settings|camera|file manager|files)\b/i.test(text)) {
-      const namedMatch = text.match(/\b(?:open|play|watch|show|find|search(?:\s+for)?)\s+(?:me\s+)?(.+?)(?:\s+(?:on\s+youtube|in\s+youtube))?$/i);
-      if (namedMatch && namedMatch[1]) {
-        let query = namedMatch[1]
-          .replace(/\b(hey|hello|ok|okay|jarvis|the|a|an|please|video|channel)\b/gi, " ")
-          .replace(/[.,!?]/g, " ").replace(/\s+/g, " ").trim();
-        if (query && (channelIntent || /\b(play|watch|video|trailer|song|clip)\b/i.test(text) || !/\bjarvis\b/i.test(text))) {
-          query = query.replace(/\b(video|trailer|song|clip|channel|youtuber|creator)\b/gi, " ").replace(/\s+/g, " ").trim();
-          openUrl("https://www.youtube.com/results?search_query=" + encodeURIComponent(query + (channelIntent ? " channel" : "")));
-          return say(channelIntent ? "Finding the " + query + " channel on YouTube." : "Finding " + query + " on YouTube.");
-        }
-      }
+    // Do not send arbitrary names (e.g. Chrome, ChatGPT, Google) to YouTube.
+    if (hasOpenIntent && /\\b(open|launch|start|go to)\\s+youtube\\b/i.test(text)) {
+      openUrl("https://www.youtube.com/");
+      return say("Opening YouTube.");
     }
-    if (isAny(text, ["open youtube", "youtube"])) { openUrl("https://www.youtube.com/"); return say("Opening YouTube."); }
     if (isAny(text, ["open google maps", "google maps", "open maps"])) { openUrl("https://maps.google.com/"); return say("Opening Google Maps."); }
     if (text === "open google" || text === "google" || text.includes("search google")) { openUrl("https://www.google.com/"); return say("Opening Google."); }
     if (isAny(text, ["open gmail", "gmail"])) { openUrl("https://mail.google.com/"); return say("Opening Gmail."); }
