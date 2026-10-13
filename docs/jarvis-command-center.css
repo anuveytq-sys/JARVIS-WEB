@@ -1,41 +1,45 @@
-/* Ultra-compact JARVIS Command Center
-   Match the small Wake Word control and sit in the left corner directly above the command panel. */
+/* JARVIS Command Center — match the Wake Word button, just slightly larger. */
 #jarvis-superpowers {
   position: fixed !important;
   left: 6px !important;
   right: auto !important;
-  bottom: 68px !important;
   top: auto !important;
-  width: 104px !important;
-  max-width: 104px !important;
+  bottom: 78px !important;
+  width: 152px !important;
+  max-width: 152px !important;
   min-width: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
-  border-radius: 6px !important;
   box-sizing: border-box !important;
-  z-index: 2147483000 !important;
-  font-size: 8px !important;
-  line-height: 1 !important;
+  border-radius: 8px !important;
+  z-index: 2147483642 !important;
+  font: 9px/1.15 system-ui, sans-serif !important;
 }
 
 #jarvis-superpowers .sp-card {
-  border-radius: 6px !important;
   padding: 0 !important;
   margin: 0 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
 }
 
 #jarvis-superpowers .sp-head {
-  min-height: 22px !important;
-  height: 22px !important;
-  padding: 2px 4px !important;
-  gap: 3px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-height: 29px !important;
+  height: 29px !important;
+  padding: 4px 6px !important;
   box-sizing: border-box !important;
-  border-radius: 6px !important;
+  border-radius: 8px !important;
 }
 
 #jarvis-superpowers .sp-title {
+  flex: 1 1 auto !important;
   min-width: 0 !important;
-  font-size: 7px !important;
+  font-size: 7.5px !important;
   line-height: 1 !important;
   letter-spacing: .35px !important;
   white-space: nowrap !important;
@@ -46,18 +50,16 @@
 #jarvis-superpowers .sp-head button {
   flex: 0 0 auto !important;
   min-width: 0 !important;
-  min-height: 18px !important;
-  width: auto !important;
-  height: 18px !important;
-  padding: 1px 4px !important;
+  min-height: 20px !important;
+  height: 20px !important;
+  padding: 2px 5px !important;
   margin: 0 !important;
-  border-radius: 5px !important;
-  font-size: 7px !important;
-  line-height: 1 !important;
+  border-radius: 6px !important;
+  font: 700 8px/1 system-ui, sans-serif !important;
 }
 
 #jarvis-superpowers .sp-body {
-  padding: 4px !important;
+  padding: 5px !important;
 }
 
 #jarvis-superpowers button,
@@ -69,18 +71,14 @@
   #jarvis-superpowers {
     left: 5px !important;
     right: auto !important;
-    bottom: 66px !important;
-    width: 100px !important;
-    max-width: 100px !important;
+    bottom: 78px !important;
+    width: 145px !important;
+    max-width: 145px !important;
   }
 
   #jarvis-superpowers .sp-head {
-    height: 21px !important;
-    min-height: 21px !important;
-    padding: 2px 4px !important;
-  }
-
-  #jarvis-superpowers .sp-title {
-    font-size: 7px !important;
+    min-height: 28px !important;
+    height: 28px !important;
+    padding: 4px 5px !important;
   }
 }
