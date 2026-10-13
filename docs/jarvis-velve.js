@@ -5,7 +5,7 @@
 */
 (() => {
   'use strict';
-  const VERSION='velve-20261013d';
+  const VERSION='velve-20261013e';
   const OR_KEY='jarvisOpenRouterKey';
   const OR_MODEL='jarvisOpenRouterModel';
   const OS_ID='velveOpenSkyClientId',OS_SECRET='velveOpenSkyClientSecret',MT_KEY='velveMapTilerKey';
@@ -32,18 +32,21 @@
         <div class="velve-row"><span>SATELLITES</span><b id="v-sat">—</b></div><div class="velve-row"><span>EARTHQUAKES 24H</span><b id="v-quake">—</b></div>
         <div class="velve-row"><span>FOCUS</span><b id="v-focus">GLOBAL</b></div><div class="velve-row"><span>WEATHER</span><b id="v-weather">—</b></div>
         <div class="velve-legend">● aircraft &nbsp; ● satellites &nbsp; ● earthquakes<br>Public sources refresh automatically where permitted.</div></section>
-      <div class="velve-panel velve-status" id="velve-status">SYSTEM: <b>INITIALIZING</b><br><br>Data timestamps are shown in UTC.<button class="velve-panel-x velve-status-x" id="velve-status-hide" aria-label="Hide status panel">×</button></div><div class="velve-panel-tools" id="velve-panel-tools"><button id="velve-show-data">EARTH DETAILS</button><button id="velve-show-status">SYSTEM STATUS</button></div>
+      <div class="velve-panel velve-status" id="velve-status">SYSTEM: <b>INITIALIZING</b><br><br>Data timestamps are shown in UTC.<button class="velve-panel-x velve-status-x" id="velve-status-hide" aria-label="Hide status panel">×</button></div><div class="velve-panel-tools" id="velve-panel-tools"><button id="velve-show-data">EARTH DETAILS</button><button id="velve-show-status">SYSTEM STATUS</button><button id="velve-show-command">COMMAND</button><button id="velve-show-settings">SETTINGS</button></div>
       <div class="velve-help" id="velve-help">DRAG TO ROTATE · SCROLL/PINCH TO ZOOM<br>TRY: “TAKE ME TO TOKYO”</div>
       <div class="velve-panel velve-settings-card" id="velve-settings-card"><h3>VELVE SETTINGS</h3>
         <p>Optional service keys are stored only in this browser. Weather (Open-Meteo), earthquakes (USGS) and satellite orbital data (CelesTrak) work without keys. Never commit keys to GitHub.</p>
         <input id="velve-or-key" type="password" placeholder="OpenRouter API key (optional)" autocomplete="off"><input id="velve-or-model" placeholder="Model, e.g. openrouter/free">
         <label for="velve-opensky-id">OpenSky client ID (optional)</label><input id="velve-opensky-id" placeholder="OpenSky OAuth client ID" autocomplete="off"><label for="velve-opensky-secret">OpenSky client secret (optional)</label><input id="velve-opensky-secret" type="password" placeholder="OpenSky OAuth client secret" autocomplete="off"><label for="velve-maptiler-key">MapTiler satellite imagery key (optional)</label><input id="velve-maptiler-key" type="password" placeholder="MapTiler API key" autocomplete="off"><button id="velve-save">SAVE LOCALLY</button><button id="velve-clear">CLEAR OPTIONAL KEYS</button></div>
-      <div class="velve-panel velve-command"><input id="velve-input" placeholder="Ask VELVE or say a navigation command…"><button id="velve-voice">🎙</button><button id="velve-send">SEND</button></div>`;
+      <div class="velve-panel velve-command" id="velve-command-panel"><button class="velve-panel-x velve-command-x" id="velve-command-hide" aria-label="Hide command panel">×</button><input id="velve-input" placeholder="Ask VELVE or say a navigation command…"><button id="velve-voice">🎙</button><button id="velve-send">SEND</button></div>`;
     document.body.appendChild(root);
     $('#velve-close').onclick=exit;
     $('#velve-settings').onclick=()=>$('#velve-settings-card').classList.toggle('open');
     $('#velve-settings-card').querySelector('h3').insertAdjacentHTML('afterend','<button class="velve-panel-x" id="velve-settings-hide" aria-label="Close settings">×</button>');
     $('#velve-settings-hide').onclick=()=>$('#velve-settings-card').classList.remove('open');
+    $('#velve-command-hide').onclick=()=>$('#velve-command-panel').classList.add('panel-hidden');
+    $('#velve-show-command').onclick=()=>$('#velve-command-panel').classList.remove('panel-hidden');
+    $('#velve-show-settings').onclick=()=>$('#velve-settings-card').classList.toggle('open');
     $('#velve-data-hide').onclick=()=>$('#velve-data-panel').classList.add('panel-hidden');
     $('#velve-status-hide').onclick=()=>$('#velve-status').classList.add('panel-hidden');
     $('#velve-show-data').onclick=()=>$('#velve-data-panel').classList.remove('panel-hidden');
@@ -55,7 +58,7 @@
     $('#velve-input').addEventListener('keydown',e=>{if(e.key==='Enter')handleInput(e.target.value)});
     $('#velve-voice').onclick=startVoice;
   }
-  function setStatus(t){if($('#velve-status'))$('#velve-status').innerHTML=`SYSTEM: <b>${esc(t)}</b><br><br>Data timestamps are shown in UTC.`}
+  function setStatus(t){const b=$('#velve-status b');if(b)b.textContent=String(t)}
   function say(t){try{if(typeof window.speak==='function')window.speak(t);else speechSynthesis.speak(new SpeechSynthesisUtterance(t))}catch(_){} }
   function loadCesium(){
     return new Promise((resolve,reject)=>{
@@ -66,7 +69,7 @@
   }
   function initViewer(){
     viewer=new Cesium.Viewer('velve-globe',{animation:false,timeline:false,geocoder:false,homeButton:false,sceneModePicker:false,baseLayerPicker:false,navigationHelpButton:false,fullscreenButton:false,infoBox:false,selectionIndicator:false,shouldAnimate:true,terrainProvider:new Cesium.EllipsoidTerrainProvider(),baseLayer:new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({url:localGet(MT_KEY)?'https://api.maptiler.com/tiles/satellite/{z}/{x}/{y}.jpg?key='+encodeURIComponent(localGet(MT_KEY)):'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',credit:localGet(MT_KEY)?'Satellite imagery © MapTiler':'Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community'}))});
-    viewer.scene.globe.enableLighting=true;viewer.scene.globe.showGroundAtmosphere=true;viewer.scene.globe.maximumScreenSpaceError=1.5;viewer.scene.globe.baseColor=Cesium.Color.fromCssColorString('#170308');viewer.scene.backgroundColor=Cesium.Color.BLACK;viewer.scene.skyAtmosphere.show=true;viewer.scene.fog.enabled=true;
+    viewer.clock.shouldAnimate=true;viewer.clock.multiplier=1;viewer.clock.currentTime=Cesium.JulianDate.now();viewer.scene.light=Cesium.SunLight?new Cesium.SunLight():viewer.scene.light;viewer.scene.globe.enableLighting=true;viewer.scene.globe.showGroundAtmosphere=true;viewer.scene.globe.maximumScreenSpaceError=1.5;viewer.scene.globe.baseColor=Cesium.Color.fromCssColorString('#170308');viewer.scene.backgroundColor=Cesium.Color.BLACK;viewer.scene.skyAtmosphere.show=true;viewer.scene.fog.enabled=true;
     viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(0,20,22000000)});
     aircraftDS=new Cesium.CustomDataSource('aircraft');satelliteDS=new Cesium.CustomDataSource('satellites');quakeDS=new Cesium.CustomDataSource('earthquakes');
     viewer.dataSources.add(aircraftDS);viewer.dataSources.add(satelliteDS);viewer.dataSources.add(quakeDS);
@@ -86,7 +89,7 @@
   async function refreshSatellites(){
     try{if(!window.satellite)return;const urls=['https://celestrak.org/NORAD/elements/gp.php?GROUP=STATIONS&FORMAT=TLE','https://celestrak.org/NORAD/elements/gp.php?GROUP=GPS-OPS&FORMAT=TLE'];const packs=await Promise.all(urls.map(u=>fetch(u,{cache:'no-store'}).then(r=>r.text())));satelliteRecs=packs.flatMap(parseTLE).slice(0,180);satelliteDS.entities.removeAll();updateSatellites();$('#v-sat').textContent=satelliteRecs.length}catch(_){$('#v-sat').textContent='offline'}}
   function updateSatellites(){if(!window.satellite)return;const now=new Date();satelliteRecs.forEach((s,i)=>{try{const rec=satellite.twoline2satrec(s.l1,s.l2),pv=satellite.propagate(rec,now);if(!pv?.position)return;const gd=satellite.eciToGeodetic(pv.position,satellite.gstime(now));const lon=satellite.degreesLong(gd.longitude),lat=satellite.degreesLat(gd.latitude),h=Math.max(80000,gd.height*1000);let e=satelliteDS.entities.getById('sat-'+i);if(!e)e=satelliteDS.entities.add({id:'sat-'+i,name:s.name,point:{pixelSize:8,color:i%3===0?Cesium.Color.fromCssColorString('#00eaff'):i%3===1?Cesium.Color.fromCssColorString('#ff42d0'):Cesium.Color.fromCssColorString('#b6ff35'),outlineColor:Cesium.Color.BLACK,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY},description:esc(s.name)});e.position=Cesium.Cartesian3.fromDegrees(lon,lat,h)}catch(_){}})}
-  function tick(){if(!root||!root.classList.contains('velve-on'))return;$('#v-utc').textContent=new Date().toISOString().slice(11,19)+'Z';updateSatellites();requestAnimationFrame(tick)}
+  function tick(){if(!root||!root.classList.contains('velve-on'))return;const now=Cesium.JulianDate.now();viewer.clock.currentTime=now;viewer.clock.shouldAnimate=true;viewer.scene.requestRender();$('#v-utc').textContent=new Date().toISOString().slice(11,19)+'Z';updateSatellites();requestAnimationFrame(tick)}
   async function geocode(q){const u='https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(q)+'&count=1&language=en&format=json';const d=await fetch(u).then(r=>r.json());return d.results?.[0]||null}
   async function flyTo(name){const r=await geocode(name);if(!r){say(`I could not locate ${name}.`);return false}selected={name:r.name,lat:r.latitude,lon:r.longitude};$('#v-focus').textContent=r.name;viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(r.longitude,r.latitude,Math.max(900000,Math.min(6000000,(r.population||1000000)>5000000?1300000:2200000))),duration:2.2});await refreshWeather();setStatus('FOCUS: '+r.name.toUpperCase());say(`Moving to ${r.name}.`);return true}
   function exit(){if(refreshTimer)clearInterval(refreshTimer);root.classList.remove('velve-on');document.body.classList.remove('velve-active');say('VELVE environment closed.');}
