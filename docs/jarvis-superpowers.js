@@ -105,6 +105,19 @@
     if(!c) return false;
     state.history.unshift({at:Date.now(),command:c}); state.history=state.history.slice(0,100); save(state);
 
+    const centerAndSearch = c.match(/^(?:open|show|launch) (?:the )?command cent(?:er|re)\\s+and\\s+(?:then\\s+)?(.+)$/i);
+    if (centerAndSearch) {
+      document.getElementById("jarvis-superpowers")?.classList.add("open");
+      document.getElementById("sp-toggle")?.replaceChildren(document.createTextNode("CLOSE"));
+      const task = centerAndSearch[1].replace(/\\s+from web search$/i, "").replace(/^search(?: the web)?(?: for)?\\s+/i, "").trim();
+      if (task) {
+        const news = /\\b(latest|recent|today'?s)\\b.*\\b(news|headlines)\\b|\\b(news|headlines)\\b.*\\b(usa|us|united states|america)\\b/i.test(task);
+        const query = /\\b(usa|us|united states|america)\\b/i.test(task) ? task : task + " USA";
+        openUrl(news ? "https://news.google.com/search?q=" + encodeURIComponent(query) + "&hl=en-US&gl=US&ceid=US:en" : "https://www.google.com/search?q=" + encodeURIComponent(query));
+        reply("Command Center opened. Searching the web for " + query + ".");
+      } else reply("Command Center opened.");
+      return true;
+    }
     if (/^(what('?s| is) )?(the )?(time|date)( right now)?\??$/i.test(c)) return runSkill("time");
     if (/^(system )?(status|diagnostics|health check)\??$/i.test(c)) return runSkill("status");
     if (/^(show|list|read|what('?s| is) in) (my )?(memory|memories)\??$/i.test(c)) return runSkill("memory");
@@ -115,7 +128,7 @@
     m=c.match(/^(?:complete|finish|done with) task\s*(\d+)$/i); if(m){const idx=Number(m[1])-1;if(state.tasks[idx]){state.tasks[idx].done=true;save(state);refreshList();reply("Task marked complete.");}else reply("That task number does not exist.",true);return true;}
     if (/^(?:clear|delete) (?:all )?(?:my )?(?:local )?(memory|memories)$/i.test(c)){state.memory=[];save(state);refreshList();reply("Local memory cleared.");return true;}
     m=c.match(/^(?:calculate|calc|what is)\s+(.+)$/i); if(m){const r=calculate(m[1].replace(/\?$/,""));if(r!==null){reply(`Result: ${r}`);return true;}}
-    m=c.match(/^(?:search|look up|google)\s+(?:the web for\s+)?(.+)$/i); if(m){openUrl("https://www.google.com/search?q="+encodeURIComponent(m[1]));reply("Opening web search.");return true;}
+    m=c.match(/^(?:search|look up|google)\\s+(?:the web\\s+)?(?:for\\s+)?(.+?)(?:\\s+from web search)?$/i); if(m){const q=m[1].trim();const news=/\\b(latest|recent|today'?s)\\b.*\\b(news|headlines)\\b|\\b(news|headlines)\\b.*\\b(usa|us|united states|america)\\b/i.test(q);openUrl(news?"https://news.google.com/search?q="+encodeURIComponent(q)+"&hl=en-US&gl=US&ceid=US:en":"https://www.google.com/search?q="+encodeURIComponent(q));reply("Opening "+(news?"news":"web")+" search for "+q+".");return true;}
     m=c.match(/^(?:copy|copy to clipboard)\s+(?:this|last answer|last reply)$/i); if(m)return runSkill("copy");
     if (/^(?:go )?fullscreen$|^enter fullscreen$|^exit fullscreen$/i.test(c)) return runSkill("fullscreen");
     if (/^(?:open )?command center$|^open superpowers$/i.test(c)){document.getElementById("jarvis-superpowers")?.classList.add("open");document.getElementById("sp-toggle")?.replaceChildren(document.createTextNode("CLOSE"));return true;}
