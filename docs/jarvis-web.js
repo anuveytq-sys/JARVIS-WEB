@@ -794,13 +794,11 @@
       { names: ["google slides", "slides"], url: "https://slides.google.com/", label: "Google Slides" }
     ];
     const cleanedCommand = text
-      .replace(/^\\s*(hey|hello|ok|okay)\\s+jarvis[,:]?\\s*/i, "")
-      .replace(/^\\s*jarvis[,:]?\\s*/i, "")
-      .replace(/^\\s*(please\\s+)?(open|launch|start|go to)\\s+/i, "")
+      .replace(/^\s*(hey|hello|ok|okay)\s+jarvis[,:]?\s*/i, "")
+      .replace(/^\s*jarvis[,:]?\s*/i, "")
+      .replace(/^\s*(please\s+)?(open|launch|start|go to)\s+/i, "")
       .replace(/[.!?]+$/g, "").trim();
-    const appRoute = appRoutes.find(route => route.names.some(name =>
-      new RegExp("^" + name.replace(/[.*+?^\\x24{}()|[\\]\\\\]/g, "\\\\$&") + "$", "i").test(cleanedCommand)
-    ));
+    const appRoute = appRoutes.find(route => route.names.some(name => name.toLowerCase() === cleanedCommand));
     if (appRoute) {
       // Android Chrome can be targeted with an intent URL. Other apps use their dependable web versions.
       if (appRoute.label === "Chrome" && /Android/i.test(navigator.userAgent)) {
@@ -816,22 +814,22 @@
     }
 
     // Search YouTube for a channel/video ONLY when the request explicitly says "on YouTube".
-    const explicitYouTube = /\\bon\\s+youtube\\b/i.test(text);
-    const youtubeHome = /^\\s*(?:(?:hey|hello|ok|okay)\\s+)?jarvis[, ]*\\s*)?(?:open\\s+)?youtube[.! ]*$/i.test(text)
-      || /^\\s*(?:open\\s+)?youtube[.! ]*$/i.test(text);
-    const channelIntent = /\\b(channel|youtuber|creator)\\b/i.test(text);
-    const videoIntent = /\\b(play|watch|video|trailer|song|clip)\\b/i.test(text);
-    const hasOpenIntent = /\\b(open|play|watch|show|find|search)\\b/i.test(text);
+    const explicitYouTube = /\bon\s+youtube\b/i.test(text);
+    const youtubeHome = /^\s*(?:(?:hey|hello|ok|okay)\s+)?jarvis[, ]*\s*)?(?:open\s+)?youtube[.! ]*$/i.test(text)
+      || /^\s*(?:open\s+)?youtube[.! ]*$/i.test(text);
+    const channelIntent = /\b(channel|youtuber|creator)\b/i.test(text);
+    const videoIntent = /\b(play|watch|video|trailer|song|clip)\b/i.test(text);
+    const hasOpenIntent = /\b(open|play|watch|show|find|search)\b/i.test(text);
     if (youtubeHome) {
       openUrl("https://www.youtube.com/");
       return say("Opening YouTube.");
     }
     if (explicitYouTube && hasOpenIntent) {
       let query = text
-        .replace(/\\b(hey|hello|ok|okay|jarvis)\\b/gi, " ")
-        .replace(/\\b(open|play|watch|show|find|search|for|me|please|the|a|an|on|youtube|channel|youtuber|creator|video|trailer|song|clip)\\b/gi, " ")
+        .replace(/\b(hey|hello|ok|okay|jarvis)\b/gi, " ")
+        .replace(/\b(open|play|watch|show|find|search|for|me|please|the|a|an|on|youtube|channel|youtuber|creator|video|trailer|song|clip)\b/gi, " ")
         .replace(/[.,!?]/g, " ")
-        .replace(/\\s+/g, " ")
+        .replace(/\s+/g, " ")
         .trim();
       if (!query) { openUrl("https://www.youtube.com/"); return say("Opening YouTube."); }
       const searchUrl = "https://www.youtube.com/results?search_query=" + encodeURIComponent(query + (channelIntent ? " channel" : ""));
@@ -839,7 +837,7 @@
       return say(channelIntent ? "Searching YouTube for the " + query + " channel." : (videoIntent ? "Finding the YouTube video " + query + "." : "Searching YouTube for " + query + "."));
     }
     // Do not send arbitrary names (e.g. Chrome, ChatGPT, Google) to YouTube.
-    if (hasOpenIntent && /\\b(open|launch|start|go to)\\s+youtube\\b/i.test(text)) {
+    if (hasOpenIntent && /\b(open|launch|start|go to)\s+youtube\b/i.test(text)) {
       openUrl("https://www.youtube.com/");
       return say("Opening YouTube.");
     }
