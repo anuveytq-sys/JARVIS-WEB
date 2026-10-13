@@ -25,6 +25,7 @@ jobs:
         run: |
           node --check docs/jarvis-web.js
           node --check docs/jarvis-ui-patch.js
+          node --check docs/jarvis-camera-fix.js
 
       - name: Build Pages site from original HUD
         run: |
@@ -33,12 +34,13 @@ jobs:
           cp public/index.html _site/index.html
           cp docs/jarvis-web.js _site/jarvis-web.js
           cp docs/jarvis-ui-patch.js _site/jarvis-ui-patch.js
+          cp docs/jarvis-camera-fix.js _site/jarvis-camera-fix.js
           python3 - <<'PY'
           from pathlib import Path
           p = Path('_site/index.html')
           s = p.read_text(encoding='utf-8')
           marker = '</body>'
-          injection = '<script src="./jarvis-ui-patch.js?v=camera-shutter-fix-20261012"></script>\n<script src="./jarvis-web.js?v=camera-shutter-fix-20261012"></script>\n'
+          injection = '<script src="./jarvis-camera-fix.js?v=camera-voice-shutter-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-shutter-20261013"></script>\n<script src="./jarvis-web.js?v=camera-voice-shutter-20261013"></script>\n'
           if injection not in s:
               s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
