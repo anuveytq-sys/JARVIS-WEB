@@ -52,11 +52,11 @@ jobs:
           p = Path('_site/index.html')
           s = p.read_text(encoding='utf-8')
           head_marker = '</head>'
-          style = '<link rel="stylesheet" href="./jarvis-command-center.css?v=wakeword-match-20261013b">\n<link rel="stylesheet" href="./jarvis-velve.css?v=velve-20261013c">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{display:none!important}</style>\n'
-          if './jarvis-velve.css?v=velve-20261013a' not in s:
+          style = '<link rel="stylesheet" href="./jarvis-command-center.css?v=wakeword-match-20261013b">\n<link rel="stylesheet" href="./jarvis-velve.css?v=velve-20261013d">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{display:none!important}</style>\n'
+          if 'jarvis-velve.css?v=velve-20261013d' not in s:
               s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261013b"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n<script src="./jarvis-velve.js?v=velve-20261013c"></script>\n<script src="./jarvis-velve-fix.js?v=velve-launch-fix-20261013a"></script>\n'
+          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=app-routing-youtube-explicit-20261013"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261013b"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n<script src="./jarvis-velve.js?v=velve-20261013d"></script>\n<script src="./jarvis-velve-fix.js?v=velve-launch-fix-20261013a"></script>\n'
           if './jarvis-velve.js?v=velve-' not in s:
               s = s.replace(marker, injection + marker, 1)
           elif './jarvis-velve-fix.js?v=velve-launch-fix-20261013a' not in s:
