@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'velve-20261014e';
+  const VERSION = 'velve-20261014f';
   const OR_KEY = 'jarvisOpenRouterKey', OR_MODEL = 'jarvisOpenRouterModel';
   const MT_KEY = 'velveMapTilerKey';
   const DEFAULT_OR_MODEL = 'openrouter/free';
@@ -83,6 +83,33 @@
     satelliteSats.forEach((item,i)=>{try{const pv=window.satellite.propagate(item.rec,now),pos=pv?.position;if(!pos||![pos.x,pos.y,pos.z].every(Number.isFinite))return;const gd=window.satellite.eciToGeodetic(pos,gst);if(!gd)return;const lon=window.satellite.degreesLong(gd.longitude),lat=window.satellite.degreesLat(gd.latitude);const realH=Math.max(0,Number(gd.height)*1000);/* Visual-only orbit exaggeration: keep markers visibly separated from Earth. */const h=Math.max(1800000,realH*1.6);if(!Number.isFinite(lon)||!Number.isFinite(lat)||!Number.isFinite(h))return;let e=satelliteDS.entities.getById('sat-'+i);if(!e)e=satelliteDS.entities.add({id:'sat-'+i,name:item.s.name,point:{pixelSize:9,color:i%3===0?Cesium.Color.CYAN:i%3===1?Cesium.Color.HOTPINK:Cesium.Color.LIME,outlineColor:Cesium.Color.BLACK,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY}});e.position=Cesium.Cartesian3.fromDegrees(lon,lat,h)}catch(_){} });
   }
   function startSatelliteLoop(){if(satelliteTimer)clearInterval(satelliteTimer);updateSatellites();satelliteTimer=setInterval(()=>{if(root?.classList.contains('velve-on')){updateSatellites();viewer.scene.requestRender()}},1000)}
+  function flyToCoordinates(lat,lon,label,altitude){
+    const destination=Cesium.Cartesian3.fromDegrees(lon,lat,altitude);
+    return new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};try{viewer.camera.cancelFlight();viewer.camera.flyTo({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0},duration:3.2,maximumHeight:12000000,complete:finish,cancel:finish})}catch(_){try{viewer.camera.setView({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0}})}catch(__){}finish()}setTimeout(finish,6000)});
+  }
+  async function goToMyLocation(){
+    if(flying)return false;
+    if(!navigator.geolocation){setStatus('LOCATION NOT SUPPORTED');say('This browser does not support location access.');return false}
+    if(!window.isSecureContext){setStatus('HTTPS REQUIRED FOR LOCATION');say('Open JARVIS using its secure HTTPS website to use your location.');return false}
+    flying=true;setStatus('REQUESTING YOUR LOCATION PERMISSION');say('Please allow location access in your browser to move VELVE to your location.');
+    try{
+      const position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:20000,maximumAge:0}));
+      const lat=Number(position.coords.latitude),lon=Number(position.coords.longitude),accuracy=Number(position.coords.accuracy);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)throw new Error('Invalid device coordinates');
+      selected={name:'Your Location',country:'',lat,lon};$('#v-focus').textContent='YOUR LOCATION';setStatus('FLYING TO YOUR LOCATION');
+      // Device coordinates are used only in this browser session; they are not uploaded or saved.
+      // A low camera altitude aims for house-level framing, subject to imagery availability and GPS accuracy.
+      await flyToCoordinates(lat,lon,'Your Location',1200);
+      await refreshWeather();setStatus('FOCUS: YOUR LOCATION');
+      say(Number.isFinite(accuracy)&&accuracy>100?'Showing your reported location. Device location accuracy is about '+Math.round(accuracy)+' meters.':'You are now viewing your location.');return true;
+    }catch(error){
+      console.warn('[VELVE] device location unavailable',error?.code||error?.message||error);
+      if(error?.code===1){setStatus('LOCATION PERMISSION DENIED');say('Location permission was not granted. Allow location access in your browser settings and try again.')}
+      else if(error?.code===3){setStatus('LOCATION REQUEST TIMED OUT');say('Your device location took too long. Please try again.')}
+      else{setStatus('LOCATION UNAVAILABLE');say('I could not get your device location. Check your browser location settings and try again.')}
+      return false;
+    }finally{flying=false}
+  }
   async function geocode(q){const raw=String(q||'').trim(),key=raw.toLowerCase().replace(/\\s+/g,' ');if(CITY_ALIASES[key]){const a=CITY_ALIASES[key];return {name:a.name,country:a.country,latitude:a.lat,longitude:a.lon,feature_code:'PPLC'}}const name=raw.replace(/\\s+city$/i,'');const d=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en&format=json`).then(r=>{if(!r.ok)throw new Error('Geocoding service unavailable');return r.json()});const rs=d.results||[];if(!rs.length)return null;const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' ').trim();const exact=rs.filter(r=>norm(r.name)===norm(name));const candidates=exact.length?exact:rs;const city=candidates.find(r=>['PPLC','PPLA','PPLA2','PPLA3','PPLA4'].includes(r.feature_code));const r=city||candidates.sort((a,b)=>(Number(b.population)||0)-(Number(a.population)||0))[0];if(!r||!Number.isFinite(Number(r.latitude))||!Number.isFinite(Number(r.longitude)))return null;return r}
   async function flyTo(name){
     if(flying)return false; flying=true; setStatus('LOCATING '+String(name).toUpperCase());
@@ -98,7 +125,7 @@
     finally{flying=false}
   }
   function localIntent(text){const t=String(text||'').toLowerCase().replace(/[!?.,]/g,' ').replace(/\s+/g,' ').trim();const m=t.match(/(?:go|take me|move|fly|navigate|show|zoom)(?:\s+me)?(?:\s+to|\s+into|\s+at|\s+around)?\s+(.+)/);if(m&&m[1]&&!/^(back|home|global|out)$/.test(m[1].trim()))return m[1].trim();if(/global view|world view|show earth|zoom out|go back/.test(t)){try{viewer.camera.cancelFlight();viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(0,20,22000000)})}catch(_){}selected={name:'Earth',lat:20,lon:0};$('#v-focus').textContent='GLOBAL';return null}return undefined}
-  async function handleInput(text){text=String(text||'').trim();if(!text)return;$('#velve-input').value='';const intent=localIntent(text);if(intent!==undefined){if(intent)await flyTo(intent);return}say('Say take me to a city or place.')}
+  async function handleInput(text){text=String(text||'').trim();if(!text)return;$('#velve-input').value='';const t=text.toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\\s+/g,' ').trim();if(/\\b(my location|my current location|our location|current location|where am i|where i am|my position|my house|my home)\\b/.test(t)||/\\b(take me|go|navigate|fly|move)\\s+(to|me to)\\s+(my location|my current location|my house|my home)\\b/.test(t)){await goToMyLocation();return}const intent=localIntent(text);if(intent!==undefined){if(intent)await flyTo(intent);return}say('Say take me to a city or place, or ask to go to your location.')}
   function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){say('Voice input is not supported by this browser.');return}const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=1;r.onresult=e=>handleInput(e.results[0][0].transcript);r.onerror=()=>setStatus('VOICE INPUT UNAVAILABLE');r.start();setStatus('LISTENING')}
   async function open(){buildUI();root.classList.add('velve-on');document.body.classList.add('velve-active');setStatus('STARTING VELVE');await loadCesium();if(!viewer)initViewer();if(!window.satellite){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/satellite.js@7.1.0/dist/satellite.min.js';document.head.appendChild(s);await new Promise(r=>{s.onload=r;s.onerror=r})}$('#velve-help').classList.add('hidden');await Promise.allSettled([refreshWeather(),refreshQuakes(),refreshAircraft(),refreshSatellites()]);startSatelliteLoop();if(refreshTimer)clearInterval(refreshTimer);refreshTimer=setInterval(()=>{if(root?.classList.contains('velve-on')){refreshQuakes();refreshAircraft()}},60000);setStatus('LIVE // PUBLIC SOURCES ACTIVE')}
   function exit(){if(refreshTimer)clearInterval(refreshTimer);if(satelliteTimer)clearInterval(satelliteTimer);try{viewer?.camera.cancelFlight()}catch(_){}root.classList.remove('velve-on');document.body.classList.remove('velve-active');say('VELVE environment closed.')}
