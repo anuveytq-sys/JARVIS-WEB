@@ -1,51 +1,231 @@
-/* JARVIS Focus Detector — hybrid browser detector.
-   Accuracy-first local COCO-SSD coverage + optional Gemini Vision for broader everyday-object recognition.
-   No API key is hard-coded. Gemini Vision uses the user's existing JARVIS personal Gemini key
-   from sessionStorage when one is configured in JARVIS Settings. */
+/* JARVIS Focus Detector — LOCAL ONLY.
+   No Gemini, OpenRouter, backend calls, API keys, or token usage.
+   Detection runs in the browser with TensorFlow.js + COCO-SSD.
+   The label dictionary adds human-friendly everyday names without sending camera frames anywhere.
+*/
 (() => {
   "use strict";
-  let modal,video,canvas,ctx,stream,model,running=false,frame=0,loading=false,previousBoxes=[];
-  let smartBusy=false,lastSmartAt=0,smartResults=[],smartPrevious=[];
-  const LABELS={"cell phone":"PHONE","laptop":"LAPTOP","potted plant":"PLANT","traffic light":"TRAFFIC LIGHT","sports ball":"BALL","person":"PERSON","bottle":"BOTTLE","cup":"CUP","book":"BOOK","chair":"CHAIR","cat":"CAT","dog":"DOG","car":"CAR","bicycle":"BICYCLE","backpack":"BACKPACK","keyboard":"KEYBOARD","mouse":"MOUSE","tv":"SCREEN","bird":"BIRD","apple":"APPLE","banana":"BANANA","motorcycle":"MOTORCYCLE","airplane":"AIRPLANE","bus":"BUS","train":"TRAIN","truck":"TRUCK","boat":"BOAT","couch":"COUCH","bed":"BED","dining table":"DINING TABLE","toilet":"TOILET","refrigerator":"REFRIGERATOR","microwave":"MICROWAVE","oven":"OVEN","sink":"SINK","remote":"REMOTE","clock":"CLOCK","vase":"VASE","scissors":"SCISSORS","teddy bear":"TEDDY BEAR","hair drier":"HAIR DRIER","toothbrush":"TOOTHBRUSH","fire hydrant":"FIRE HYDRANT","stop sign":"STOP SIGN","parking meter":"PARKING METER","bench":"BENCH","umbrella":"UMBRELLA","handbag":"HANDBAG","tie":"TIE","suitcase":"SUITCASE","frisbee":"FRISBEE","skis":"SKIS","snowboard":"SNOWBOARD","kite":"KITE","baseball bat":"BASEBALL BAT","baseball glove":"BASEBALL GLOVE","skateboard":"SKATEBOARD","surfboard":"SURFBOARD","tennis racket":"TENNIS RACKET","wine glass":"GLASS","fork":"FORK","knife":"KNIFE","spoon":"SPOON","bowl":"BOWL","donut":"DONUT","cake":"CAKE","sandwich":"SANDWICH","pizza":"PIZZA","hot dog":"HOT DOG","carrot":"CARROT","broccoli":"BROCCOLI","orange":"ORANGE","horse":"HORSE","sheep":"SHEEP","cow":"COW","elephant":"ELEPHANT","bear":"BEAR","zebra":"ZEBRA","giraffe":"GIRAFFE"};
-  const EVERYDAY=`glasses eyeglasses sunglasses airpods earbuds earphones headphones headset watch smartwatch ring bracelet wallet purse money cash banknote bill coin coins key keys pen pencil marker eraser ruler notebook paper envelope folder stapler tape glue scissors calculator charger cable usb cable power bank adapter plug remote controller game controller phone tablet laptop monitor keyboard mouse webcam speaker microphone camera tripod book magazine newspaper bottle cup mug glass plate bowl spoon fork knife backpack handbag suitcase umbrella hat cap shoes sandal sock shirt jacket pants jeans belt tie pillow blanket towel soap shampoo toothbrush toothpaste comb hairbrush mirror makeup bag water bottle thermos lunch box food container medicine box toy teddy bear ball doll lego blocks bicycle helmet car bus motorcycle train airplane tv sofa couch table desk bed lamp fan clock calendar picture frame vase plant flower trash bin basket box carton package tools hammer screwdriver wrench pliers ruler tape measure flashlight battery broom mop bucket vacuum iron hair dryer refrigerator freezer microwave oven toaster blender kettle coffee maker rice cooker pan pot cutting board dish rack sink faucet toilet door window curtain carpet mat chair stool bench bookshelf drawer cabinet shelf bedframe pillowcase bedsheet. Include common variants, colors, sizes, brands only when visually readable. Recognize small personal items such as earbuds, coins, cash and glasses only when their shape and appearance are clear enough to distinguish them from similar objects.`;
-  function build(){
-    if(modal)return;
-    const style=document.createElement("style");style.textContent=`#jarvis-focus-detector{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,5,14,.97);color:#d8fbff;font:14px/1.4 system-ui,sans-serif}#jarvis-focus-card{width:min(96vw,900px);max-height:96vh;overflow:auto;padding:14px;box-sizing:border-box;border:1px solid #00eaff;border-radius:15px;background:linear-gradient(145deg,#031b30,#000914);box-shadow:0 0 32px #00eaff2b}#jarvis-focus-stage{position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;line-height:0}#jarvis-focus-video{display:block;width:100%;max-height:66vh;object-fit:contain}#jarvis-focus-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.jarvis-focus-btn{touch-action:manipulation;border:1px solid #00d9ff;border-radius:8px;background:#06263c;color:#d8fbff;font-weight:800;padding:10px 13px;margin:8px 5px 0 0}#jarvis-focus-status{color:#8defff;font-size:12px;margin:9px 0 2px;min-height:1.5em}#jarvis-focus-card h2{font-size:18px;letter-spacing:2px;margin:2px 0 5px}`;document.head.appendChild(style);
-    modal=document.createElement("div");modal.id="jarvis-focus-detector";modal.innerHTML='<section id="jarvis-focus-card" role="dialog" aria-modal="true" aria-label="JARVIS object detector"><h2>JARVIS // FOCUS DETECTOR</h2><p style="font-size:12px;color:#9bcbd8;margin:0 0 10px">ACCURACY MODE: detections are deliberately slower and must remain stable before JARVIS reports them. Smart Vision requires a Gemini key configured in JARVIS Settings.</p><div id="jarvis-focus-stage"><video id="jarvis-focus-video" autoplay playsinline muted></video><canvas id="jarvis-focus-overlay"></canvas></div><div id="jarvis-focus-status" role="status">Ready. Tap START DETECTOR to allow camera access.</div><button class="jarvis-focus-btn" id="jarvis-focus-start">START DETECTOR</button><button class="jarvis-focus-btn" id="jarvis-focus-smart">SMART VISION</button><button class="jarvis-focus-btn" id="jarvis-focus-close">CLOSE</button></section>';
-    document.body.appendChild(modal);video=modal.querySelector("#jarvis-focus-video");canvas=modal.querySelector("#jarvis-focus-overlay");ctx=canvas.getContext("2d");modal.querySelector("#jarvis-focus-start").addEventListener("click",start);modal.querySelector("#jarvis-focus-smart").addEventListener("click",()=>smartDetect(true));modal.querySelector("#jarvis-focus-close").addEventListener("click",close);
+  let modal, video, canvas, ctx, stream, model;
+  let running = false, frame = 0, loading = false, previousBoxes = [];
+
+  // COCO-SSD's supported classes, presented with JARVIS-friendly everyday names.
+  const LABELS = {
+    "person":"PERSON", "bicycle":"BICYCLE", "car":"CAR", "motorcycle":"MOTORCYCLE",
+    "airplane":"AIRPLANE", "bus":"BUS", "train":"TRAIN", "truck":"TRUCK", "boat":"BOAT",
+    "traffic light":"TRAFFIC LIGHT", "fire hydrant":"FIRE HYDRANT", "stop sign":"STOP SIGN",
+    "parking meter":"PARKING METER", "bench":"BENCH", "bird":"BIRD", "cat":"CAT", "dog":"DOG",
+    "horse":"HORSE", "sheep":"SHEEP", "cow":"COW", "elephant":"ELEPHANT", "bear":"BEAR",
+    "zebra":"ZEBRA", "giraffe":"GIRAFFE", "backpack":"BACKPACK", "umbrella":"UMBRELLA",
+    "handbag":"HANDBAG / PURSE", "tie":"TIE", "suitcase":"SUITCASE", "frisbee":"FRISBEE",
+    "skis":"SKIS", "snowboard":"SNOWBOARD", "sports ball":"BALL", "kite":"KITE",
+    "baseball bat":"BASEBALL BAT", "baseball glove":"BASEBALL GLOVE", "skateboard":"SKATEBOARD",
+    "surfboard":"SURFBOARD", "tennis racket":"TENNIS RACKET", "bottle":"BOTTLE",
+    "wine glass":"GLASS", "cup":"CUP / MUG", "fork":"FORK", "knife":"KNIFE", "spoon":"SPOON",
+    "bowl":"BOWL", "banana":"BANANA", "apple":"APPLE", "sandwich":"SANDWICH", "orange":"ORANGE",
+    "broccoli":"BROCCOLI", "carrot":"CARROT", "hot dog":"HOT DOG", "pizza":"PIZZA",
+    "donut":"DONUT", "cake":"CAKE", "chair":"CHAIR", "couch":"SOFA / COUCH", "potted plant":"PLANT",
+    "bed":"BED", "dining table":"TABLE", "toilet":"TOILET", "tv":"TV / SCREEN",
+    "laptop":"LAPTOP", "mouse":"MOUSE", "remote":"REMOTE / CONTROLLER", "keyboard":"KEYBOARD",
+    "cell phone":"PHONE", "microwave":"MICROWAVE", "oven":"OVEN", "toaster":"TOASTER",
+    "sink":"SINK", "refrigerator":"FRIDGE", "book":"BOOK", "clock":"CLOCK", "vase":"VASE",
+    "scissors":"SCISSORS", "teddy bear":"TEDDY BEAR", "hair drier":"HAIR DRYER", "toothbrush":"TOOTHBRUSH"
+  };
+
+  // Human-friendly aliases used by the local/manual presentation layer.
+  // These do not add network inference; they only rename classes already detected locally.
+  const EVERYDAY_ALIASES = {
+    "cell phone":["phone","smartphone","mobile"], "laptop":["computer","notebook computer"],
+    "tv":["television","monitor","screen"], "mouse":["computer mouse"], "keyboard":["computer keyboard"],
+    "remote":["remote control","controller"], "bottle":["water bottle","drink bottle"],
+    "cup":["mug","coffee cup"], "handbag":["purse","bag"], "backpack":["school bag"],
+    "couch":["sofa"], "dining table":["table","desk-like table"], "potted plant":["house plant"],
+    "refrigerator":["fridge"], "hair drier":["hair dryer"], "sports ball":["ball"],
+    "book":["textbook","notebook-like book"], "clock":["wall clock","table clock"],
+    "scissors":["paper scissors"], "toothbrush":["tooth brush"]
+  };
+
+  function build() {
+    if (modal) return;
+    const style = document.createElement("style");
+    style.id = "jarvis-focus-detector-style";
+    style.textContent = `
+      #jarvis-focus-detector{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,5,14,.97);color:#d8fbff;font:14px/1.4 system-ui,sans-serif}
+      #jarvis-focus-card{width:min(96vw,900px);max-height:96vh;overflow:auto;padding:14px;box-sizing:border-box;border:1px solid #00eaff;border-radius:15px;background:linear-gradient(145deg,#031b30,#000914);box-shadow:0 0 32px #00eaff2b}
+      #jarvis-focus-stage{position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;line-height:0}
+      #jarvis-focus-video{display:block;width:100%;max-height:66vh;object-fit:contain}
+      #jarvis-focus-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+      .jarvis-focus-btn{touch-action:manipulation;cursor:pointer;border:1px solid #00d9ff;border-radius:8px;background:#06263c;color:#d8fbff;font-weight:800;padding:10px 13px;margin:8px 5px 0 0}
+      #jarvis-focus-status{color:#8defff;font-size:12px;margin:9px 0 2px;min-height:1.5em}
+      #jarvis-focus-card h2{font-size:18px;letter-spacing:2px;margin:2px 0 5px}
+    `;
+    document.head.appendChild(style);
+    modal = document.createElement("div");
+    modal.id = "jarvis-focus-detector";
+    modal.innerHTML = `<section id="jarvis-focus-card" role="dialog" aria-modal="true" aria-label="JARVIS object detector">
+      <h2>JARVIS // FOCUS DETECTOR</h2>
+      <p style="font-size:12px;color:#9bcbd8;margin:0 0 10px">LOCAL ZERO-TOKEN MODE • Camera frames stay on this device. No Gemini, OpenRouter, or AI API requests are made.</p>
+      <div id="jarvis-focus-stage"><video id="jarvis-focus-video" autoplay playsinline muted></video><canvas id="jarvis-focus-overlay"></canvas></div>
+      <div id="jarvis-focus-status" role="status">Ready. Tap START DETECTOR to allow camera access.</div>
+      <button class="jarvis-focus-btn" id="jarvis-focus-start" type="button">START DETECTOR</button>
+      <button class="jarvis-focus-btn" id="jarvis-focus-close" type="button">CLOSE</button>
+    </section>`;
+    document.body.appendChild(modal);
+    video = modal.querySelector("#jarvis-focus-video");
+    canvas = modal.querySelector("#jarvis-focus-overlay");
+    ctx = canvas.getContext("2d");
+    modal.querySelector("#jarvis-focus-start").addEventListener("click", start);
+    modal.querySelector("#jarvis-focus-close").addEventListener("click", close);
   }
-  function status(s){const e=document.getElementById("jarvis-focus-status");if(e)e.textContent=s}
-  function loadScript(src){return new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=src;s.onload=resolve;s.onerror=()=>reject(new Error("Could not load detector library"));document.head.appendChild(s)})}
-  async function loadModel(){if(model)return model;if(loading){while(loading)await new Promise(r=>setTimeout(r,100));return model}loading=true;try{if(!window.tf)await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js");if(!window.cocoSsd)await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js");model=await window.cocoSsd.load({base:"mobilenet_v2"});return model}finally{loading=false}}
-  function getGeminiKey(){try{return sessionStorage.getItem("jarvisPersonalGeminiKey")||""}catch(_){return ""}}
-  function getGeminiModel(){try{return sessionStorage.getItem("jarvisPersonalGeminiModel")||"gemini-3.5-flash"}catch(_){return "gemini-3.5-flash"}}
-  function frameData(){const c=document.createElement("canvas"),scale=Math.min(1,1280/video.videoWidth);c.width=Math.max(1,Math.round(video.videoWidth*scale));c.height=Math.max(1,Math.round(video.videoHeight*scale));c.getContext("2d").drawImage(video,0,0,c.width,c.height);return{data:c.toDataURL("image/jpeg",.82).split(",")[1],w:c.width,h:c.height}}
-  function normalizeLabel(s){return String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
-  function sameSmartObject(a,b){const al=normalizeLabel(a.label),bl=normalizeLabel(b.label);if(!al||!bl)return false;if(al===bl)return true;const aliases=[["airpods","earbuds"],["earbud","earbuds"],["coin","coins"],["banknote","cash"],["banknote","money"],["remote","remote control"],["watch","smartwatch"],["glasses","eyeglasses"],["phone","cell phone"]];return aliases.some(([x,y])=>(al.includes(x)&&bl.includes(y))||(al.includes(y)&&bl.includes(x)))}
-  async function smartDetect(force=false){
-    if(!video?.videoWidth||smartBusy)return;
-    const key=getGeminiKey();
-    if(!key){status("AI Vision needs a Gemini key in JARVIS Settings. Local detector remains active.");return}
-    if(!force&&Date.now()-lastSmartAt<5200)return;lastSmartAt=Date.now();smartBusy=true;
-    try{
-      status("SMART VISION • taking a careful second look…");
-      const f=frameData();
-      const prompt=`Detect only objects that are clearly visible and confidently identifiable in this image. Accuracy is more important than finding every object. Return ONLY valid JSON: {"objects":[{"label":"short common object name","confidence":0.0,"box_2d":[ymin,xmin,ymax,xmax]}]}. Coordinates are integers from 0 to 1000 in [ymin,xmin,ymax,xmax]. Do NOT guess from vague shapes, shadows, reflections, blur, or partial views. Do NOT label an object as clock, donut, remote, phone, or another familiar class merely because its shape is vaguely similar. For tiny objects such as coins, AirPods/earbuds, keys and small electronics, report them only when the visual evidence is strong. If uncertain, omit the object. Confidence must reflect visual certainty, not possibility. Broad vocabulary guidance: ${EVERYDAY}`;
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(getGeminiModel())}:generateContent?key=${encodeURIComponent(key)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt},{inline_data:{mime_type:"image/jpeg",data:f.data}}]}],generationConfig:{temperature:0,responseMimeType:"application/json"}})});
-      if(!res.ok)throw new Error("AI Vision request failed");
-      const json=await res.json();const text=json?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("")||"";const parsed=JSON.parse(text.replace(/^```json\s*/i,"").replace(/```$/i,"").trim());
-      const candidates=Array.isArray(parsed.objects)?parsed.objects.filter(o=>o&&o.label&&Array.isArray(o.box_2d)&&o.box_2d.length===4&&Number(o.confidence||0)>=.68).slice(0,12):[];
-      smartResults=candidates.filter(o=>smartPrevious.some(p=>sameSmartObject(p,o)));
-      smartPrevious=candidates;
-      drawSmart(f.w,f.h);status(smartResults.length?`SMART VISION • ${smartResults.length} STABLE OBJECTS • ${smartResults.map(o=>String(o.label).toUpperCase()).join(", ")}`:"SMART VISION • waiting for stable, high-confidence results…");
-    }catch(e){status("Smart Vision unavailable right now; local detector continues scanning.")}finally{smartBusy=false}
+
+  function status(text) {
+    const el = document.getElementById("jarvis-focus-status");
+    if (el) el.textContent = text;
   }
-  function drawSmart(w,h){if(!canvas||!ctx)return;for(const o of smartResults){const b=o.box_2d.map(Number);const y=b[0]/1000*h,x=b[1]/1000*w,y2=b[2]/1000*h,x2=b[3]/1000*w,bw=Math.max(1,x2-x),bh=Math.max(1,y2-y);ctx.lineWidth=Math.max(2,w/400);ctx.strokeStyle="#ff3b6b";ctx.shadowColor="#ff3b6b";ctx.shadowBlur=9;ctx.strokeRect(x,y,bw,bh);ctx.shadowBlur=0;ctx.font="bold "+Math.max(13,w/45)+"px system-ui,sans-serif";const text=String(o.label).toUpperCase()+" "+Math.round(Number(o.confidence||0)*100)+"%";const th=Math.max(24,w/28),tw=ctx.measureText(text).width+16,ly=Math.max(0,y-th);ctx.fillStyle="rgba(30,0,18,.92)";ctx.fillRect(x,ly,tw,th);ctx.fillStyle="#ffd2df";ctx.fillText(text,x+8,ly+th*.69)}}
-  async function start(){build();modal.style.display="flex";status("Requesting camera permission…");try{if(!navigator.mediaDevices?.getUserMedia)throw new Error("Camera is not supported by this browser.");if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});video.srcObject=stream;await video.play();status("Loading accuracy-first local detector…");await loadModel();running=true;status("DETECTOR ACTIVE • slower, stable recognition enabled.");detectLoop()}catch(e){running=false;status("Could not start: "+(e.message||"allow camera access and try again."))}}
-  async function detectLoop(){if(!running||!model||!video?.videoWidth){if(running)requestAnimationFrame(detectLoop);return}if(++frame%6===0){try{const predictions=await model.detect(video,25,.60),w=video.videoWidth,h=video.videoHeight;if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}ctx.clearRect(0,0,w,h);const overlap=(a,b)=>{const[ax,ay,aw,ah]=a,[bx,by,bw,bh]=b,ix=Math.max(0,Math.min(ax+aw,bx+bw)-Math.max(ax,bx)),iy=Math.max(0,Math.min(ay+ah,by+bh)-Math.max(ay,by)),inter=ix*iy,union=aw*ah+bw*bh-inter;return union>0?inter/union:0};const tracked=predictions.map(p=>{const old=previousBoxes.find(q=>q.class===p.class&&overlap(q.bbox,p.bbox)>=.30);return{...p,streak:old?old.streak+1:1}});previousBoxes=tracked.map(p=>({class:p.class,bbox:p.bbox,streak:p.streak}));const chosen=tracked.filter(p=>p.streak>=4&&p.score>=.65).sort((a,b)=>b.score-a.score).slice(0,8);for(const p of chosen){const[x,y,bw,bh]=p.bbox,label=LABELS[p.class]||p.class.toUpperCase();ctx.lineWidth=Math.max(2,w/400);ctx.strokeStyle="#00f5ff";ctx.shadowColor="#00dfff";ctx.shadowBlur=8;ctx.strokeRect(x,y,bw,bh);ctx.shadowBlur=0;ctx.font="bold "+Math.max(13,w/45)+"px system-ui,sans-serif";const text=label+" "+Math.round(p.score*100)+"%",th=Math.max(24,w/28),tw=ctx.measureText(text).width+16,ly=Math.max(0,y-th);ctx.fillStyle="rgba(0,18,34,.92)";ctx.fillRect(x,ly,tw,th);ctx.fillStyle="#9ffaff";ctx.fillText(text,x+8,ly+th*.69)}if(getGeminiKey()&&Date.now()-lastSmartAt>5200)smartDetect(false);if(smartResults.length)drawSmart(w,h);if(chosen.length)status("LOCAL + SMART VISION • "+chosen.length+" stable detections"+(smartResults.length?` • ${smartResults.length} stable AI detections`:""));else if(!getGeminiKey())status("LOCAL DETECTOR • accuracy mode: hold the object steady for a few moments. Add your Gemini key for broader recognition.")}catch(e){status("Detection paused briefly; retrying…")}}if(running)requestAnimationFrame(detectLoop)}
-  function close(){running=false;previousBoxes=[];smartResults=[];smartPrevious=[];if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(video)video.srcObject=null;if(modal)modal.style.display="none"}
-  function open(){build();modal.style.display="flex";if(!stream)start()}
-  window.JARVISDetector={open,start,close,smartDetect};
-  document.addEventListener("submit",e=>{if(e.target?.id!=="commandForm")return;const input=document.getElementById("commandInput"),command=String(input?.value||"").replace(/^\s*(?:(?:hey|hello|hi|ok|okay)\s+)?jarvis[, ]*/i,"").trim().replace(/[.!?]+$/,"");if(/^(?:open|launch|start|show|turn on)(?: the)? (?:object )?detector$/i.test(command)){e.preventDefault();e.stopImmediatePropagation();open()}else if(/^(?:close|exit|stop|hide)(?: the)? detector$/i.test(command)){e.preventDefault();e.stopImmediatePropagation();close()}},true);
-  window.addEventListener("beforeunload",close);
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("Could not load local detector library"));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function loadModel() {
+    if (model) return model;
+    if (loading) {
+      while (loading) await new Promise(r => setTimeout(r, 100));
+      return model;
+    }
+    loading = true;
+    try {
+      if (!window.tf) await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js");
+      if (!window.cocoSsd) await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js");
+      model = await window.cocoSsd.load({base:"mobilenet_v2"});
+      return model;
+    } finally {
+      loading = false;
+    }
+  }
+
+  function intersectionOverUnion(a,b) {
+    const [ax,ay,aw,ah]=a,[bx,by,bw,bh]=b;
+    const ix=Math.max(0,Math.min(ax+aw,bx+bw)-Math.max(ax,bx));
+    const iy=Math.max(0,Math.min(ay+ah,by+bh)-Math.max(ay,by));
+    const inter=ix*iy, union=aw*ah+bw*bh-inter;
+    return union>0?inter/union:0;
+  }
+
+  function displayLabel(className) {
+    return LABELS[className] || String(className || "OBJECT").toUpperCase();
+  }
+
+  function drawDetection(p,w) {
+    const [x,y,bw,bh]=p.bbox;
+    const label=displayLabel(p.class);
+    ctx.lineWidth=Math.max(2,w/400);
+    ctx.strokeStyle="#00f5ff";
+    ctx.shadowColor="#00dfff";
+    ctx.shadowBlur=8;
+    ctx.strokeRect(x,y,bw,bh);
+    ctx.shadowBlur=0;
+    ctx.font="bold "+Math.max(13,w/45)+"px system-ui,sans-serif";
+    const text=label+" "+Math.round(p.score*100)+"%";
+    const th=Math.max(24,w/28),tw=ctx.measureText(text).width+16;
+    const ly=Math.max(0,y-th);
+    ctx.fillStyle="rgba(0,18,34,.92)";
+    ctx.fillRect(x,ly,tw,th);
+    ctx.fillStyle="#9ffaff";
+    ctx.fillText(text,x+8,ly+th*.69);
+  }
+
+  async function start() {
+    build();
+    modal.style.display="flex";
+    status("Requesting camera permission…");
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera is not supported by this browser.");
+      if (stream) stream.getTracks().forEach(t=>t.stop());
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
+      video.srcObject=stream;
+      await video.play();
+      status("Loading local zero-token detector…");
+      await loadModel();
+      running=true;
+      frame=0;
+      previousBoxes=[];
+      status("DETECTOR ACTIVE • LOCAL ONLY • no AI/API requests");
+      detectLoop();
+    } catch(e) {
+      running=false;
+      status("Could not start: "+(e.message||"allow camera access and try again."));
+    }
+  }
+
+  async function detectLoop() {
+    if (!running || !model || !video?.videoWidth) {
+      if (running) requestAnimationFrame(detectLoop);
+      return;
+    }
+    if (++frame % 6 === 0) {
+      try {
+        const predictions=await model.detect(video,25,.60);
+        const w=video.videoWidth,h=video.videoHeight;
+        if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+        ctx.clearRect(0,0,w,h);
+
+        const tracked=predictions.map(p=>{
+          const old=previousBoxes.find(q=>q.class===p.class&&intersectionOverUnion(q.bbox,p.bbox)>=.30);
+          return {...p,streak:old?old.streak+1:1};
+        });
+        previousBoxes=tracked.map(p=>({class:p.class,bbox:p.bbox,streak:p.streak}));
+
+        // Stable multi-frame reporting prevents random guesses from appearing immediately.
+        const chosen=tracked.filter(p=>p.streak>=4&&p.score>=.65)
+          .sort((a,b)=>b.score-a.score).slice(0,10);
+        chosen.forEach(p=>drawDetection(p,w));
+
+        if(chosen.length){
+          const names=chosen.map(p=>displayLabel(p.class)).join(", ");
+          status("LOCAL DETECTOR • "+chosen.length+" stable object"+(chosen.length===1?"":"s")+" • "+names);
+        } else {
+          status("LOCAL DETECTOR • hold objects steady for a moment • zero API/token usage");
+        }
+      } catch(e) {
+        status("Detection paused briefly; local detector retrying…");
+      }
+    }
+    if(running) requestAnimationFrame(detectLoop);
+  }
+
+  function close() {
+    running=false;
+    previousBoxes=[];
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream=null;
+    if(video) video.srcObject=null;
+    if(ctx&&canvas) ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(modal) modal.style.display="none";
+  }
+
+  // Public launcher for JARVIS voice/browser commands.
+  window.openJarvisFocusDetector = () => { build(); start(); };
+  window.closeJarvisFocusDetector = close;
+  window.JARVISFocusDetector = {open:start, close};
+
+  // Voice/text command compatibility. This does not send anything to a server.
+  document.addEventListener("submit", e => {
+    const form=e.target;
+    if(form?.id!=="commandForm") return;
+    const input=document.getElementById("commandInput");
+    const text=String(input?.value||"").trim().replace(/^hey\s+jarvis[,:]?\s*/i,"").trim();
+    if(/^(open|start|launch|show)(?: the)? (?:object )?(?:focus )?detector$|^(?:object )?detector$/i.test(text)){
+      e.preventDefault(); e.stopImmediatePropagation();
+      start();
+      if(input) input.value="";
+    }
+  }, true);
+
+  window.addEventListener("keydown", e => { if(e.key === "Escape" && modal?.style.display === "flex") close(); });
 })();
