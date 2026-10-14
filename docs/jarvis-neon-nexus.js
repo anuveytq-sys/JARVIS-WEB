@@ -17,7 +17,7 @@
   let root, recognition, clockTimer, refreshTimer, lastReply = '';
   function build() {
     if (root) return;
-    const style = document.createElement('link'); style.rel='stylesheet'; style.href='./jarvis-neon-nexus.css?v=neon-nexus-20261014c'; document.head.appendChild(style);
+    const style = document.createElement('link'); style.rel='stylesheet'; style.href='./jarvis-neon-nexus.css?v=neon-nexus-20261014d'; document.head.appendChild(style);
     root = document.createElement('section'); root.id='neon-nexus'; root.setAttribute('aria-label','NEON NEXUS JARVIS Command Environment');
     root.innerHTML = `
       <div class="nn-grid"></div><canvas class="nn-network" id="nn-network"></canvas><div class="nn-vignette"></div>
@@ -142,16 +142,62 @@
     try{if(typeof window.sendCommand==='function'){window.sendCommand(q);showToast('Command sent to JARVIS core.')}else{showToast('Main JARVIS command engine is not ready.');speak('The JARVIS command engine is not ready yet.')}}catch(_){showToast('Could not send command to JARVIS.')}
   }
   function voice(){
+    // Reuse the original JARVIS HUD recognizer first. It is initialized on page load
+    // and is more reliable on mobile browsers than creating a second recognizer here.
+    const mainVoiceButton = document.querySelector('#voiceButton');
+    if (mainVoiceButton && !mainVoiceButton.disabled) {
+      $('#nn-voice')?.classList.add('listening');
+      if ($('#nn-core-state')) $('#nn-core-state').textContent = 'LISTENING';
+      showToast('JARVIS voice input starting… speak your command.');
+      try {
+        mainVoiceButton.click();
+        clearTimeout(voice.resetTimer);
+        voice.resetTimer = setTimeout(() => {
+          $('#nn-voice')?.classList.remove('listening');
+          if ($('#nn-core-state') && $('#nn-core-state').textContent === 'LISTENING') $('#nn-core-state').textContent = 'CORE STANDBY';
+        }, 12000);
+        return;
+      } catch (_) {
+        $('#nn-voice')?.classList.remove('listening');
+      }
+    }
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR){showToast('Speech recognition is not supported in this browser. Try keyboard dictation.');$('#nn-input')?.focus();return}
-    try{if(recognition){recognition.abort();recognition=null}
-      recognition=new SR();recognition.lang=navigator.language||'en-US';recognition.interimResults=false;recognition.maxAlternatives=1;
-      $('#nn-voice')?.classList.add('listening');$('#nn-core-state').textContent='LISTENING';
-      recognition.onresult=e=>{const heard=e.results?.[0]?.[0]?.transcript||'';$('#nn-input').value=heard;showToast('Heard: '+heard);if(heard)submitCommand({preventDefault(){}})};
-      recognition.onerror=()=>showToast('Voice input failed. Check microphone permission or type your command.');
-      recognition.onend=()=>{$('#nn-voice')?.classList.remove('listening');if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';recognition=null};
-      recognition.start();showToast('Listening… speak your command.');
-    }catch(_){showToast('Could not start microphone. Check browser permission.')}
+    if(!SR){showToast('Voice recognition is not available in this browser. Allow microphone access or use keyboard dictation.');$('#nn-input')?.focus();return}
+    try {
+      if(recognition){try{recognition.abort()}catch(_){} recognition=null}
+      recognition=new SR();
+      recognition.lang=navigator.language||'en-US';
+      recognition.interimResults=false;
+      recognition.maxAlternatives=1;
+      $('#nn-voice')?.classList.add('listening');
+      if ($('#nn-core-state')) $('#nn-core-state').textContent='LISTENING';
+      recognition.onresult=e=>{
+        const heard=e.results?.[0]?.[0]?.transcript||'';
+        $('#nn-input').value=heard;
+        showToast(heard ? 'Heard: '+heard : 'No speech detected. Try again.');
+        if(heard)submitCommand({preventDefault(){}});
+      };
+      recognition.onerror=e=>{
+        const err=e?.error||'unknown';
+        const message = err==='not-allowed'||err==='service-not-allowed'
+          ? 'Microphone access is blocked. Allow microphone access for this site in browser settings.'
+          : err==='no-speech' ? 'No speech detected. Tap Speak and try again.'
+          : err==='network' ? 'Voice service network error. Check your connection and try again.'
+          : 'Voice input unavailable ('+err+'). Try the JARVIS HUD voice button or type your command.';
+        showToast(message);
+      };
+      recognition.onend=()=>{
+        $('#nn-voice')?.classList.remove('listening');
+        if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';
+        recognition=null;
+      };
+      recognition.start();
+      showToast('Listening… speak your command.');
+    } catch (_) {
+      $('#nn-voice')?.classList.remove('listening');
+      if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';
+      showToast('Could not start microphone. Allow microphone access and try again.');
+    }
   }
   function escHandler(e){if(e.key==='Escape'&&root?.classList.contains('open'))close()}
   function open(){build();root.classList.add('open');document.body.classList.add('neon-nexus-active');render();updateClock();showToast('NEON NEXUS online. All command panels connected.');speak('Neon Nexus online. JARVIS command environment ready.')}
@@ -167,7 +213,7 @@
   const hideLegacy=()=>{const legacy=$('#jarvis-superpowers');if(legacy)legacy.style.setProperty('display','none','important')};
   hideLegacy();new MutationObserver(hideLegacy).observe(document.documentElement,{childList:true,subtree:true});
   document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='n'){e.preventDefault();open()}});
-  window.NEON_NEXUS={open,close,render,version:'neon-nexus-20261014c'};
+  window.NEON_NEXUS={open,close,render,version:'neon-nexus-20261014d'};
   // Add a small launcher so users can enter the new environment from the original HUD.
   function launcher(){if($('#nn-launcher'))return;const b=document.createElement('button');b.id='nn-launcher';b.type='button';b.textContent='✧ NEXUS';b.title='Open NEON NEXUS command environment';b.onclick=open;document.body.appendChild(b)}
   launcher();window.addEventListener('load',launcher);
