@@ -113,3 +113,79 @@ body.neon-nexus-active #nn-launcher,body.neon-nexus-active #jarvis-wake-word-tog
 @media(max-width:740px){#neon-nexus .nn-top{top:8px;left:8px;right:8px;grid-template-columns:auto 1fr auto;gap:5px}#neon-nexus .nn-clock{min-width:0;padding:6px 7px}#neon-nexus .nn-clock small{font-size:5px;letter-spacing:.7px}#neon-nexus .nn-clock strong{font-size:15px;letter-spacing:1px}#neon-nexus .nn-clock span{font-size:5px;letter-spacing:.5px}#neon-nexus .nn-brand{gap:5px;justify-content:center}#neon-nexus .nn-brand-dot{width:8px;height:8px}#neon-nexus .nn-brand b{font-size:10px;letter-spacing:2px}#neon-nexus .nn-brand small{font-size:5px;letter-spacing:.5px}#neon-nexus .nn-online{display:none}#neon-nexus #nn-back{font-size:7px;padding:7px 7px}#neon-nexus .nn-panel{top:68px;bottom:76px;width:calc(50% - 13px);padding:7px;border-radius:8px}#neon-nexus .nn-left{left:7px}#neon-nexus .nn-right{right:7px}#neon-nexus .nn-panel-head{font-size:6px;letter-spacing:.3px}#neon-nexus .nn-env{grid-template-columns:18px minmax(0,1fr) 4px;gap:4px;padding:5px 3px}#neon-nexus .nn-env-icon{width:18px;height:18px;font-size:10px}#neon-nexus .nn-env b{font-size:6px}#neon-nexus .nn-env small{font-size:5px;line-height:1.25}#neon-nexus .nn-env em{display:none}#neon-nexus .nn-panel-foot{font-size:5px;letter-spacing:0}#neon-nexus .nn-task{font-size:7px;padding:5px 1px}#neon-nexus .nn-memory-tabs button{font-size:6px;padding:6px 2px}#neon-nexus .nn-service{gap:4px;padding:6px 1px}#neon-nexus .nn-service-icon{width:17px;height:17px;flex-basis:17px;font-size:10px}#neon-nexus .nn-service b{font-size:6px}#neon-nexus .nn-service small{font-size:5.5px;line-height:1.35}#neon-nexus .nn-memory-item{font-size:7px}#neon-nexus .nn-quick-grid{gap:4px;padding:6px 0}#neon-nexus .nn-quick-grid button{font-size:6px;padding:7px 2px}#neon-nexus .nn-note{font-size:5px}#neon-nexus .nn-core-area{top:51%;width:calc(100vw - 26px);height:42vh;min-height:0;pointer-events:none}#neon-nexus .nn-core{width:100px;height:100px;pointer-events:auto}#neon-nexus .nn-orbit-a{width:52%;height:22%}#neon-nexus .nn-orbit-b{width:42%;height:42%}#neon-nexus .nn-orbit-c{width:30%;height:60%}#neon-nexus .nn-node{min-width:35px;pointer-events:auto}#neon-nexus .nn-node b{width:24px;height:24px;font-size:11px}#neon-nexus .nn-node span{font-size:5px}#neon-nexus .nn-node-a{left:9%;top:21%}#neon-nexus .nn-node-b{right:8%;top:20%}#neon-nexus .nn-node-c{left:9%;bottom:19%}#neon-nexus .nn-node-d{right:8%;bottom:18%}#neon-nexus .nn-core-caption{top:0;font-size:5px;letter-spacing:.5px}#neon-nexus .nn-core-foot{font-size:5px;left:8%;right:8%;bottom:0}#neon-nexus .nn-console{bottom:7px;width:calc(100vw - 14px);padding:6px;gap:5px}#neon-nexus .nn-console-mark{display:none}#neon-nexus .nn-input-wrap small{font-size:5px}#neon-nexus #nn-input{font-size:11px}#neon-nexus #nn-voice{width:34px;height:36px;flex-basis:34px}#neon-nexus #nn-send{height:36px;padding:0 9px;font-size:7px}#neon-nexus .nn-toast{bottom:57px;font-size:8px}}
 @media(max-width:390px){#neon-nexus .nn-clock{display:none}#neon-nexus .nn-top{grid-template-columns:1fr auto}#neon-nexus .nn-brand{justify-content:flex-start}#neon-nexus .nn-panel-head{font-size:5.5px}#neon-nexus .nn-env small{font-size:4.8px}#neon-nexus .nn-node-a{left:4%}#neon-nexus .nn-node-b{right:4%}}
 @media(prefers-reduced-motion:reduce){#neon-nexus *,#neon-nexus *::before,#neon-nexus *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+
+
+/* NEON NEXUS layout refinement — six independent, scrollable panels; preserve the central core. */
+#nn-launcher{right:14px!important;bottom:142px!important;z-index:2147483642!important;padding:9px 12px!important}
+#neon-nexus .nn-panel{top:auto;bottom:auto;width:clamp(190px,17vw,245px);height:25vh;min-height:150px;max-height:255px;padding:10px 11px;overflow:hidden}
+#neon-nexus .nn-left{left:14px;right:auto}
+#neon-nexus .nn-right{right:14px;left:auto}
+#neon-nexus .nn-panel-env,#neon-nexus .nn-panel-services{top:92px}
+#neon-nexus .nn-panel-tasks,#neon-nexus .nn-panel-memory{top:calc(92px + 25vh + 8px)}
+#neon-nexus .nn-panel-system,#neon-nexus .nn-panel-actions{top:calc(92px + 50vh + 16px);bottom:86px;height:auto;max-height:none}
+#neon-nexus .nn-environments{flex:1;padding:8px 2px 2px}
+#neon-nexus .nn-tasks,#neon-nexus .nn-memory-list,#neon-nexus .nn-actions-scroll{flex:1;min-height:0;overflow:auto}
+#neon-nexus .nn-panel-head{font-size:8px;letter-spacing:.8px;flex-shrink:0}
+#neon-nexus .nn-quick-grid{display:flex;flex-direction:column;gap:6px;padding:8px 1px}
+#neon-nexus .nn-quick-grid button{display:block;width:100%;min-height:32px;text-align:left;padding:8px 10px;font-size:8px;letter-spacing:.7px}
+#neon-nexus .nn-system-metric{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:10px 2px;border-bottom:1px solid #ff43df1a;font-size:7px;letter-spacing:.6px;color:#b88ab2}
+#neon-nexus .nn-system-metric b{font-size:8px;color:#c6ffe6;white-space:nowrap}
+#neon-nexus .nn-system-metric em{font-style:normal;color:#ff7be7}
+#neon-nexus .nn-system-note{padding:10px 2px;font-size:8px;line-height:1.6;color:#b88ab2}
+#neon-nexus .nn-core-area{width:min(650px,calc(100vw - 550px));height:min(650px,calc(100vh - 170px))}
+#neon-nexus .nn-core{width:clamp(135px,17vw,205px);height:clamp(135px,17vw,205px)}
+@media(max-width:1000px) and (min-width:741px){
+  #neon-nexus .nn-panel{width:clamp(180px,19vw,205px);padding:8px}
+  #neon-nexus .nn-panel-head{font-size:7px;letter-spacing:.4px}
+  #neon-nexus .nn-core-area{width:calc(100vw - 460px)}
+  #nn-launcher{bottom:132px!important}
+}
+@media(max-width:740px){
+  #nn-launcher{right:10px!important;bottom:118px!important;padding:8px 10px!important}
+  #neon-nexus .nn-panel{width:calc(34vw - 2px);height:21vh;min-height:0;max-height:none;padding:6px;border-radius:8px}
+  #neon-nexus .nn-left{left:5px}
+  #neon-nexus .nn-right{right:5px}
+  #neon-nexus .nn-panel-env,#neon-nexus .nn-panel-services{top:67px}
+  #neon-nexus .nn-panel-tasks,#neon-nexus .nn-panel-memory{top:calc(67px + 21vh + 5px)}
+  #neon-nexus .nn-panel-system,#neon-nexus .nn-panel-actions{top:calc(67px + 42vh + 10px);bottom:76px;height:auto}
+  #neon-nexus .nn-panel-head{font-size:6px;letter-spacing:0;padding-bottom:5px;gap:3px}
+  #neon-nexus .nn-panel-head i{margin-right:2px}
+  #neon-nexus .nn-env{grid-template-columns:17px minmax(0,1fr) 4px;gap:3px;padding:5px 2px}
+  #neon-nexus .nn-env-icon{width:17px;height:17px;font-size:9px}
+  #neon-nexus .nn-env b{font-size:6px}
+  #neon-nexus .nn-env small{font-size:5.5px;line-height:1.3}
+  #neon-nexus .nn-env em{display:none}
+  #neon-nexus .nn-task{font-size:6.5px;padding:5px 1px}
+  #neon-nexus .nn-task small{font-size:5.5px}
+  #neon-nexus .nn-service{gap:4px;padding:6px 1px}
+  #neon-nexus .nn-service-icon{width:16px;height:16px;flex-basis:16px;font-size:9px}
+  #neon-nexus .nn-service b{font-size:6px;letter-spacing:0}
+  #neon-nexus .nn-service small{font-size:5.5px;line-height:1.35}
+  #neon-nexus .nn-memory-item{font-size:6.5px;padding:6px 1px}
+  #neon-nexus .nn-memory-item small{font-size:5.5px}
+  #neon-nexus .nn-quick-grid{gap:4px;padding:5px 0}
+  #neon-nexus .nn-quick-grid button{font-size:6px;min-height:26px;padding:6px 5px;letter-spacing:0}
+  #neon-nexus .nn-system-metric{font-size:5.5px;padding:7px 1px;letter-spacing:0}
+  #neon-nexus .nn-system-metric b{font-size:6px}
+  #neon-nexus .nn-system-note{font-size:6px;padding:7px 1px;line-height:1.4}
+  #neon-nexus .nn-core-area{left:50%;top:51%;width:30vw;height:35vh;min-width:0;min-height:0;pointer-events:none}
+  #neon-nexus .nn-core{width:clamp(76px,22vw,100px);height:clamp(76px,22vw,100px);pointer-events:auto}
+  #neon-nexus .nn-orbit-a{width:140%;height:48%}
+  #neon-nexus .nn-orbit-b{width:120%;height:85%}
+  #neon-nexus .nn-orbit-c{width:90%;height:120%}
+  #neon-nexus .nn-node-a{left:-30%;top:12%}
+  #neon-nexus .nn-node-b{right:-30%;top:12%}
+  #neon-nexus .nn-node-c{left:-30%;bottom:12%}
+  #neon-nexus .nn-node-d{right:-30%;bottom:12%}
+  #neon-nexus .nn-node b{width:22px;height:22px;font-size:10px}
+  #neon-nexus .nn-node span{font-size:5px}
+  #neon-nexus .nn-core-caption{font-size:5px;letter-spacing:0;top:-12%}
+  #neon-nexus .nn-core-foot{left:-100%;right:-100%;font-size:5px;bottom:-8%}
+}
+@media(max-width:390px){
+  #neon-nexus .nn-panel{width:calc(34vw - 2px);padding:5px}
+  #neon-nexus .nn-panel-head{font-size:5.5px}
+  #neon-nexus .nn-env small{font-size:5px}
+  #neon-nexus .nn-service small{font-size:5px}
+  #neon-nexus .nn-quick-grid button{font-size:5.5px}
+}
