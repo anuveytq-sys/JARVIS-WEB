@@ -17,7 +17,7 @@
   let root, recognition, clockTimer, refreshTimer, lastReply = '';
   function build() {
     if (root) return;
-    const style = document.createElement('link'); style.rel='stylesheet'; style.href='./jarvis-neon-nexus.css?v=neon-nexus-20261014a'; document.head.appendChild(style);
+    const style = document.createElement('link'); style.rel='stylesheet'; style.href='./jarvis-neon-nexus.css?v=neon-nexus-20261014c'; document.head.appendChild(style);
     root = document.createElement('section'); root.id='neon-nexus'; root.setAttribute('aria-label','NEON NEXUS JARVIS Command Environment');
     root.innerHTML = `
       <div class="nn-grid"></div><canvas class="nn-network" id="nn-network"></canvas><div class="nn-vignette"></div>
@@ -26,14 +26,22 @@
         <div class="nn-brand"><span class="nn-brand-dot"></span><div><b>NEON NEXUS</b><small>JARVIS NEURAL COMMAND ENVIRONMENT</small></div></div>
         <div class="nn-top-actions"><span class="nn-online"><i></i> SYSTEM ONLINE</span><button id="nn-back" title="Return to main JARVIS">↙ JARVIS</button></div>
       </header>
-      <aside class="nn-panel nn-left">
+      <section class="nn-panel nn-left nn-panel-env" aria-label="Environment status">
         <div class="nn-panel-head"><span><i>01</i> ENVIRONMENT STATUS</span><b class="nn-live">LIVE</b></div>
-        <div id="nn-environments" class="nn-environments"></div>
-        <div class="nn-panel-foot"><span>NETWORK INTEGRITY</span><b>OPTIMAL <em>98.7%</em></b></div>
-        <div class="nn-meter"><span></span></div>
-        <div class="nn-panel-head nn-subhead"><span><i>02</i> TASK STREAM</span><b id="nn-task-count">0 LOGS</b></div>
+        <div id="nn-environments" class="nn-scroll nn-environments"></div>
+      </section>
+      <section class="nn-panel nn-left nn-panel-tasks" aria-label="Task stream">
+        <div class="nn-panel-head"><span><i>02</i> TASK STREAM</span><b id="nn-task-count">0 LOGS</b></div>
         <div id="nn-tasks" class="nn-scroll nn-tasks" aria-label="Completed and pending tasks"></div>
-      </aside>
+      </section>
+      <section class="nn-panel nn-left nn-panel-system" aria-label="System diagnostics">
+        <div class="nn-panel-head"><span><i>03</i> SYSTEM DIAGNOSTICS</span><b class="nn-live">LIVE</b></div>
+        <div class="nn-system-metric"><span>NETWORK INTEGRITY</span><b>OPTIMAL <em>98.7%</em></b></div>
+        <div class="nn-meter"><span></span></div>
+        <div class="nn-system-metric"><span>CORE STATUS</span><b>ONLINE</b></div>
+        <div class="nn-system-metric"><span>LOCAL STORAGE</span><b>READY</b></div>
+        <div class="nn-system-note">Browser-local memory and task history stay on this device. Connected AI services depend on your configured provider.</div>
+      </section>
       <main class="nn-core-area">
         <div class="nn-core-caption"><span>NEURAL LINK ESTABLISHED</span><span id="nn-core-state">CORE STANDBY</span></div>
         <div class="nn-orbit nn-orbit-a"></div><div class="nn-orbit nn-orbit-b"></div><div class="nn-orbit nn-orbit-c"></div>
@@ -47,19 +55,30 @@
         <div class="nn-node nn-node-d" data-node="services"><b>✧</b><span>SERVICES</span></div>
         <div class="nn-core-foot"><span>AI CORE / V.4.8</span><span class="nn-pulse"><i></i> NEURAL ACTIVITY</span><span>LATENCY <b id="nn-latency">24 MS</b></span></div>
       </main>
-      <aside class="nn-panel nn-right">
-        <div class="nn-panel-head"><span><i>03</i> MEMORY & SERVICES</span><b id="nn-memory-count">ACTIVE</b></div>
-        <div class="nn-memory-tabs"><button class="active" data-memory-tab="services">SERVICES</button><button data-memory-tab="memory">MEMORY</button></div>
+      <section class="nn-panel nn-right nn-panel-services" aria-label="Services directory">
+        <div class="nn-panel-head"><span><i>04</i> SERVICES</span><b id="nn-services-count">06 MODULES</b></div>
+        <div id="nn-services" class="nn-scroll nn-memory-list"></div>
+      </section>
+      <section class="nn-panel nn-right nn-panel-memory" aria-label="Saved memory">
+        <div class="nn-panel-head"><span><i>05</i> MEMORY</span><b id="nn-memory-count">0 SAVED</b></div>
         <div id="nn-memory" class="nn-scroll nn-memory-list"></div>
         <div class="nn-panel-foot"><span>LOCAL BROWSER MEMORY</span><b>SYNC READY</b></div>
-        <div class="nn-panel-head nn-subhead"><span><i>04</i> QUICK ACTIONS</span><b>TOOLS</b></div>
-        <div class="nn-quick-grid">
-          <button data-action="time">◷ TIME</button><button data-action="status">◈ STATUS</button>
-          <button data-action="tasks">⇄ TASK LOG</button><button data-action="memory">⌘ MEMORY</button>
-          <button data-action="fullscreen">⛶ FULLSCREEN</button><button data-action="calculator">∑ CALCULATOR</button><button data-action="copy">▣ COPY REPLY</button><button data-action="main">↙ MAIN HUD</button>
+      </section>
+      <section class="nn-panel nn-right nn-panel-actions" aria-label="Quick actions">
+        <div class="nn-panel-head"><span><i>06</i> QUICK ACTIONS</span><b>TOOLS</b></div>
+        <div class="nn-scroll nn-actions-scroll">
+          <div class="nn-quick-grid">
+            <button data-action="time">◷ TIME</button>
+            <button data-action="status">◈ STATUS</button>
+            <button data-action="tasks">⇄ TASK LOG</button>
+            <button data-action="memory">⌘ MEMORY</button>
+            <button data-action="fullscreen">⛶ FULLSCREEN</button>
+            <button data-action="calculator">∑ CALCULATOR</button>
+            <button data-action="copy">▣ COPY REPLY</button>
+            <button data-action="main">↙ MAIN HUD</button>
+          </div>
         </div>
-        <div class="nn-note">Your services and saved memories are stored in this browser. External AI features may require your own configured connection.</div>
-      </aside>
+      </section>
       <form class="nn-console" id="nn-form">
         <span class="nn-console-mark">⌘</span><div class="nn-input-wrap"><small>COMMAND / WEB SEARCH</small><input id="nn-input" autocomplete="off" placeholder="Ask JARVIS or search the web…" aria-label="Ask JARVIS or search the web"></div>
         <button type="button" id="nn-voice" aria-label="Speak a command" title="Speak">🎙</button><button type="submit" id="nn-send">EXECUTE ↗</button>
@@ -73,7 +92,6 @@
     $('#nn-form').addEventListener('submit', submitCommand);
     root.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>action(b.dataset.action)));
     root.querySelectorAll('[data-node]').forEach(n=>n.addEventListener('click',()=>action(n.dataset.node)));
-    root.querySelectorAll('[data-memory-tab]').forEach(b=>b.addEventListener('click',()=>{root.querySelectorAll('[data-memory-tab]').forEach(x=>x.classList.toggle('active',x===b));renderMemory(b.dataset.memoryTab)}));
     startNetwork(); render(); updateClock(); clockTimer=setInterval(updateClock,1000); refreshTimer=setInterval(render,2500);
     document.addEventListener('keydown', escHandler);
   }
@@ -85,11 +103,11 @@
     const envs=[['JARVIS CORE','Main AI · voice · commands · web search'],['NEON NEXUS','Magenta neural command environment'],['VELVE','Earth globe · location · satellite feeds'],['TERRANEXUS','Interactive 3D science workshop']];
     const e=$('#nn-environments'); if(e)e.innerHTML=envs.map((x,i)=>'<div class="nn-env"><span class="nn-env-icon">'+['⌘','✧','◎','⚛'][i]+'</span><div><b>'+x[0]+'</b><small>'+x[1]+'</small></div><i class="nn-env-state"></i><em>READY</em></div>').join('');
     const taskBox=$('#nn-tasks');if(taskBox){const items=tasks.slice().reverse().slice(0,60);taskBox.innerHTML=items.length?items.map(t=>'<div class="nn-task"><i class="'+(t.done?'done':'pending')+'">'+(t.done?'✓':'○')+'</i><span>'+escapeHTML(t.text||'JARVIS activity')+'<small>'+(t.at?new Date(t.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):t.source||'JARVIS LOCAL TASK')+'</small></span></div>').join(''):'<div class="nn-empty">No task history yet.<small>Commands and tasks will appear here as you use JARVIS.</small></div>';$ ('#nn-task-count').textContent=items.length+' LOGS';}
-    renderMemory(root.querySelector('[data-memory-tab].active')?.dataset.memoryTab||'services');
+    renderMemory('services'); renderMemory('memory');
   }
   function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function renderMemory(mode){
-    const box=$('#nn-memory');if(!box)return;const s=safeState(),mem=Array.isArray(s.memory)?s.memory:[];
+    const box=mode==='memory'?$('#nn-memory'):$('#nn-services');if(!box)return;const s=safeState(),mem=Array.isArray(s.memory)?s.memory:[];
     const services=[
       ['JARVIS CORE','Natural-language commands, voice input, spoken replies, calculations, browser tools, local memory, task list, web search, time/date, quick actions.'],
       ['NEON NEXUS','Shared task stream, service directory, command routing, voice dictation, neural 3D interface.'],
@@ -105,7 +123,7 @@
       $('#nn-memory-count').textContent=mem.length+' SAVED';
     } else {
       box.innerHTML=services.map(x=>'<div class="nn-service"><span class="nn-service-icon">✧</span><div><b>'+escapeHTML(x[0])+'</b><small>'+escapeHTML(x[1])+'</small></div></div>').join('');
-      $('#nn-memory-count').textContent=services.length+' MODULES';
+      $('#nn-services-count').textContent=String(services.length).padStart(2,'0')+' MODULES';
     }
   }
   function action(kind){
@@ -113,8 +131,8 @@
     if(kind==='time'){showToast(new Date().toLocaleString());speak('The time is '+new Date().toLocaleTimeString());return}
     if(kind==='status'){showToast('JARVIS CORE, NEON NEXUS, VELVE and TERRANEXUS are installed and ready.');return}
     if(kind==='tasks'){render();$('#nn-tasks')?.scrollTo({top:0,behavior:'smooth'});showToast('Task stream refreshed.');return}
-    if(kind==='memory'){root.querySelectorAll('[data-memory-tab]').forEach(b=>b.classList.toggle('active',b.dataset.memoryTab==='memory'));renderMemory('memory');return}
-    if(kind==='services'){root.querySelectorAll('[data-memory-tab]').forEach(b=>b.classList.toggle('active',b.dataset.memoryTab==='services'));renderMemory('services');return}
+    if(kind==='memory'){renderMemory('memory');$('#nn-memory')?.scrollTo({top:0,behavior:'smooth'});showToast('Saved memory panel ready.');return}
+    if(kind==='services'){renderMemory('services');$('#nn-services')?.scrollTo({top:0,behavior:'smooth'});showToast('Services directory ready.');return}
     if(kind==='fullscreen'){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.();return}
   }
   function submitCommand(e){
@@ -149,11 +167,11 @@
   const hideLegacy=()=>{const legacy=$('#jarvis-superpowers');if(legacy)legacy.style.setProperty('display','none','important')};
   hideLegacy();new MutationObserver(hideLegacy).observe(document.documentElement,{childList:true,subtree:true});
   document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='n'){e.preventDefault();open()}});
-  window.NEON_NEXUS={open,close,render,version:'neon-nexus-20261014a'};
+  window.NEON_NEXUS={open,close,render,version:'neon-nexus-20261014c'};
   // Add a small launcher so users can enter the new environment from the original HUD.
   function launcher(){if($('#nn-launcher'))return;const b=document.createElement('button');b.id='nn-launcher';b.type='button';b.textContent='✧ NEXUS';b.title='Open NEON NEXUS command environment';b.onclick=open;document.body.appendChild(b)}
   launcher();window.addEventListener('load',launcher);
   // Intercept the command entry so the new environment is launched naturally by voice/text.
-  const hook=()=>{if(typeof window.sendCommand!=='function'||window.sendCommand.__neonNexusWrapped)return;const old=window.sendCommand;const wrapped=function(q){if(/^(?:(?:hey\s+)?jarvis\s+)?(?:(?:open|launch|start|activate|enter|show)\s+(?:the\s+)?)?(?:neon nexus|neon command environment|magenta command centre|magenta command center)[.! ]*$/i.test(String(q||'').trim())){open();return}if(document.body.classList.contains('neon-nexus-active')&&/^(?:back to jarvis|return to jarvis|close neon nexus|exit neon nexus)$/i.test(String(q||'').trim())){close();return}if(String(q||'').trim())logTask('JARVIS command: '+String(q).trim());return old.apply(this,arguments)};wrapped.__neonNexusWrapped=true;window.sendCommand=wrapped};
+  const hook=()=>{if(typeof window.sendCommand!=='function'||window.sendCommand.__neonNexusWrapped)return;const old=window.sendCommand;const wrapped=function(q){if(/^(?:(?:hey\s+)?jarvis\s+)?(?:(?:open|launch|start|activate|enter|show)\s+(?:the\s+)?)?(?:neon nexus|neon command environment|magenta command centre|magenta command center|command centre|command center|centre|center|nexus)[.! ]*$/i.test(String(q||'').trim())){open();return}if(document.body.classList.contains('neon-nexus-active')&&/^(?:back to jarvis|return to jarvis|close neon nexus|exit neon nexus)$/i.test(String(q||'').trim())){close();return}if(String(q||'').trim())logTask('JARVIS command: '+String(q).trim());return old.apply(this,arguments)};wrapped.__neonNexusWrapped=true;window.sendCommand=wrapped};
   hook();setTimeout(hook,900);window.addEventListener('load',hook);
 })();
