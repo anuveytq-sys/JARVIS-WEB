@@ -189,3 +189,8 @@ body.neon-nexus-active #nn-launcher,body.neon-nexus-active #jarvis-wake-word-tog
   #neon-nexus .nn-service small{font-size:5px}
   #neon-nexus .nn-quick-grid button{font-size:5.5px}
 }
+
+/* Clickable environment shortcuts in the NEXUS status panel. */
+.nn-env[role="button"]{cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease;}
+.nn-env[role="button"]:hover,.nn-env[role="button"]:focus-visible{border-color:rgba(255,65,224,.7);background:rgba(255,38,210,.09);transform:translateX(2px);outline:none;}
+.nn-env[role="button"]:focus-visible{box-shadow:0 0 0 2px rgba(255,65,224,.35);}
