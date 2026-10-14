@@ -815,20 +815,20 @@
 
     // Music commands use public music-site search URLs: no API key or extra permission is needed.
     // The service itself may require a tap to start playback because browsers restrict autoplay.
-    const musicIntent = /\\b(play|listen to|put on)\\b/i.test(text);
-    const explicitYouTubeMusic = /\\bon\\s+youtube\\s+music\\b/i.test(text);
-    const explicitSpotifyMusic = /\\bon\\s+spotify\\b/i.test(text);
-    const explicitAppleMusic = /\\bon\\s+apple\\s+music\\b/i.test(text);
-    const explicitAmazonMusic = /\\bon\\s+amazon\\s+music\\b/i.test(text);
-    const explicitPlainYouTube = /\\bon\\s+youtube\\b/i.test(text) && !explicitYouTubeMusic;
+    const musicIntent = /\b(play|listen to|put on)\b/i.test(text);
+    const explicitYouTubeMusic = /\bon\s+youtube\s+music\b/i.test(text);
+    const explicitSpotifyMusic = /\bon\s+spotify\b/i.test(text);
+    const explicitAppleMusic = /\bon\s+apple\s+music\b/i.test(text);
+    const explicitAmazonMusic = /\bon\s+amazon\s+music\b/i.test(text);
+    const explicitPlainYouTube = /\bon\s+youtube\b/i.test(text) && !explicitYouTubeMusic;
     if (musicIntent && !explicitPlainYouTube) {
       let songQuery = text
-        .replace(/^\\s*(hey|hello|ok|okay)?\\s*jarvis[, :]?\\s*/i, "")
-        .replace(/^\\s*(please\\s+)?(play|listen\\s+to|put\\s+on)\\s+/i, "")
-        .replace(/\\s+\\bon\\s+(youtube\\s+music|youtube|spotify|apple\\s+music|amazon\\s+music)\\b.*$/i, "")
-        .replace(/\\s+\\b(song|track|music)\\s*$/i, "")
+        .replace(/^\s*(hey|hello|ok|okay)?\s*jarvis[, :]?\s*/i, "")
+        .replace(/^\s*(please\s+)?(play|listen\s+to|put\s+on)\s+/i, "")
+        .replace(/\s+\bon\s+(youtube\s+music|youtube|spotify|apple\s+music|amazon\s+music)\b.*$/i, "")
+        .replace(/\s+\b(song|track|music)\s*$/i, "")
         .replace(/[.,!?]+$/g, "")
-        .replace(/\\s+/g, " ")
+        .replace(/\s+/g, " ")
         .trim();
       if (!songQuery) return say("Tell me the song name, for example: play Tere Liye.");
       let musicUrl;
