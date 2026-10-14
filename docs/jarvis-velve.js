@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'velve-20261014f';
+  const VERSION = 'velve-20261014g';
   const OR_KEY = 'jarvisOpenRouterKey', OR_MODEL = 'jarvisOpenRouterModel';
   const MT_KEY = 'velveMapTilerKey';
   const DEFAULT_OR_MODEL = 'openrouter/free';
@@ -49,9 +49,19 @@
       <div class="velve-panel-tools" id="velve-panel-tools"><button id="velve-show-data">EARTH DETAILS</button><button id="velve-show-status">SYSTEM STATUS</button><button id="velve-show-command">COMMAND</button><button id="velve-show-settings">SETTINGS</button></div>
       <div class="velve-help" id="velve-help">DRAG TO ROTATE · SCROLL/PINCH TO ZOOM<br>TRY: “TAKE ME TO TOKYO”</div>
       <div class="velve-panel velve-settings-card" id="velve-settings-card"><h3>VELVE SETTINGS</h3><p>Public sources work without keys.</p><input id="velve-or-key" type="password" placeholder="OpenRouter API key (optional)"><input id="velve-or-model" placeholder="Model, e.g. openrouter/free"><button id="velve-save">SAVE LOCALLY</button></div>
-      <div class="velve-panel velve-command" id="velve-command-panel"><button class="velve-panel-x velve-command-x" id="velve-command-hide">×</button><input id="velve-input" placeholder="Ask VELVE or say a navigation command…"><button id="velve-voice">🎙</button><button id="velve-send">SEND</button></div>`;
+      <div class="velve-panel velve-command" id="velve-command-panel"><button class="velve-panel-x velve-command-x" id="velve-command-hide">×</button><input id="velve-input" placeholder="Ask VELVE or say a navigation command…"><button id="velve-voice">🎙</button><button id="velve-send">SEND</button></div>
+      <div id="velve-location-modal" role="dialog" aria-modal="true" aria-labelledby="velve-location-title" style="display:none;position:absolute;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,.68);padding:20px;box-sizing:border-box">
+        <div style="width:min(360px,100%);box-sizing:border-box;background:#07131d;border:1px solid #29dfff;border-radius:14px;padding:22px;color:#e9fbff;font-family:Arial,sans-serif;box-shadow:0 0 28px rgba(41,223,255,.24);text-align:center">
+          <div style="font-size:12px;letter-spacing:3px;color:#29dfff;margin-bottom:10px">VELVE LOCATION ACCESS</div>
+          <h3 id="velve-location-title" style="margin:0 0 10px;font-size:20px">Allow location access?</h3>
+          <p style="font-size:14px;line-height:1.5;color:#c6dce5;margin:0 0 20px">VELVE wants to use this browser's device location to move the camera to your current area. Your coordinates are used for this navigation only.</p>
+          <div style="display:flex;gap:10px"><button id="velve-location-deny" style="flex:1;padding:11px;border:1px solid #65808b;border-radius:8px;background:#12232d;color:#d9e7ed;font-weight:700">DENY</button><button id="velve-location-allow" style="flex:1;padding:11px;border:0;border-radius:8px;background:#29dfff;color:#001018;font-weight:800">ALLOW</button></div>
+        </div>
+      </div>`;
     document.body.appendChild(root);
     $('#velve-close').onclick=exit;
+    $('#velve-location-deny').onclick=()=>{ $('#velve-location-modal').style.display='none'; setStatus('LOCATION REQUEST CANCELLED'); say('Location access was cancelled.'); };
+    $('#velve-location-allow').onclick=async()=>{ $('#velve-location-modal').style.display='none'; await goToMyLocation(); };
     $('#velve-settings').onclick=()=>$('#velve-settings-card').classList.toggle('open');
     $('#velve-save').onclick=()=>{try{localStorage.setItem(OR_KEY,$('#velve-or-key').value.trim());localStorage.setItem(OR_MODEL,$('#velve-or-model').value.trim()||DEFAULT_OR_MODEL)}catch(_){}setStatus('SETTINGS SAVED LOCALLY')};
     $('#velve-or-key').value=getORKey(); $('#velve-or-model').value=getORModel();
@@ -75,60 +85,4 @@
   async function refreshQuakes(){try{const d=await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson',{cache:'no-store'}).then(r=>r.json());quakeDS.entities.removeAll();(d.features||[]).slice(0,100).forEach(f=>{const c=f.geometry?.coordinates||[],p=f.properties||{},mag=Number(p.mag||0);if(c.length<3)return;quakeDS.entities.add({position:Cesium.Cartesian3.fromDegrees(Number(c[0]),Number(c[1]),Math.max(1000,Math.min(120000,Number(c[2])*1000))),point:{pixelSize:Math.max(4,Math.min(10,mag*2)),color:Cesium.Color.RED.withAlpha(.75)}})});$('#v-quake').textContent=d.metadata?.count??'—'}catch(_){} }
   function addAircraft(x,source,seen){const lon=Number(x.lon??x[5]),lat=Number(x.lat??x[6]);if(!Number.isFinite(lon)||!Number.isFinite(lat))return false;const key=String(x.hex??x.icao24??x[0]??(source+'-'+lon+'-'+lat));if(seen.has(key))return false;seen.add(key);const alt=Math.max(300,Number(x.alt_baro??x.geo_altitude??x.alt_geom??x[7]??x[13]??1000));aircraftDS.entities.add({id:'air-'+key,position:Cesium.Cartesian3.fromDegrees(lon,lat,alt),point:{pixelSize:8,color:Cesium.Color.ORANGE,outlineColor:Cesium.Color.WHITE,outlineWidth:1,disableDepthTestDistance:Number.POSITIVE_INFINITY}});return true}
   async function refreshAircraft(){try{aircraftDS.entities.removeAll();const d=await fetch('https://api.adsb.lol/v2/all',{cache:'no-store'}).then(r=>r.ok?r.json():null);const seen=new Set();let count=0;(d?.ac||[]).forEach(x=>{if(count<800&&addAircraft(x,'ADSB.lol',seen))count++});$('#v-air').textContent=count||'offline'}catch(_){$('#v-air').textContent='offline'} }
-  function parseTLE(text){const lines=String(text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length-2;i++){if(lines[i+1]?.startsWith('1 ')&&lines[i+2]?.startsWith('2 ')){out.push({name:lines[i].replace(/^0 /,''),l1:lines[i+1],l2:lines[i+2]});i+=2}}return out}
-  async function refreshSatellites(){try{if(!window.satellite)return;const groups=['STARLINK','ONEWEB','GPS-OPS','GALILEO','GLONASS','STATIONS'];const packs=await Promise.all(groups.map(g=>fetch(`https://celestrak.org/NORAD/elements/gp.php?GROUP=${g}&FORMAT=TLE`,{cache:'no-store'}).then(r=>r.ok?r.text():'')));const all=packs.flatMap(parseTLE),seen=new Set();satelliteRecs=[];for(const s of all){const key=s.l1.slice(2,7);if(!seen.has(key)){seen.add(key);satelliteRecs.push(s)}if(satelliteRecs.length>=700)break}satelliteDS.entities.removeAll();satelliteSats=satelliteRecs.map(s=>{try{return {s,rec:window.satellite.twoline2satrec(s.l1,s.l2)}}catch(_){return null}}).filter(Boolean);updateSatellites();$('#v-sat').textContent=satelliteSats.length}catch(_){$('#v-sat').textContent='offline'} }
-  function updateSatellites(){
-    if(!window.satellite||!satelliteSats.length)return;
-    const now=new Date(),gst=window.satellite.gstime(now);
-    satelliteSats.forEach((item,i)=>{try{const pv=window.satellite.propagate(item.rec,now),pos=pv?.position;if(!pos||![pos.x,pos.y,pos.z].every(Number.isFinite))return;const gd=window.satellite.eciToGeodetic(pos,gst);if(!gd)return;const lon=window.satellite.degreesLong(gd.longitude),lat=window.satellite.degreesLat(gd.latitude);const realH=Math.max(0,Number(gd.height)*1000);/* Visual-only orbit exaggeration: keep markers visibly separated from Earth. */const h=Math.max(1800000,realH*1.6);if(!Number.isFinite(lon)||!Number.isFinite(lat)||!Number.isFinite(h))return;let e=satelliteDS.entities.getById('sat-'+i);if(!e)e=satelliteDS.entities.add({id:'sat-'+i,name:item.s.name,point:{pixelSize:9,color:i%3===0?Cesium.Color.CYAN:i%3===1?Cesium.Color.HOTPINK:Cesium.Color.LIME,outlineColor:Cesium.Color.BLACK,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY}});e.position=Cesium.Cartesian3.fromDegrees(lon,lat,h)}catch(_){} });
-  }
-  function startSatelliteLoop(){if(satelliteTimer)clearInterval(satelliteTimer);updateSatellites();satelliteTimer=setInterval(()=>{if(root?.classList.contains('velve-on')){updateSatellites();viewer.scene.requestRender()}},1000)}
-  function flyToCoordinates(lat,lon,label,altitude){
-    const destination=Cesium.Cartesian3.fromDegrees(lon,lat,altitude);
-    return new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};try{viewer.camera.cancelFlight();viewer.camera.flyTo({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0},duration:3.2,maximumHeight:12000000,complete:finish,cancel:finish})}catch(_){try{viewer.camera.setView({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0}})}catch(__){}finish()}setTimeout(finish,6000)});
-  }
-  async function goToMyLocation(){
-    if(flying)return false;
-    if(!navigator.geolocation){setStatus('LOCATION NOT SUPPORTED');say('This browser does not support location access.');return false}
-    if(!window.isSecureContext){setStatus('HTTPS REQUIRED FOR LOCATION');say('Open JARVIS using its secure HTTPS website to use your location.');return false}
-    flying=true;setStatus('REQUESTING YOUR LOCATION PERMISSION');say('Please allow location access in your browser to move VELVE to your location.');
-    try{
-      const position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:20000,maximumAge:0}));
-      const lat=Number(position.coords.latitude),lon=Number(position.coords.longitude),accuracy=Number(position.coords.accuracy);
-      if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)throw new Error('Invalid device coordinates');
-      selected={name:'Your Location',country:'',lat,lon};$('#v-focus').textContent='YOUR LOCATION';setStatus('FLYING TO YOUR LOCATION');
-      // Device coordinates are used only in this browser session; they are not uploaded or saved.
-      // A low camera altitude aims for house-level framing, subject to imagery availability and GPS accuracy.
-      await flyToCoordinates(lat,lon,'Your Location',1200);
-      await refreshWeather();setStatus('FOCUS: YOUR LOCATION');
-      say(Number.isFinite(accuracy)&&accuracy>100?'Showing your reported location. Device location accuracy is about '+Math.round(accuracy)+' meters.':'You are now viewing your location.');return true;
-    }catch(error){
-      console.warn('[VELVE] device location unavailable',error?.code||error?.message||error);
-      if(error?.code===1){setStatus('LOCATION PERMISSION DENIED');say('Location permission was not granted. Allow location access in your browser settings and try again.')}
-      else if(error?.code===3){setStatus('LOCATION REQUEST TIMED OUT');say('Your device location took too long. Please try again.')}
-      else{setStatus('LOCATION UNAVAILABLE');say('I could not get your device location. Check your browser location settings and try again.')}
-      return false;
-    }finally{flying=false}
-  }
-  async function geocode(q){const raw=String(q||'').trim(),key=raw.toLowerCase().replace(/\\s+/g,' ');if(CITY_ALIASES[key]){const a=CITY_ALIASES[key];return {name:a.name,country:a.country,latitude:a.lat,longitude:a.lon,feature_code:'PPLC'}}const name=raw.replace(/\\s+city$/i,'');const d=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en&format=json`).then(r=>{if(!r.ok)throw new Error('Geocoding service unavailable');return r.json()});const rs=d.results||[];if(!rs.length)return null;const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' ').trim();const exact=rs.filter(r=>norm(r.name)===norm(name));const candidates=exact.length?exact:rs;const city=candidates.find(r=>['PPLC','PPLA','PPLA2','PPLA3','PPLA4'].includes(r.feature_code));const r=city||candidates.sort((a,b)=>(Number(b.population)||0)-(Number(a.population)||0))[0];if(!r||!Number.isFinite(Number(r.latitude))||!Number.isFinite(Number(r.longitude)))return null;return r}
-  async function flyTo(name){
-    if(flying)return false; flying=true; setStatus('LOCATING '+String(name).toUpperCase());
-    try{const r=await geocode(name);if(!r){say(`I could not locate ${name}. Try the city name and country.`);setStatus('LOCATION NOT FOUND');return false}
-      const lat=Number(r.latitude??r.lat),lon=Number(r.longitude??r.lon);
-      if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180){say('I could not verify that city location.');setStatus('INVALID CITY COORDINATES');return false}
-      selected={name:r.name||String(name),country:r.country||'',lat,lon};$('#v-focus').textContent=selected.name+(selected.country?', '+selected.country:'');
-      // City-level overview: top-down and centered on the verified city coordinates.
-      const altitude=450000;const destination=Cesium.Cartesian3.fromDegrees(lon,lat,altitude);
-      await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};try{viewer.camera.cancelFlight();viewer.camera.flyTo({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0},duration:2.8,maximumHeight:12000000,complete:finish,cancel:finish})}catch(_){try{viewer.camera.setView({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0}})}catch(__){}finish()}setTimeout(finish,5000)});
-      await refreshWeather();setStatus('FOCUS: '+selected.name.toUpperCase());say(`Moving to ${selected.name}${selected.country?', '+selected.country:''}.`);return true
-    }catch(error){console.error('[VELVE] city navigation failed',error);setStatus('CITY SEARCH TEMPORARILY UNAVAILABLE');say('City navigation is temporarily unavailable. Please try again.');return false}
-    finally{flying=false}
-  }
-  function localIntent(text){const t=String(text||'').toLowerCase().replace(/[!?.,]/g,' ').replace(/\s+/g,' ').trim();const m=t.match(/(?:go|take me|move|fly|navigate|show|zoom)(?:\s+me)?(?:\s+to|\s+into|\s+at|\s+around)?\s+(.+)/);if(m&&m[1]&&!/^(back|home|global|out)$/.test(m[1].trim()))return m[1].trim();if(/global view|world view|show earth|zoom out|go back/.test(t)){try{viewer.camera.cancelFlight();viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(0,20,22000000)})}catch(_){}selected={name:'Earth',lat:20,lon:0};$('#v-focus').textContent='GLOBAL';return null}return undefined}
-  async function handleInput(text){text=String(text||'').trim();if(!text)return;$('#velve-input').value='';const t=text.toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();if(/\b(my location|my current location|our location|current location|where am i|where i am|my position|my house|my home)\b/.test(t)||/\b(take me|go|navigate|fly|move)\s+(to|me to)\s+(my location|my current location|my house|my home)\b/.test(t)){await goToMyLocation();return}const intent=localIntent(text);if(intent!==undefined){if(intent)await flyTo(intent);return}say('Say take me to a city or place, or ask to go to your location.')}
-  function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){say('Voice input is not supported by this browser.');return}const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=1;r.onresult=e=>handleInput(e.results[0][0].transcript);r.onerror=()=>setStatus('VOICE INPUT UNAVAILABLE');r.start();setStatus('LISTENING')}
-  async function open(){buildUI();root.classList.add('velve-on');document.body.classList.add('velve-active');setStatus('STARTING VELVE');await loadCesium();if(!viewer)initViewer();if(!window.satellite){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/satellite.js@7.1.0/dist/satellite.min.js';document.head.appendChild(s);await new Promise(r=>{s.onload=r;s.onerror=r})}$('#velve-help').classList.add('hidden');await Promise.allSettled([refreshWeather(),refreshQuakes(),refreshAircraft(),refreshSatellites()]);startSatelliteLoop();if(refreshTimer)clearInterval(refreshTimer);refreshTimer=setInterval(()=>{if(root?.classList.contains('velve-on')){refreshQuakes();refreshAircraft()}},60000);setStatus('LIVE // PUBLIC SOURCES ACTIVE')}
-  function exit(){if(refreshTimer)clearInterval(refreshTimer);if(satelliteTimer)clearInterval(satelliteTimer);try{viewer?.camera.cancelFlight()}catch(_){}root.classList.remove('velve-on');document.body.classList.remove('velve-active');say('VELVE environment closed.')}
-  function intercept(){if(typeof window.sendCommand!=='function')return;const original=window.sendCommand;if(original.__velveWrapped)return;const wrapped=async function(c){const t=String(c||'').trim();if(/^velve$/i.test(t)||/start\s+(?:the\s+)?velve/i.test(t)){await open();say('VELVE environment online.');return}if(root?.classList.contains('velve-on')&&/^exit\s+velve/i.test(t)){exit();return}return original.apply(this,arguments)};wrapped.__velveWrapped=true;window.sendCommand=wrapped}
-  buildUI();intercept();setTimeout(intercept,1000);window.addEventListener('load',intercept);window.VELVE={open,exit,flyTo,version:VERSION};
-})();
+  function parseTLE(text){const lines=String(text||'').split(/\r?\n  async function handleInput(text){text=String(text||'').trim();if(!text)return;$('#velve-input').value='';const t=text.toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();if(/\b(my location|my current location|our location|current location|where am i|where i am|my position|my house|my home|what is my location|whats my location|what's my location)\b/.test(t)||/\b(take me|go|navigate|fly|move)\s+(to|me to)\s+(my location|my current location|my house|my home)\b/.test(t)){showLocationPermissionPopup();return}const intent=localIntent(text);if(intent!==undefined){if(intent)await flyTo(intent);return}say('Say take me to a city or place, or ask where you are.')}
