@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'velve-20261014g';
+  const VERSION = 'velve-20261014h';
   const OR_KEY = 'jarvisOpenRouterKey', OR_MODEL = 'jarvisOpenRouterModel';
   const MT_KEY = 'velveMapTilerKey';
   const DEFAULT_OR_MODEL = 'openrouter/free';
@@ -51,7 +51,7 @@
       <div class="velve-panel velve-settings-card" id="velve-settings-card"><h3>VELVE SETTINGS</h3><p>Public sources work without keys.</p><input id="velve-or-key" type="password" placeholder="OpenRouter API key (optional)"><input id="velve-or-model" placeholder="Model, e.g. openrouter/free"><button id="velve-save">SAVE LOCALLY</button></div>
       <div class="velve-panel velve-command" id="velve-command-panel"><button class="velve-panel-x velve-command-x" id="velve-command-hide">×</button><input id="velve-input" placeholder="Ask VELVE or say a navigation command…"><button id="velve-voice">🎙</button><button id="velve-send">SEND</button></div>`;
     document.body.appendChild(root);
-    root.insertAdjacentHTML('beforeend', `<div id="velve-location-modal" role="dialog" aria-modal="true" aria-labelledby="velve-location-title" style="display:none;position:absolute;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,.68);padding:20px;box-sizing:border-box"><div style="width:min(360px,100%);box-sizing:border-box;background:#07131d;border:1px solid #29dfff;border-radius:14px;padding:22px;color:#e9fbff;font-family:Arial,sans-serif;box-shadow:0 0 28px rgba(41,223,255,.24);text-align:center"><div style="font-size:12px;letter-spacing:3px;color:#29dfff;margin-bottom:10px">VELVE LOCATION ACCESS</div><h3 id="velve-location-title" style="margin:0 0 10px;font-size:20px">Allow location access?</h3><p style="font-size:14px;line-height:1.5;color:#c6dce5;margin:0 0 20px">VELVE wants to use this browser's device location to move the camera to your current area. Your coordinates are used for this navigation only.</p><div style="display:flex;gap:10px"><button id="velve-location-deny" style="flex:1;padding:11px;border:1px solid #65808b;border-radius:8px;background:#12232d;color:#d9e7ed;font-weight:700">DENY</button><button id="velve-location-allow" style="flex:1;padding:11px;border:0;border-radius:8px;background:#29dfff;color:#001018;font-weight:800">ALLOW</button></div></div></div>`);
+    root.insertAdjacentHTML('beforeend', `<div id="velve-location-modal" role="dialog" aria-modal="true" aria-labelledby="velve-location-title" style="display:none;position:absolute;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,.68);padding:20px;box-sizing:border-box"><div style="width:min(360px,100%);box-sizing:border-box;background:#07131d;border:1px solid #29dfff;border-radius:14px;padding:22px;color:#e9fbff;font-family:Arial,sans-serif;box-shadow:0 0 28px rgba(41,223,255,.24);text-align:center"><div style="font-size:12px;letter-spacing:3px;color:#29dfff;margin-bottom:10px">VELVE LOCATION ACCESS</div><h3 id="velve-location-title" style="margin:0 0 10px;font-size:20px">Allow location access?</h3><p style="font-size:14px;line-height:1.5;color:#c6dce5;margin:0 0 20px">VELVE first tries your device location. If the browser blocks it, you can still be taken to an approximate area based on your internet connection (not GPS). Network-based location is less accurate and the lookup sends your IP address to the location provider.</p><div style="display:flex;gap:10px"><button id="velve-location-deny" style="flex:1;padding:11px;border:1px solid #65808b;border-radius:8px;background:#12232d;color:#d9e7ed;font-weight:700">DENY</button><button id="velve-location-allow" style="flex:1;padding:11px;border:0;border-radius:8px;background:#29dfff;color:#001018;font-weight:800">ALLOW</button></div></div></div>`);
     $('#velve-location-deny').onclick=()=>{ $('#velve-location-modal').style.display='none'; setStatus('LOCATION REQUEST CANCELLED'); say('Location access was cancelled.'); };
     $('#velve-location-allow').onclick=async()=>{ $('#velve-location-modal').style.display='none'; await goToMyLocation(); };
     $('#velve-close').onclick=exit;
@@ -108,10 +108,26 @@
       say(Number.isFinite(accuracy)&&accuracy>100?'Showing your reported location. Device location accuracy is about '+Math.round(accuracy)+' meters.':'You are now viewing your location.');return true;
     }catch(error){
       console.warn('[VELVE] device location unavailable',error?.code||error?.message||error);
-      if(error?.code===1){setStatus('LOCATION PERMISSION DENIED');say('Location permission was not granted. Allow location access in your browser settings and try again.')}
-      else if(error?.code===3){setStatus('LOCATION REQUEST TIMED OUT');say('Your device location took too long. Please try again.')}
-      else{setStatus('LOCATION UNAVAILABLE');say('I could not get your device location. Check your browser location settings and try again.')}
-      return false;
+      // A browser or OS may report permission denied even when the site setting appears enabled.
+      // Fall back to explicitly disclosed, approximate IP-based location so navigation can still work.
+      try{
+        setStatus('DEVICE LOCATION UNAVAILABLE · FINDING APPROXIMATE AREA');
+        const network=await fetch('https://ipwho.is/',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Network location service unavailable');return r.json()});
+        const lat=Number(network.latitude),lon=Number(network.longitude);
+        if(network.success===false||!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)throw new Error('No approximate coordinates returned');
+        const area=[network.city,network.region,network.country].filter(Boolean).join(', ')||'Approximate Network Area';
+        selected={name:area,lat,lon};$('#v-focus').textContent='APPROXIMATE AREA';
+        await flyToCoordinates(lat,lon,area,30000);
+        await refreshWeather();setStatus('APPROXIMATE NETWORK LOCATION · NOT GPS');
+        say('Device GPS was unavailable, so I am showing an approximate area based on your internet connection. This may be inaccurate.');
+        return true;
+      }catch(fallbackError){
+        console.warn('[VELVE] approximate location fallback failed',fallbackError);
+        if(error?.code===1){setStatus('LOCATION BLOCKED');say('The browser or device is blocking location. Check the site permission and your device Location Services, or open this page directly in Safari or Chrome and try again. Approximate network location was also unavailable.')}
+        else if(error?.code===3){setStatus('LOCATION REQUEST TIMED OUT');say('Your device location timed out, and approximate network location was unavailable. Please try again.')}
+        else{setStatus('LOCATION UNAVAILABLE');say('I could not get your device location or approximate network area. Please check your connection and device location settings.')}
+        return false;
+      }
     }finally{flying=false}
   }
   async function geocode(q){const raw=String(q||'').trim(),key=raw.toLowerCase().replace(/\\s+/g,' ');if(CITY_ALIASES[key]){const a=CITY_ALIASES[key];return {name:a.name,country:a.country,latitude:a.lat,longitude:a.lon,feature_code:'PPLC'}}const name=raw.replace(/\\s+city$/i,'');const d=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en&format=json`).then(r=>{if(!r.ok)throw new Error('Geocoding service unavailable');return r.json()});const rs=d.results||[];if(!rs.length)return null;const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' ').trim();const exact=rs.filter(r=>norm(r.name)===norm(name));const candidates=exact.length?exact:rs;const city=candidates.find(r=>['PPLC','PPLA','PPLA2','PPLA3','PPLA4'].includes(r.feature_code));const r=city||candidates.sort((a,b)=>(Number(b.population)||0)-(Number(a.population)||0))[0];if(!r||!Number.isFinite(Number(r.latitude))||!Number.isFinite(Number(r.longitude)))return null;return r}
