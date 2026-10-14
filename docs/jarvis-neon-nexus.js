@@ -56,7 +56,7 @@
         <div class="nn-quick-grid">
           <button data-action="time">◷ TIME</button><button data-action="status">◈ STATUS</button>
           <button data-action="tasks">⇄ TASK LOG</button><button data-action="memory">⌘ MEMORY</button>
-          <button data-action="fullscreen">⛶ FULLSCREEN</button><button data-action="main">↙ MAIN HUD</button>
+          <button data-action="fullscreen">⛶ FULLSCREEN</button><button data-action="calculator">∑ CALCULATOR</button><button data-action="copy">▣ COPY REPLY</button><button data-action="main">↙ MAIN HUD</button>
         </div>
         <div class="nn-note">Your services and saved memories are stored in this browser. External AI features may require your own configured connection.</div>
       </aside>
@@ -154,6 +154,6 @@
   function launcher(){if($('#nn-launcher'))return;const b=document.createElement('button');b.id='nn-launcher';b.type='button';b.textContent='✧ NEXUS';b.title='Open NEON NEXUS command environment';b.onclick=open;document.body.appendChild(b)}
   launcher();window.addEventListener('load',launcher);
   // Intercept the command entry so the new environment is launched naturally by voice/text.
-  const hook=()=>{if(typeof window.sendCommand!=='function'||window.sendCommand.__neonNexusWrapped)return;const old=window.sendCommand;const wrapped=function(q){if(/^(?:(?:hey\s+)?jarvis\s+)?(?:(?:open|launch|start|activate|enter|show)\s+(?:the\s+)?)?(?:neon nexus|neon command environment|magenta command centre|magenta command center)[.! ]*$/i.test(String(q||'').trim())){open();return}if(document.body.classList.contains('neon-nexus-active')&&/^(?:back to jarvis|return to jarvis|close neon nexus|exit neon nexus)$/i.test(String(q||'').trim())){close();return}return old.apply(this,arguments)};wrapped.__neonNexusWrapped=true;window.sendCommand=wrapped};
+  const hook=()=>{if(typeof window.sendCommand!=='function'||window.sendCommand.__neonNexusWrapped)return;const old=window.sendCommand;const wrapped=function(q){if(/^(?:(?:hey\s+)?jarvis\s+)?(?:(?:open|launch|start|activate|enter|show)\s+(?:the\s+)?)?(?:neon nexus|neon command environment|magenta command centre|magenta command center)[.! ]*$/i.test(String(q||'').trim())){open();return}if(document.body.classList.contains('neon-nexus-active')&&/^(?:back to jarvis|return to jarvis|close neon nexus|exit neon nexus)$/i.test(String(q||'').trim())){close();return}if(String(q||'').trim())logTask('JARVIS command: '+String(q).trim());return old.apply(this,arguments)};wrapped.__neonNexusWrapped=true;window.sendCommand=wrapped};
   hook();setTimeout(hook,900);window.addEventListener('load',hook);
 })();
