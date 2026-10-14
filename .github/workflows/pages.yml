@@ -29,6 +29,7 @@ jobs:
           node --check docs/jarvis-popup-fix.js
           node --check docs/jarvis-superpowers.js
           node --check docs/jarvis-focus-detector.js
+          node --check docs/jarvis-music.js
           node --check docs/jarvis-velve.js
           node --check docs/jarvis-velve-fix.js
           node --check docs/jarvis-velve-stability.js
@@ -45,6 +46,7 @@ jobs:
           cp docs/jarvis-popup-fix.js _site/jarvis-popup-fix.js
           cp docs/jarvis-superpowers.js _site/jarvis-superpowers.js
           cp docs/jarvis-focus-detector.js _site/jarvis-focus-detector.js
+          cp docs/jarvis-music.js _site/jarvis-music.js
           cp docs/jarvis-command-center.css _site/jarvis-command-center.css
           cp docs/jarvis-velve.css _site/jarvis-velve.css
           cp docs/jarvis-velve.js _site/jarvis-velve.js
@@ -62,7 +64,7 @@ jobs:
           s = re.sub(r'<link[^>]+jarvis-velve\.css\?v=velve-[^\"]+[^>]*>\s*', '', s)
           s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=music-search-20261014a"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261013b"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n<script src="./jarvis-velve-stability.js?v=velve-stability-20261014b"></script>\n<script src="./jarvis-velve.js?v=velve-20261014o"></script>\n<script src="./jarvis-velve-fix.js?v=geocore-voice-20261014b"></script>\n<script src="./terranexus.js?v=terranexus-20261014f"></script>\n'
+          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=music-search-20261014a"></script>\n<script src="./jarvis-music.js?v=music-launcher-20261014a"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261013b"></script>\n<script src="./jarvis-superpowers.js?v=voice-command-fix-20261013b"></script>\n<script src="./jarvis-velve-stability.js?v=velve-stability-20261014b"></script>\n<script src="./jarvis-velve.js?v=velve-20261014o"></script>\n<script src="./jarvis-velve-fix.js?v=geocore-voice-20261014b"></script>\n<script src="./terranexus.js?v=terranexus-20261014f"></script>\n'
           s = re.sub(r'<script[^>]+jarvis-velve-stability\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = re.sub(r'<script[^>]+jarvis-velve\.js\?v=velve-[^\"]+[^>]*></script>\s*', '', s)
           s = re.sub(r'<script[^>]+jarvis-velve-fix\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
