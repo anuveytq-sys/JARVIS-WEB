@@ -813,6 +813,49 @@
       return say("Opening " + appRoute.label + ".");
     }
 
+    // Music commands use public music-site search URLs: no API key or extra permission is needed.
+    // The service itself may require a tap to start playback because browsers restrict autoplay.
+    const musicIntent = /\\b(play|listen to|put on)\\b/i.test(text);
+    const explicitYouTubeMusic = /\\bon\\s+youtube\\s+music\\b/i.test(text);
+    const explicitSpotifyMusic = /\\bon\\s+spotify\\b/i.test(text);
+    const explicitAppleMusic = /\\bon\\s+apple\\s+music\\b/i.test(text);
+    const explicitAmazonMusic = /\\bon\\s+amazon\\s+music\\b/i.test(text);
+    const explicitPlainYouTube = /\\bon\\s+youtube\\b/i.test(text) && !explicitYouTubeMusic;
+    if (musicIntent && !explicitPlainYouTube) {
+      let songQuery = text
+        .replace(/^\\s*(hey|hello|ok|okay)?\\s*jarvis[, :]?\\s*/i, "")
+        .replace(/^\\s*(please\\s+)?(play|listen\\s+to|put\\s+on)\\s+/i, "")
+        .replace(/\\s+\\bon\\s+(youtube\\s+music|youtube|spotify|apple\\s+music|amazon\\s+music)\\b.*$/i, "")
+        .replace(/\\s+\\b(song|track|music)\\s*$/i, "")
+        .replace(/[.,!?]+$/g, "")
+        .replace(/\\s+/g, " ")
+        .trim();
+      if (!songQuery) return say("Tell me the song name, for example: play Tere Liye.");
+      let musicUrl;
+      let musicService;
+      if (explicitSpotifyMusic) {
+        musicService = "Spotify";
+        musicUrl = "https://open.spotify.com/search/" + encodeURIComponent(songQuery);
+      } else if (explicitAppleMusic) {
+        musicService = "Apple Music";
+        musicUrl = "https://music.apple.com/search?term=" + encodeURIComponent(songQuery);
+      } else if (explicitAmazonMusic) {
+        musicService = "Amazon Music";
+        musicUrl = "https://music.amazon.in/search/" + encodeURIComponent(songQuery);
+      } else {
+        musicService = "YouTube Music";
+        musicUrl = "https://music.youtube.com/search?q=" + encodeURIComponent(songQuery);
+      }
+      const musicTab = window.open(musicUrl, "_blank");
+      if (musicTab) {
+        try { musicTab.opener = null; } catch (_) {}
+      } else {
+        // If the browser blocks a new tab, still complete the user's request in this tab.
+        window.location.assign(musicUrl);
+      }
+      return say("Searching " + musicService + " for " + songQuery + ". Select the matching result to start playback.");
+    }
+
     // Search YouTube for a channel/video ONLY when the request explicitly says "on YouTube".
     const explicitYouTube = /\bon\s+youtube\b/i.test(text);
     const youtubeHome = /^(?:(?:hey|hello|ok|okay)\s+)?jarvis[, ]*\s*(?:open\s+)?youtube[.! ]*$/i.test(text)
