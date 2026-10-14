@@ -30,3 +30,111 @@
 #velve-root #velve-status{position:absolute;overflow:auto;padding:12px 36px 12px 10px;box-sizing:border-box}
 #velve-root #velve-status .velve-status-x{position:absolute!important;display:inline-flex!important;visibility:visible!important;opacity:1!important;right:6px!important;top:6px!important;z-index:100!important;width:22px!important;height:22px!important;align-items:center;justify-content:center;cursor:pointer}
 #velve-root #velve-status.panel-hidden{display:none!important}
+
+
+/* VELVE amber-night visual refinement (m): darker cinematic glass, richer orange glow,
+   anchored lower command console, and always-accessible panel reopen controls. */
+#velve-root{
+  background:#050403!important;
+  color:#fff0df!important;
+  --v-amber:#ff9a35;
+  --v-hot:#ff6b1b;
+  --v-line:rgba(255,151,55,.66);
+  --v-glass:rgba(10,8,6,.88);
+}
+#velve-root .velve-vignette{
+  background:
+    radial-gradient(ellipse at 50% 45%,transparent 24%,rgba(0,0,0,.55) 68%,rgba(0,0,0,.94) 100%),
+    linear-gradient(rgba(255,133,30,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,133,30,.025) 1px,transparent 1px);
+  background-size:auto,100% 5px,5.5% 100%;
+}
+#velve-root .velve-title{
+  color:#ffb15c!important;
+  text-shadow:0 0 8px rgba(255,112,24,.85),0 0 26px rgba(255,91,15,.5);
+}
+#velve-root .velve-title small{color:#c27b3b!important}
+#velve-root .velve-panel{
+  background:linear-gradient(145deg,rgba(22,15,9,.94),rgba(5,5,5,.9))!important;
+  border:1px solid rgba(255,145,48,.46)!important;
+  box-shadow:0 0 20px rgba(255,107,24,.12),inset 0 0 24px rgba(255,130,36,.045),0 12px 38px rgba(0,0,0,.35)!important;
+  backdrop-filter:blur(16px) saturate(125%);
+}
+#velve-root .velve-data h3,
+#velve-root .velve-settings-card h3{color:#ffad58!important;text-shadow:0 0 10px rgba(255,116,26,.28)}
+#velve-root .velve-row{color:#bda087!important}
+#velve-root .velve-row b,
+#velve-root .velve-status b{color:#ffe0b8!important}
+#velve-root .velve-close,
+#velve-root .velve-settings,
+#velve-root .velve-panel-tools button{
+  border:1px solid rgba(255,150,55,.65)!important;
+  background:linear-gradient(145deg,rgba(35,21,10,.96),rgba(9,7,5,.96))!important;
+  color:#ffd1a0!important;
+  box-shadow:inset 0 0 12px rgba(255,120,25,.06),0 0 12px rgba(255,104,25,.1);
+}
+#velve-root .velve-panel-tools button:hover,
+#velve-root .velve-close:hover,
+#velve-root .velve-settings:hover{
+  border-color:#ffb05c!important;
+  box-shadow:0 0 15px rgba(255,124,31,.28),inset 0 0 12px rgba(255,124,31,.1);
+}
+#velve-root .velve-command{
+  position:absolute!important;
+  top:auto!important;
+  left:50%!important;
+  bottom:calc(14px + env(safe-area-inset-bottom))!important;
+  transform:translateX(-50%)!important;
+  z-index:50!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  padding:10px 42px 10px 10px!important;
+  border:1px solid rgba(255,151,55,.88)!important;
+  border-radius:14px!important;
+  background:linear-gradient(110deg,rgba(24,16,9,.97),rgba(5,5,5,.97))!important;
+  box-shadow:0 0 0 1px rgba(255,119,30,.13),0 0 24px rgba(255,100,20,.23),inset 0 0 22px rgba(255,128,34,.07)!important;
+  backdrop-filter:blur(18px);
+}
+#velve-root .velve-command input{
+  height:43px!important;
+  box-sizing:border-box!important;
+  background:rgba(5,5,5,.92)!important;
+  border:1px solid rgba(255,145,48,.48)!important;
+  border-radius:9px!important;
+  color:#fff0df!important;
+  box-shadow:inset 0 0 12px rgba(255,124,31,.05);
+}
+#velve-root .velve-command input:focus{
+  border-color:#ffad58!important;
+  box-shadow:0 0 0 2px rgba(255,142,43,.13),0 0 13px rgba(255,112,25,.15)!important;
+}
+#velve-root .velve-command button{
+  min-height:40px!important;
+  border:1px solid rgba(255,154,62,.8)!important;
+  border-radius:9px!important;
+  background:linear-gradient(145deg,#49230d,#1a0d06)!important;
+  color:#ffd4a4!important;
+  box-shadow:0 0 12px rgba(255,107,24,.1);
+  font-weight:800;
+}
+#velve-root .velve-command button:hover{background:linear-gradient(145deg,#71360f,#261006)!important;box-shadow:0 0 17px rgba(255,116,24,.25)!important}
+#velve-root .velve-command #velve-send{background:linear-gradient(135deg,#ffad55,#e76b1d)!important;color:#1b0c03!important;border-color:#ffc078!important}
+#velve-root .velve-command #velve-voice{min-width:48px}
+#velve-root .velve-command-x{position:absolute!important;right:6px!important;top:6px!important}
+#velve-root .velve-panel-x{border-color:rgba(255,165,82,.7)!important;background:#241307!important;color:#ffd9ae!important}
+#velve-root .velve-help{color:#ffb05c!important;text-shadow:0 0 12px rgba(255,108,24,.8)!important}
+#velve-root .velve-settings-card input{
+  background:#080706!important;border-color:rgba(255,145,48,.45)!important;color:#ffe3c2!important;
+}
+#velve-root .velve-settings-card label{color:#ffbd79!important}
+#velve-root #velve-show-data::before{content:"↗ ";font-size:11px}
+#velve-root #velve-show-status::before{content:"↗ ";font-size:11px}
+#velve-root #velve-show-data,#velve-root #velve-show-status{border-color:rgba(255,164,82,.8)!important}
+@media(max-width:700px){
+  #velve-root .velve-command{bottom:calc(10px + env(safe-area-inset-bottom))!important;width:calc(100vw - 20px)!important;padding:8px 36px 8px 8px!important;gap:6px!important}
+  #velve-root .velve-command input{height:40px!important;padding:9px!important;font-size:12px}
+  #velve-root .velve-command button{min-height:38px!important;padding:0 10px!important;font-size:10px}
+  #velve-root .velve-command #velve-voice{min-width:38px}
+  #velve-root .velve-panel-tools{bottom:70px!important;z-index:51!important}
+}
