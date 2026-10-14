@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'velve-20261014n';
+  const VERSION = 'velve-20261014o';
   const OR_KEY = 'jarvisOpenRouterKey', OR_MODEL = 'jarvisOpenRouterModel';
   const MT_KEY = 'velveMapTilerKey', OW_KEY = 'velveOpenWeatherMapKey';
   const OS_CLIENT_ID_KEY = 'velveOpenSkyClientId', OS_CLIENT_SECRET_KEY = 'velveOpenSkyClientSecret';
@@ -197,7 +197,40 @@
       setStatus('VELVE AI RESPONSE READY');say(answer);
     }catch(error){console.warn('[VELVE AI]',error);setStatus('VELVE AI REQUEST FAILED');say('I could not get an AI answer. Check the OpenRouter key and model in VELVE Settings. Navigation and public globe feeds still work without a key.')}
   }
-  function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){say('Voice input is not supported by this browser.');return}const r=new SR();r.lang='en-IN';r.interimResults=false;r.maxAlternatives=5;r.onresult=e=>{const alts=Array.from(e.results[0]||[]).map(x=>String(x.transcript||'').trim()).filter(Boolean);const score=x=>{const t=x.toLowerCase();let n=0;if(/geo\s*core|geocore|geocor|open core|open jor/.test(t))n+=10;if(/take me|navigate|fly to|go to|move to/.test(t))n+=4;if(Object.keys(CITY_ALIASES).some(city=>t.includes(city)))n+=6;if(/where am i|my location|my house|my home/.test(t))n+=5;return n};alts.sort((a,b)=>score(b)-score(a));handleInput(alts[0]||'')};r.onerror=()=>setStatus('VOICE INPUT UNAVAILABLE');try{r.start();setStatus('LISTENING')}catch(e){setStatus('VOICE INPUT UNAVAILABLE')}}
+  function voiceDictationFallback(reason){
+    const input=$('#velve-input');
+    if(input){
+      input.placeholder='Use your keyboard microphone to dictate, then tap SEND';
+      input.focus();
+    }
+    setStatus(reason||'USE KEYBOARD VOICE DICTATION');
+    say('Browser voice recognition is unavailable here. Use the microphone on your keyboard to dictate your command, then tap Send.');
+  }
+  function startVoice(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){voiceDictationFallback('BROWSER VOICE API UNAVAILABLE');return}
+    let r;
+    try{r=new SR()}catch(e){voiceDictationFallback('VOICE START FAILED · USE KEYBOARD DICTATION');return}
+    r.lang='en-IN';r.interimResults=false;r.maxAlternatives=5;
+    r.onstart=()=>setStatus('LISTENING · SPEAK NOW');
+    r.onresult=e=>{
+      const alts=Array.from(e.results[0]||[]).map(x=>String(x.transcript||'').trim()).filter(Boolean);
+      const score=x=>{const t=x.toLowerCase();let n=0;if(/geo\\s*core|geocore|geocor|open core|open jor/.test(t))n+=10;if(/take me|navigate|fly to|go to|move to/.test(t))n+=4;if(Object.keys(CITY_ALIASES).some(city=>t.includes(city)))n+=6;if(/where am i|my location|my house|my home/.test(t))n+=5;return n};
+      alts.sort((a,b)=>score(b)-score(a));
+      const heard=alts[0]||'';
+      if(heard){$('#velve-input').placeholder='Ask VELVE or say a navigation command…';handleInput(heard)}
+      else{setStatus('NO SPEECH DETECTED · TRY AGAIN');say('I did not hear a command. Please try again.')}
+    };
+    r.onerror=e=>{
+      const err=String(e&&e.error||'unknown');
+      console.warn('[VELVE voice]',err);
+      if(err==='no-speech'){setStatus('NO SPEECH DETECTED · TRY AGAIN');say('I did not hear anything. Please try again.');return}
+      if(err==='aborted'){setStatus('VOICE INPUT CANCELLED');return}
+      voiceDictationFallback('VOICE RECOGNITION FAILED ('+err+') · USE KEYBOARD DICTATION');
+    };
+    r.onend=()=>{if($('#velve-status b')&&$('#velve-status b').textContent==='LISTENING · SPEAK NOW')setStatus('VOICE SESSION ENDED')};
+    try{r.start();setStatus('LISTENING · SPEAK NOW')}catch(e){console.warn('[VELVE voice start]',e);voiceDictationFallback('VOICE START BLOCKED · USE KEYBOARD DICTATION')}
+  }
   async function open(){buildUI();root.classList.add('velve-on');document.body.classList.add('velve-active');setStatus('STARTING VELVE');await loadCesium();if(!viewer)initViewer();if(!window.satellite){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/satellite.js@7.1.0/dist/satellite.min.js';document.head.appendChild(s);await new Promise(r=>{s.onload=r;s.onerror=r})}$('#velve-help').classList.add('hidden');await Promise.allSettled([refreshWeather(),refreshQuakes(),refreshAircraft(),refreshSatellites()]);startSatelliteLoop();if(refreshTimer)clearInterval(refreshTimer);refreshTimer=setInterval(()=>{if(root?.classList.contains('velve-on')){refreshQuakes();refreshAircraft()}},60000);setStatus('LIVE // PUBLIC SOURCES ACTIVE')}
   function exit(){if(refreshTimer)clearInterval(refreshTimer);if(satelliteTimer)clearInterval(satelliteTimer);try{viewer?.camera.cancelFlight()}catch(_){}root.classList.remove('velve-on');document.body.classList.remove('velve-active');say('VELVE environment closed.')}
   function intercept(){if(typeof window.sendCommand!=='function')return;const original=window.sendCommand;if(original.__velveWrapped)return;const wrapped=async function(c){const t=String(c||'').trim();if(/^velve$/i.test(t)||/start\s+(?:the\s+)?velve/i.test(t)){await open();say('VELVE environment online.');return}if(root?.classList.contains('velve-on')&&/^exit\s+velve/i.test(t)){exit();return}return original.apply(this,arguments)};wrapped.__velveWrapped=true;window.sendCommand=wrapped}
