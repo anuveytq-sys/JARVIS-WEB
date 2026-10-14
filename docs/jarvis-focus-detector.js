@@ -2,8 +2,9 @@
 (() => {
   "use strict";
   let modal, video, canvas, ctx, stream, model, running = false, frame = 0, loading = false, previousBoxes = [];
-  const ALLOWED = new Set(["person","cell phone","laptop","keyboard","mouse","book","bottle","cup","chair","couch","tv","remote","backpack","handbag","suitcase","umbrella","clock","plant","potted plant","cat","dog","bird","car","bicycle","motorcycle","bus","truck","traffic light","stop sign","banana","apple","orange","sports ball","scissors"]);
-  const LABELS = {"cell phone":"PHONE","laptop":"LAPTOP","potted plant":"PLANT","traffic light":"TRAFFIC LIGHT","sports ball":"BALL","person":"PERSON","bottle":"BOTTLE","cup":"CUP","book":"BOOK","chair":"CHAIR","cat":"CAT","dog":"DOG","car":"CAR","bicycle":"BICYCLE","backpack":"BACKPACK","keyboard":"KEYBOARD","mouse":"MOUSE","tv":"SCREEN","bird":"BIRD","apple":"APPLE","banana":"BANANA"};
+  // COCO-SSD supports 80 everyday object classes. We intentionally do not whitelist
+  // a small subset here: every class returned by the model is eligible for display.
+  const LABELS = {"cell phone":"PHONE","laptop":"LAPTOP","potted plant":"PLANT","traffic light":"TRAFFIC LIGHT","sports ball":"BALL","person":"PERSON","bottle":"BOTTLE","cup":"CUP","book":"BOOK","chair":"CHAIR","cat":"CAT","dog":"DOG","car":"CAR","bicycle":"BICYCLE","backpack":"BACKPACK","keyboard":"KEYBOARD","mouse":"MOUSE","tv":"SCREEN","bird":"BIRD","apple":"APPLE","banana":"BANANA","motorcycle":"MOTORCYCLE","airplane":"AIRPLANE","bus":"BUS","train":"TRAIN","truck":"TRUCK","boat":"BOAT","couch":"COUCH","bed":"BED","dining table":"DINING TABLE","toilet":"TOILET","refrigerator":"REFRIGERATOR","microwave":"MICROWAVE","oven":"OVEN","sink":"SINK","remote":"REMOTE","clock":"CLOCK","vase":"VASE","scissors":"SCISSORS","teddy bear":"TEDDY BEAR","hair drier":"HAIR DRIER","toothbrush":"TOOTHBRUSH","fire hydrant":"FIRE HYDRANT","stop sign":"STOP SIGN","parking meter":"PARKING METER","bench":"BENCH","backpack":"BACKPACK","umbrella":"UMBRELLA","handbag":"HANDBAG","tie":"TIE","suitcase":"SUITCASE","frisbee":"FRISBEE","skis":"SKIS","snowboard":"SNOWBOARD","sports ball":"BALL","kite":"KITE","baseball bat":"BASEBALL BAT","baseball glove":"BASEBALL GLOVE","skateboard":"SKATEBOARD","surfboard":"SURFBOARD","tennis racket":"TENNIS RACKET","wine glass":"GLASS","fork":"FORK","knife":"KNIFE","spoon":"SPOON","bowl":"BOWL","donut":"DONUT","cake":"CAKE","sandwich":"SANDWICH","pizza":"PIZZA","hot dog":"HOT DOG","carrot":"CARROT","broccoli":"BROCCOLI","orange":"ORANGE","horse":"HORSE","sheep":"SHEEP","cow":"COW","elephant":"ELEPHANT","bear":"BEAR","zebra":"ZEBRA","giraffe":"GIRAFFE"};
   function build() {
     if (modal) return;
     const style = document.createElement("style");
@@ -19,7 +20,7 @@
     `;
     document.head.appendChild(style);
     modal=document.createElement("div"); modal.id="jarvis-focus-detector";
-    modal.innerHTML='<section id="jarvis-focus-card" role="dialog" aria-modal="true" aria-label="JARVIS object detector"><h2>JARVIS // FOCUS DETECTOR</h2><p style="font-size:12px;color:#9bcbd8;margin:0 0 10px">Recognises supported COCO object categories only. Small items such as pens and chewing gum are not supported reliably; camera access requires your permission.</p><div id="jarvis-focus-stage"><video id="jarvis-focus-video" autoplay playsinline muted></video><canvas id="jarvis-focus-overlay"></canvas></div><div id="jarvis-focus-status" role="status">Ready. Tap START DETECTOR to allow camera access.</div><button class="jarvis-focus-btn" id="jarvis-focus-start">START DETECTOR</button><button class="jarvis-focus-btn" id="jarvis-focus-close">CLOSE</button></section>';
+    modal.innerHTML='<section id="jarvis-focus-card" role="dialog" aria-modal="true" aria-label="JARVIS object detector"><h2>JARVIS // FOCUS DETECTOR</h2><p style="font-size:12px;color:#9bcbd8;margin:0 0 10px">Wide-coverage COCO-SSD detector with 80 supported everyday object classes. It uses the higher-accuracy MobileNetV2 model and stabilises detections across frames; it cannot identify objects outside the model\'s training classes reliably.</p><div id="jarvis-focus-stage"><video id="jarvis-focus-video" autoplay playsinline muted></video><canvas id="jarvis-focus-overlay"></canvas></div><div id="jarvis-focus-status" role="status">Ready. Tap START DETECTOR to allow camera access.</div><button class="jarvis-focus-btn" id="jarvis-focus-start">START DETECTOR</button><button class="jarvis-focus-btn" id="jarvis-focus-close">CLOSE</button></section>';
     document.body.appendChild(modal);
     video=modal.querySelector("#jarvis-focus-video"); canvas=modal.querySelector("#jarvis-focus-overlay"); ctx=canvas.getContext("2d");
     modal.querySelector("#jarvis-focus-start").addEventListener("click", start);
@@ -33,7 +34,8 @@
     try {
       if(!window.tf) await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js");
       if(!window.cocoSsd) await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js");
-      model=await window.cocoSsd.load({base:"lite_mobilenet_v2"});return model;
+      // MobileNetV2 is the higher-accuracy COCO-SSD backbone; it is heavier than lite.
+      model=await window.cocoSsd.load({base:"mobilenet_v2"});return model;
     } finally {loading=false;}
   }
   async function start(){
@@ -41,21 +43,21 @@
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw new Error("Camera is not supported by this browser.");
       if(stream)stream.getTracks().forEach(t=>t.stop());
-      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
       video.srcObject=stream;await video.play();
-      status("Loading focused object detector… (first start may take a moment)");
-      await loadModel();running=true;status("DETECTOR ACTIVE • Show one clear object to the camera.");detectLoop();
+      status("Loading high-accuracy object detector… (first start may take longer)");
+      await loadModel();running=true;status("DETECTOR ACTIVE • Scanning all supported object classes.");detectLoop();
     }catch(e){running=false;status("Could not start: "+(e.message||"allow camera access and try again."));}
   }
   async function detectLoop(){
     if(!running||!model||!video?.videoWidth)return;
     if(++frame%2===0){
       try{
-        const predictions=await model.detect(video,20,0.2);
+        // No small allow-list: accept all classes produced by COCO-SSD.
+        const predictions=await model.detect(video,25,0.55);
         const w=video.videoWidth,h=video.videoHeight;
         if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
         ctx.clearRect(0,0,w,h);
-        const candidates=predictions.filter(p=>ALLOWED.has(p.class)&&p.score>=0.76);
         const overlap=(a,b)=>{
           const [ax,ay,aw,ah]=a,[bx,by,bw,bh]=b;
           const ix=Math.max(0,Math.min(ax+aw,bx+bw)-Math.max(ax,bx));
@@ -63,13 +65,12 @@
           const inter=ix*iy, union=aw*ah+bw*bh-inter;
           return union>0?inter/union:0;
         };
-        const tracked=candidates.map(p=>{
+        const tracked=predictions.map(p=>{
           const old=previousBoxes.find(q=>q.class===p.class&&overlap(q.bbox,p.bbox)>=0.25);
           return {...p,streak:old?old.streak+1:1};
         });
         previousBoxes=tracked.map(p=>({class:p.class,bbox:p.bbox,streak:p.streak}));
-        const chosen=tracked.filter(p=>p.streak>=3)
-          .sort((a,b)=>b.score-a.score).slice(0,3);
+        const chosen=tracked.filter(p=>p.streak>=2).sort((a,b)=>b.score-a.score).slice(0,12);
         for(const p of chosen){
           const [x,y,bw,bh]=p.bbox; const label=LABELS[p.class]||p.class.toUpperCase();
           ctx.lineWidth=Math.max(2,w/400);ctx.strokeStyle="#00f5ff";ctx.shadowColor="#00dfff";ctx.shadowBlur=8;ctx.strokeRect(x,y,bw,bh);ctx.shadowBlur=0;
@@ -77,7 +78,7 @@
           const text=label+" "+Math.round(p.score*100)+"%";const th=Math.max(24,w/28);const tw=ctx.measureText(text).width+16;
           const ly=Math.max(0,y-th);ctx.fillStyle="rgba(0,18,34,.92)";ctx.fillRect(x,ly,tw,th);ctx.fillStyle="#9ffaff";ctx.fillText(text,x+8,ly+th*.69);
         }
-        status(chosen.length?("TRACKING "+chosen.length+" STABLE OBJECT"+(chosen.length>1?"S":"")+" • "+chosen.map(p=>(LABELS[p.class]||p.class.toUpperCase())+" "+Math.round(p.score*100)+"%").join(", ")):"Scanning… hold a supported object steady. Results appear after 3 consistent frames; pens and chewing gum are not supported categories.");
+        status(chosen.length?("TRACKING "+chosen.length+" OBJECT"+(chosen.length>1?"S":"")+" • "+chosen.map(p=>(LABELS[p.class]||p.class.toUpperCase())+" "+Math.round(p.score*100)+"%").join(", ")):"Scanning all supported classes… hold objects reasonably steady for stable results.");
       }catch(e){status("Detection paused briefly; retrying…");}
     }
     if(running) requestAnimationFrame(detectLoop);
