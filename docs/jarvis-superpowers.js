@@ -31,7 +31,6 @@
   function addTask(text) { if (!text) return; state.tasks.push({ id: Date.now(), text, done: false }); save(state); }
   function openUrl(url) { try { const w = window.open(url, "_blank"); if (!w) location.href = url; } catch (_) { location.href = url; } }
 
-  // Small arithmetic parser: + - * / % parentheses and decimals. No eval/Function.
   function calculate(expr) {
     const s = expr.replace(/,/g, "").replace(/×/g, "*").replace(/÷/g, "/").replace(/[^0-9+\-*/%.()\s]/g, "");
     if (!s || s.length > 120) return null;
@@ -44,7 +43,7 @@
     for (let i=0;i<tokens.length;i++) {
       const t=tokens[i];
       if (/^\d/.test(t)) { vals.push(Number(t)); prev="num"; continue; }
-      if (t === "(" ) { ops.push(t); prev="op"; continue; }
+      if (t === "(") { ops.push(t); prev="op"; continue; }
       if (t === ")") { while (ops.length && ops[ops.length-1] !== "(") apply(); if (ops.pop() !== "(") throw Error(); prev="num"; continue; }
       if ((t === "+" || t === "-") && prev === "op") { vals.push(0); }
       while (ops.length && ops[ops.length-1] !== "(" && prec(ops[ops.length-1]) >= prec(t)) apply();
@@ -90,7 +89,10 @@
 
   function runSkill(kind, payload="") {
     if(kind==="time") { reply(new Date().toLocaleString([], {dateStyle:"full",timeStyle:"short"})); return true; }
-    if(kind==="status") { reply(`JARVIS ONLINE. Browser skills: memory, tasks, calculator, web search, clipboard, fullscreen, HUD theme, command history. AI provider remains your configured JARVIS/Gemini/OpenRouter path.`); return true; }
+    if(kind==="status") {
+      reply("JARVIS WEB SYSTEM: ONLINE\nJARVIS VELVE SYSTEM: ONLINE\nJARVIS TERA SYSTEM: ONLINE");
+      return true;
+    }
     if(kind==="memory") { reply(state.memory.length ? "I remember:\n• "+state.memory.slice(0,12).join("\n• ") : "My local JARVIS memory is empty."); return true; }
     if(kind==="tasks") { reply(state.tasks.length ? "Tasks:\n"+state.tasks.map((t,i)=>`${i+1}. ${t.done?"✓":"○"} ${t.text}`).join("\n") : "No local tasks yet."); return true; }
     if(kind==="search") { const q=prompt("JARVIS web search"); if(q) openUrl("https://www.google.com/search?q="+encodeURIComponent(q)); return true; }
@@ -136,11 +138,9 @@
     return false;
   }
 
-  // Capture before the original form handler so built-in skills do not reach the AI backend.
   document.addEventListener("submit", e=>{const f=e.target;if(f?.id!=="commandForm")return;const v=input()?.value||"";if(handleCommand(v)){e.preventDefault();e.stopImmediatePropagation();if(input())input().value="";}}, true);
   document.addEventListener("keydown", e=>{if(e.key!=="Enter"||e.shiftKey)return;const el=e.target;if(el?.id!=="commandInput")return;if(handleCommand(el.value)){e.preventDefault();e.stopImmediatePropagation();el.value="";}}, true);
 
-  // Make the last visible JARVIS answer available to the command center without replacing existing code.
   const watch=new MutationObserver(()=>{const p=panel();if(p?.textContent?.trim())lastReply=p.textContent.trim();});
   watch.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
   window.addEventListener("load",()=>setTimeout(makeUI,250));
