@@ -1,21 +1,18 @@
-/* NEON NEXUS launcher isolation patch — keeps the NEXUS button out of VELVE/TERRANEXUS. */
+/* NEON NEXUS launcher cleanup — remove the floating button; use JARVIS command/voice instead. */
 (()=>{
   'use strict';
-  const sync=()=>{
+  const hide=()=>{
     const b=document.getElementById('nn-launcher');
-    if(!b)return;
-    const velve=document.body.classList.contains('velve-active')||document.body.classList.contains('velve-open');
-    const terra=!!document.getElementById('terranexus-overlay');
-    const neon=!!document.getElementById('neon-nexus')?.classList.contains('open');
-    b.style.setProperty('display',(velve||terra||neon)?'none':'block','important');
+    if(b)b.style.setProperty('display','none','important');
   };
   const install=()=>{
-    sync();
-    if(window.__NEXUS_LAUNCHER_ISOLATION__)return;
-    window.__NEXUS_LAUNCHER_ISOLATION__=true;
-    new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
-    window.addEventListener('load',sync);
+    hide();
+    if(window.__NEXUS_LAUNCHER_CLEANUP__)return;
+    window.__NEXUS_LAUNCHER_CLEANUP__=true;
+    new MutationObserver(hide).observe(document.body,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
+    window.addEventListener('load',hide);
   };
   install();
   setTimeout(install,300);
+  setTimeout(hide,1000);
 })();
