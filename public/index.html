@@ -3297,6 +3297,24 @@ async function sendCommand(command) {
   command = String(command || "").trim();
   if (!command) return;
 
+  // Route NEON NEXUS launch phrases locally before sending them to the AI backend.
+  // This keeps the command working even when the model/API does not recognize the phrase.
+  const nexusPhrase = command.toLowerCase()
+    .replace(/\\b(hey|hi|hello|jarvis|please|can you|could you)\\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const nexusWords = nexusPhrase.split(/\\s+/).filter(Boolean);
+  const hasNexus = nexusWords.includes("nexus");
+  const hasNeon = nexusWords.includes("neon");
+  const hasAction = ["open", "launch", "start", "activate", "enter", "show", "go", "switch"].some(w => nexusWords.includes(w));
+  const isNexusLaunch = (hasNexus && (hasAction || hasNeon)) ||
+    /^(open|launch|start|activate|enter|show) (the )?(command )?(centre|center)$/.test(nexusPhrase) ||
+    /^(open|launch|start|activate|enter|show) (the )?command (centre|center)$/.test(nexusPhrase);
+  if (isNexusLaunch && window.NEON_NEXUS && typeof window.NEON_NEXUS.open === "function") {
+    window.NEON_NEXUS.open();
+    return;
+  }
+
   setState("thinking");
 
   try {
