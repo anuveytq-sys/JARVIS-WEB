@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'velve-20261014h';
+  const VERSION = 'velve-20261014i';
   const OR_KEY = 'jarvisOpenRouterKey', OR_MODEL = 'jarvisOpenRouterModel';
   const MT_KEY = 'velveMapTilerKey';
   const DEFAULT_OR_MODEL = 'openrouter/free';
@@ -102,8 +102,8 @@
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)throw new Error('Invalid device coordinates');
       selected={name:'Your Location',country:'',lat,lon};$('#v-focus').textContent='YOUR LOCATION';setStatus('FLYING TO YOUR LOCATION');
       // Device coordinates are used only in this browser session; they are not uploaded or saved.
-      // A low camera altitude aims for house-level framing, subject to imagery availability and GPS accuracy.
-      await flyToCoordinates(lat,lon,'Your Location',1200);
+      // Zoom to house-level scale. The actual house can only be centered reliably when device GPS accuracy and available satellite imagery are sufficiently precise.
+      await flyToCoordinates(lat,lon,'Your Location',180);
       await refreshWeather();setStatus('FOCUS: YOUR LOCATION');
       say(Number.isFinite(accuracy)&&accuracy>100?'Showing your reported location. Device location accuracy is about '+Math.round(accuracy)+' meters.':'You are now viewing your location.');return true;
     }catch(error){
