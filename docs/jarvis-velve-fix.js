@@ -1,6 +1,6 @@
 /* VELVE launch compatibility patch.
-   Keeps the original JARVIS code untouched. Handles wake-word systems that
-   strip "Jarvis" before calling sendCommand, and handles common variants.
+   Keeps the original JARVIS code untouched. "GeoCore" is an alternate launch
+   phrase for the existing VELVE environment; it does not rename the environment.
 */
 (() => {
   'use strict';
@@ -8,9 +8,9 @@
     const t = String(value || '').trim().toLowerCase()
       .replace(/[“”]/g, '"').replace(/[’]/g, "'")
       .replace(/[!?.,]+$/g, '');
-    return /^(?:(?:hey|hello)\s+)?jarvis[,:]?\s*(?:please\s+)?(?:start|activate|open|enter|launch)\s+(?:the\s+)?velve(?:\s+environment)?$/i.test(t)
-      || /^(?:start|activate|open|enter|launch)\s+(?:the\s+)?velve(?:\s+environment)?$/i.test(t)
-      || /^velve(?:\s+environment)?$/i.test(t);
+    return /^(?:(?:hey|hello)\s+)?jarvis[,:]?\s*(?:please\s+)?(?:start|activate|open|enter|launch)\s+(?:the\s+)?(?:velve|geocore)(?:\s+environment)?$/i.test(t)
+      || /^(?:start|activate|open|enter|launch)\s+(?:the\s+)?(?:velve|geocore)(?:\s+environment)?$/i.test(t)
+      || /^(?:velve|geocore)(?:\s+environment)?$/i.test(t);
   };
 
   const install = () => {
