@@ -41,3 +41,105 @@
  #terranexus-overlay .tn-controls button{font-size:7px;padding:5px 4px}#terranexus-overlay .tn-controls span{display:none}
  #terranexus-overlay .tn-actions button{font-size:8px;padding:7px 6px}
 }
+
+/* TERRANEXUS only — dark cinematic amber/orange holographic theme */
+#terranexus-overlay{
+ --tn-accent:#ff8a27;--tn-accent-strong:#ff6a12;--tn-line:rgba(255,137,39,.65);--tn-ink:#ffe4c5;
+ background:radial-gradient(ellipse at 50% 38%,#21130b 0%,#100b08 48%,#070605 100%)!important;
+ color:#ffe4c5!important;
+}
+#terranexus-overlay .tn-top,#terranexus-overlay .tn-console{
+ background:linear-gradient(100deg,rgba(18,12,8,.97),rgba(34,18,8,.95),rgba(12,9,7,.98))!important;
+ border:1px solid rgba(255,139,47,.55)!important;
+ box-shadow:0 0 22px rgba(255,110,24,.12),inset 0 0 18px rgba(255,122,24,.055);
+}
+#terranexus-overlay .tn-top{border-radius:0 0 12px 12px;margin:7px 9px 0;min-height:62px}
+#terranexus-overlay .tn-logo>span,#terranexus-overlay .tn-command-icon{
+ background:linear-gradient(145deg,#ffb15b,#b94b0d)!important;color:#fff5e9!important;
+ box-shadow:0 0 18px rgba(255,117,26,.3),inset 0 0 10px rgba(255,226,175,.18)
+}
+#terranexus-overlay .tn-logo b{color:#fff0dc;text-shadow:0 0 14px rgba(255,123,30,.32)}
+#terranexus-overlay .tn-logo small,#terranexus-overlay .tn-live,#terranexus-overlay .tn-kicker,
+#terranexus-overlay .tn-sub,#terranexus-overlay .tn-note{color:#b67a4d!important}
+#terranexus-overlay .tn-layout{grid-template-columns:minmax(165px,205px) minmax(0,1fr) minmax(165px,205px);gap:10px;padding:10px}
+#terranexus-overlay .tn-side{
+ background:linear-gradient(155deg,rgba(32,21,14,.97),rgba(14,10,8,.96))!important;
+ border:1px solid rgba(255,139,47,.4)!important;border-radius:12px;
+ box-shadow:0 0 22px rgba(255,102,16,.09),inset 0 0 24px rgba(255,129,28,.035)!important;
+ color:#ffe2c1!important
+}
+#terranexus-overlay .tn-side h2,#terranexus-overlay .tn-inspector h2{color:#ffe5c8;text-shadow:0 0 12px rgba(255,120,25,.17)}
+#terranexus-overlay .tn-side p,#terranexus-overlay .tn-parts button small{color:#c49b7a!important}
+#terranexus-overlay .tn-side-x{border:1px solid rgba(255,144,53,.65)!important;background:#24150c!important;color:#ff9a45!important;box-shadow:0 0 12px rgba(255,111,21,.15)}
+#terranexus-overlay .tn-actions button,#terranexus-overlay .tn-controls button{
+ border:1px solid rgba(255,139,47,.58)!important;background:linear-gradient(145deg,#26170d,#120d09)!important;
+ color:#ffbd7b!important;box-shadow:inset 0 0 12px rgba(255,119,28,.06)
+}
+#terranexus-overlay .tn-actions button:hover,#terranexus-overlay .tn-controls button:hover,
+#terranexus-overlay .tn-controls button.on{background:linear-gradient(145deg,#62300f,#2a160b)!important;border-color:#ff9b45!important;box-shadow:0 0 14px rgba(255,115,22,.23)}
+#terranexus-overlay .tn-demos button{color:#d6ad8a!important}
+#terranexus-overlay .tn-demos button span{background:#25170d!important;color:#ff9a42!important}
+#terranexus-overlay .tn-demos button.on,#terranexus-overlay .tn-demos button:hover,
+#terranexus-overlay .tn-parts button.on,#terranexus-overlay .tn-parts button:hover{
+ background:#39200f!important;border-color:#ff943e!important;color:#ffe2c2!important;box-shadow:inset 0 0 14px rgba(255,112,18,.1)
+}
+#terranexus-overlay .tn-elements button,#terranexus-overlay .tn-inspector .tn-facts,
+#terranexus-overlay .tn-parts button{background:linear-gradient(145deg,#2b1a0e,#17100a)!important;border-color:#75411f!important;color:#ffc184!important}
+#terranexus-overlay .tn-elements button:nth-child(n){background:linear-gradient(145deg,#2b1a0e,#17100a)!important;color:#ffc184!important}
+#terranexus-overlay .tn-elements button:hover{outline:1px solid #ff8a27!important;box-shadow:0 0 10px rgba(255,112,18,.24)}
+#terranexus-overlay #tn-stage{
+ background:radial-gradient(ellipse at 50% 42%,#24150b 0%,#100b08 58%,#080605 100%)!important;
+ border:1px solid rgba(255,139,47,.62)!important;border-radius:13px;
+ box-shadow:inset 0 0 70px rgba(255,103,16,.10),0 0 24px rgba(255,111,21,.10)!important
+}
+#terranexus-overlay .tn-stage-title{color:#c38a5c!important}
+#terranexus-overlay .tn-caption{background:rgba(20,12,7,.9)!important;border:1px solid rgba(255,139,47,.45)!important;color:#ffc184!important}
+#terranexus-overlay .tn-controls span{color:#c18a5c!important}
+#terranexus-overlay .tn-reaction{background:#1c120b!important;border-color:rgba(255,139,47,.48)!important;color:#ffbd7b!important}
+#terranexus-overlay .tn-reaction button,#terranexus-overlay .tn-modal-actions #tn-save{
+ background:linear-gradient(135deg,#ffad55,#d95d10)!important;color:#1b0b02!important;box-shadow:0 0 16px rgba(255,111,21,.2)
+}
+#terranexus-overlay .tn-console{
+ flex:0 0 auto;position:relative;order:10;margin:0 10px 9px;padding:10px 13px calc(10px + env(safe-area-inset-bottom));
+ border:1px solid rgba(255,139,47,.72)!important;border-radius:13px!important;
+ box-shadow:0 0 22px rgba(255,104,17,.16),inset 0 0 22px rgba(255,117,25,.055)!important
+}
+#terranexus-overlay .tn-input-wrap{padding:7px 11px;border:1px solid rgba(255,139,47,.52);border-radius:9px;background:rgba(7,6,5,.75);box-shadow:inset 0 0 16px rgba(255,111,21,.06)}
+#terranexus-overlay .tn-input-wrap label{color:#ff9a43!important}
+#terranexus-overlay .tn-input-wrap input{color:#fff0df!important;min-height:28px}
+#terranexus-overlay .tn-input-wrap input::placeholder{color:#9c7456!important}
+#terranexus-overlay .tn-input-wrap small{color:#b88a67!important}
+#terranexus-overlay .tn-console #tn-voice{border:1px solid #ff943e!important;background:#25160c!important;color:#ffb56b!important;box-shadow:0 0 14px rgba(255,111,21,.13)}
+#terranexus-overlay .tn-console #tn-voice.listening{background:#63300e!important;box-shadow:0 0 20px rgba(255,111,21,.4)}
+#terranexus-overlay .tn-console #tn-send{border:1px solid #ffb36c!important;background:linear-gradient(135deg,#ffb45f,#d6570a)!important;color:#1b0a01!important;box-shadow:0 0 18px rgba(255,104,17,.3)}
+#terranexus-overlay .tn-modal-bg{background:rgba(0,0,0,.78)!important}
+#terranexus-overlay .tn-modal{background:linear-gradient(145deg,#24170e,#100b07)!important;border:1px solid rgba(255,139,47,.65)!important;box-shadow:0 0 40px rgba(255,105,17,.18)!important;color:#ffe4c5}
+#terranexus-overlay .tn-modal p{color:#d0a17a!important}
+#terranexus-overlay .tn-modal label,#terranexus-overlay .tn-modal>small{color:#c18a5c!important}
+#terranexus-overlay .tn-modal input,#terranexus-overlay .tn-modal-actions button{background:#160e08!important;border:1px solid #75411f!important;color:#ffd2a4!important}
+#terranexus-overlay .tn-modal a{color:#ff9a43!important}
+#terranexus-overlay .tn-x{color:#ffad65!important}
+#terranexus-overlay .tn-layout.tn-hide-left{grid-template-columns:minmax(0,1fr) minmax(165px,205px)}
+#terranexus-overlay .tn-layout.tn-hide-left>.tn-side:first-child{display:none!important}
+#terranexus-overlay .tn-layout.tn-hide-right{grid-template-columns:minmax(165px,205px) minmax(0,1fr)}
+#terranexus-overlay .tn-layout.tn-hide-right>.tn-inspector{display:none!important}
+#terranexus-overlay .tn-layout.tn-hide-left.tn-hide-right{grid-template-columns:minmax(0,1fr)}
+#terranexus-overlay .tn-layout.tn-hide-left.tn-hide-right>.tn-side{display:none!important}
+@media(max-width:740px){
+ #terranexus-overlay .tn-top{margin:5px 5px 0;gap:4px;padding:6px}
+ #terranexus-overlay .tn-layout{display:block;position:absolute;inset:60px 0 78px;padding:0;pointer-events:none}
+ #terranexus-overlay .tn-center{position:absolute;inset:0;pointer-events:auto}
+ #terranexus-overlay .tn-side{position:absolute;top:8px;bottom:8px;width:29%;max-height:none;pointer-events:auto;padding:8px;border-radius:10px}
+ #terranexus-overlay .tn-layout>.tn-side:first-child{display:block;left:6px;right:auto}
+ #terranexus-overlay .tn-layout>.tn-inspector{display:block;right:6px;left:auto}
+ #terranexus-overlay .tn-layout.tn-hide-left>.tn-side:first-child,#terranexus-overlay .tn-layout.tn-hide-right>.tn-inspector{display:none!important}
+ #terranexus-overlay .tn-console{margin:0 5px 5px;padding:7px 7px calc(7px + env(safe-area-inset-bottom));gap:5px}
+ #terranexus-overlay .tn-input-wrap{padding:5px 7px}
+ #terranexus-overlay .tn-console #tn-voice{width:39px}
+ #terranexus-overlay .tn-console #tn-send{padding:0 12px}
+ #terranexus-overlay .tn-actions button{font-size:7px;padding:6px 5px}
+ #terranexus-overlay .tn-side h2{font-size:12px}#terranexus-overlay .tn-side p{font-size:9px;line-height:1.4}
+ #terranexus-overlay .tn-elements{grid-template-columns:repeat(5,minmax(12px,1fr))}
+ #terranexus-overlay .tn-stage-title{padding:0 30%}#terranexus-overlay .tn-controls{padding:0 30%}
+ #terranexus-overlay .tn-controls button{font-size:7px;padding:5px 4px}#terranexus-overlay .tn-controls span{display:none}
+}
