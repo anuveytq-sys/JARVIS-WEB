@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'velve-20261014o';
+  const VERSION = 'velve-20261014p';
   const OR_KEY = 'jarvisOpenRouterKey', OR_MODEL = 'jarvisOpenRouterModel';
   const MT_KEY = 'velveMapTilerKey', OW_KEY = 'velveOpenWeatherMapKey';
   const OS_CLIENT_ID_KEY = 'velveOpenSkyClientId', OS_CLIENT_SECRET_KEY = 'velveOpenSkyClientSecret';
@@ -233,6 +233,6 @@
   }
   async function open(){buildUI();root.classList.add('velve-on');document.body.classList.add('velve-active');setStatus('STARTING VELVE');await loadCesium();if(!viewer)initViewer();if(!window.satellite){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/satellite.js@7.1.0/dist/satellite.min.js';document.head.appendChild(s);await new Promise(r=>{s.onload=r;s.onerror=r})}$('#velve-help').classList.add('hidden');await Promise.allSettled([refreshWeather(),refreshQuakes(),refreshAircraft(),refreshSatellites()]);startSatelliteLoop();if(refreshTimer)clearInterval(refreshTimer);refreshTimer=setInterval(()=>{if(root?.classList.contains('velve-on')){refreshQuakes();refreshAircraft()}},60000);setStatus('LIVE // PUBLIC SOURCES ACTIVE')}
   function exit(){if(refreshTimer)clearInterval(refreshTimer);if(satelliteTimer)clearInterval(satelliteTimer);try{viewer?.camera.cancelFlight()}catch(_){}root.classList.remove('velve-on');document.body.classList.remove('velve-active');say('VELVE environment closed.')}
-  function intercept(){if(typeof window.sendCommand!=='function')return;const original=window.sendCommand;if(original.__velveWrapped)return;const wrapped=async function(c){const t=String(c||'').trim();if(/^velve$/i.test(t)||/start\s+(?:the\s+)?velve/i.test(t)){await open();say('VELVE environment online.');return}if(root?.classList.contains('velve-on')&&/^exit\s+velve/i.test(t)){exit();return}return original.apply(this,arguments)};wrapped.__velveWrapped=true;window.sendCommand=wrapped}
+  function intercept(){if(typeof window.sendCommand!=='function')return;const original=window.sendCommand;if(original.__velveWrapped)return;const wrapped=async function(c){const t=String(c||'').trim();if(/^(?:open\s+(?:the\s+)?core|open\s+(?:the\s+)?core\s+(?:then\s+)?velve|open\s+(?:the\s+)?velve|velve|start\s+(?:the\s+)?velve|launch\s+(?:the\s+)?velve|show\s+(?:the\s+)?velve)$/i.test(t)){await open();say('VELVE environment online.');return}if(root?.classList.contains('velve-on')&&/^exit\s+velve/i.test(t)){exit();return}return original.apply(this,arguments)};wrapped.__velveWrapped=true;window.sendCommand=wrapped}
   buildUI();intercept();setTimeout(intercept,1000);window.addEventListener('load',intercept);window.VELVE={open,exit,flyTo,version:VERSION};
 })();
