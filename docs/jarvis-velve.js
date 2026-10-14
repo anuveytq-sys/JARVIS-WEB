@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'velve-20261014d';
+  const VERSION = 'velve-20261014e';
   const OR_KEY = 'jarvisOpenRouterKey', OR_MODEL = 'jarvisOpenRouterModel';
   const MT_KEY = 'velveMapTilerKey';
   const DEFAULT_OR_MODEL = 'openrouter/free';
@@ -83,14 +83,19 @@
     satelliteSats.forEach((item,i)=>{try{const pv=window.satellite.propagate(item.rec,now),pos=pv?.position;if(!pos||![pos.x,pos.y,pos.z].every(Number.isFinite))return;const gd=window.satellite.eciToGeodetic(pos,gst);if(!gd)return;const lon=window.satellite.degreesLong(gd.longitude),lat=window.satellite.degreesLat(gd.latitude);const realH=Math.max(0,Number(gd.height)*1000);/* Visual-only orbit exaggeration: keep markers visibly separated from Earth. */const h=Math.max(1800000,realH*1.6);if(!Number.isFinite(lon)||!Number.isFinite(lat)||!Number.isFinite(h))return;let e=satelliteDS.entities.getById('sat-'+i);if(!e)e=satelliteDS.entities.add({id:'sat-'+i,name:item.s.name,point:{pixelSize:9,color:i%3===0?Cesium.Color.CYAN:i%3===1?Cesium.Color.HOTPINK:Cesium.Color.LIME,outlineColor:Cesium.Color.BLACK,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY}});e.position=Cesium.Cartesian3.fromDegrees(lon,lat,h)}catch(_){} });
   }
   function startSatelliteLoop(){if(satelliteTimer)clearInterval(satelliteTimer);updateSatellites();satelliteTimer=setInterval(()=>{if(root?.classList.contains('velve-on')){updateSatellites();viewer.scene.requestRender()}},1000)}
-  async function geocode(q){const raw=String(q||'').trim(),key=raw.toLowerCase().replace(/\s+/g,' ');if(CITY_ALIASES[key])return CITY_ALIASES[key];const name=raw.replace(/\s+city$/i,'');const d=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en&format=json`).then(r=>r.json());const rs=d.results||[];return rs.find(r=>['PPLC','PPLA'].includes(r.feature_code))||rs.sort((a,b)=>(b.population||0)-(a.population||0))[0]||null}
+  async function geocode(q){const raw=String(q||'').trim(),key=raw.toLowerCase().replace(/\\s+/g,' ');if(CITY_ALIASES[key]){const a=CITY_ALIASES[key];return {name:a.name,country:a.country,latitude:a.lat,longitude:a.lon,feature_code:'PPLC'}}const name=raw.replace(/\\s+city$/i,'');const d=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en&format=json`).then(r=>{if(!r.ok)throw new Error('Geocoding service unavailable');return r.json()});const rs=d.results||[];if(!rs.length)return null;const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' ').trim();const exact=rs.filter(r=>norm(r.name)===norm(name));const candidates=exact.length?exact:rs;const city=candidates.find(r=>['PPLC','PPLA','PPLA2','PPLA3','PPLA4'].includes(r.feature_code));const r=city||candidates.sort((a,b)=>(Number(b.population)||0)-(Number(a.population)||0))[0];if(!r||!Number.isFinite(Number(r.latitude))||!Number.isFinite(Number(r.longitude)))return null;return r}
   async function flyTo(name){
     if(flying)return false; flying=true; setStatus('LOCATING '+String(name).toUpperCase());
-    try{const r=await geocode(name);if(!r){say(`I could not locate ${name}.`);setStatus('LOCATION NOT FOUND');return false}selected={name:r.name,country:r.country||'',lat:Number(r.latitude),lon:Number(r.longitude)};$('#v-focus').textContent=r.name+(r.country?', '+r.country:'');
-      const altitude=900000; const destination=Cesium.Cartesian3.fromDegrees(selected.lon,selected.lat,altitude);
-      await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};try{viewer.camera.cancelFlight();viewer.camera.flyTo({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-62),roll:0},duration:2.5,maximumHeight:12000000,complete:finish,cancel:finish})}catch(_){try{viewer.camera.setView({destination});}catch(__){}finish()}setTimeout(finish,4500)});
-      await refreshWeather();setStatus('FOCUS: '+r.name.toUpperCase());say(`Moving to ${r.name}${r.country?', '+r.country:''}.`);return true
-    }finally{flying=false}
+    try{const r=await geocode(name);if(!r){say(`I could not locate ${name}. Try the city name and country.`);setStatus('LOCATION NOT FOUND');return false}
+      const lat=Number(r.latitude??r.lat),lon=Number(r.longitude??r.lon);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180){say('I could not verify that city location.');setStatus('INVALID CITY COORDINATES');return false}
+      selected={name:r.name||String(name),country:r.country||'',lat,lon};$('#v-focus').textContent=selected.name+(selected.country?', '+selected.country:'');
+      // City-level overview: top-down and centered on the verified city coordinates.
+      const altitude=450000;const destination=Cesium.Cartesian3.fromDegrees(lon,lat,altitude);
+      await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};try{viewer.camera.cancelFlight();viewer.camera.flyTo({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0},duration:2.8,maximumHeight:12000000,complete:finish,cancel:finish})}catch(_){try{viewer.camera.setView({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0}})}catch(__){}finish()}setTimeout(finish,5000)});
+      await refreshWeather();setStatus('FOCUS: '+selected.name.toUpperCase());say(`Moving to ${selected.name}${selected.country?', '+selected.country:''}.`);return true
+    }catch(error){console.error('[VELVE] city navigation failed',error);setStatus('CITY SEARCH TEMPORARILY UNAVAILABLE');say('City navigation is temporarily unavailable. Please try again.');return false}
+    finally{flying=false}
   }
   function localIntent(text){const t=String(text||'').toLowerCase().replace(/[!?.,]/g,' ').replace(/\s+/g,' ').trim();const m=t.match(/(?:go|take me|move|fly|navigate|show|zoom)(?:\s+me)?(?:\s+to|\s+into|\s+at|\s+around)?\s+(.+)/);if(m&&m[1]&&!/^(back|home|global|out)$/.test(m[1].trim()))return m[1].trim();if(/global view|world view|show earth|zoom out|go back/.test(t)){try{viewer.camera.cancelFlight();viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(0,20,22000000)})}catch(_){}selected={name:'Earth',lat:20,lon:0};$('#v-focus').textContent='GLOBAL';return null}return undefined}
   async function handleInput(text){text=String(text||'').trim();if(!text)return;$('#velve-input').value='';const intent=localIntent(text);if(intent!==undefined){if(intent)await flyTo(intent);return}say('Say take me to a city or place.')}
