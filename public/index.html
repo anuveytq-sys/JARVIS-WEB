@@ -3343,21 +3343,33 @@ if (SpeechRecognition) {
   recognition = new SpeechRecognition();
   recognition.continuous     = false;
   recognition.interimResults = false;
-  recognition.lang           = "en-US";
+  recognition.lang           = "en-IN";
+  recognition.maxAlternatives = 5;
 
   recognition.onstart = () => {
     setState("listening");
   };
 
   recognition.onresult = async (event) => {
-    const transcript = event.results[0][0].transcript.trim();
-    console.log("[JARVIS VOICE] Heard:", transcript);
+    const alternatives = Array.from(event.results[0] || []).map(item => String(item.transcript || "").trim()).filter(Boolean);
+    const score = (text) => {
+      const t = text.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+      let value = 0;
+      if (/geo\s*core|geocore|geocor|geo cor/.test(t)) value += 10;
+      if (/\b(open|start|launch|activate|enter)\b/.test(t)) value += 3;
+      if (/\b(jarvis|velve)\b/.test(t)) value += 2;
+      if (/\b(core|jor|geor)\b/.test(t)) value += 5;
+      return value;
+    };
+    alternatives.sort((a, b) => score(b) - score(a));
+    const transcript = alternatives[0] || "";
+    console.log("[JARVIS VOICE] Heard:", transcript, "| Alternatives:", alternatives);
 
     if (transcript) {
       await sendCommand(transcript);
     } else {
       setState("idle");
-      speak("I didn't catch that.");
+      speak("I didn't catch that. Please try again.");
     }
   };
 
