@@ -150,7 +150,20 @@
   };
 
   function addSettingsUI() {
-    if (document.getElementById("jarvis-settings-trigger")) return;
+    const existingButton = document.getElementById("jarvis-settings-trigger");
+    if (existingButton) {
+      // Normalize an existing trigger created by an earlier HUD script too.
+      // Keep its existing click handler and settings behavior intact.
+      existingButton.textContent = "⚙";
+      existingButton.title = "Settings";
+      existingButton.setAttribute("aria-label", "JARVIS settings");
+      Object.assign(existingButton.style, {
+        width: "42px", height: "42px", minWidth: "42px", padding: "0",
+        fontSize: "20px", letterSpacing: "0", display: "flex",
+        alignItems: "center", justifyContent: "center", boxSizing: "border-box"
+      });
+      return;
+    }
     const responsiveStyle = document.createElement("style");
     responsiveStyle.id = "jarvis-settings-responsive-style";
     responsiveStyle.textContent = `
