@@ -37,12 +37,15 @@ jobs:
           node --check docs/jarvis-neon-nexus.js
           node --check docs/jarvis-neon-nexus-launcher-fix.js
           node --check docs/jarvis-neon-nexus-command-fix.js
+          node --check docs/jarvis-core-3d.js
 
-      - name: Verify NEON NEXUS aliases, environment navigation, and launcher cleanup
+      - name: Verify JARVIS command routing and 3D voice core
         run: |
           grep -q 'Local command aliases for NEON NEXUS / Command Centre.' public/index.html
           grep -q 'function openEnvironment(name)' docs/jarvis-neon-nexus.js
           grep -q 'command-routing-20261014c' .github/workflows/pages.yml
+          grep -q 'jarvis-core-3d' docs/jarvis-core-3d.js
+          grep -q 'CLICK TO SPEAK' docs/jarvis-core-3d.js
 
       - name: Build Pages site from original HUD
         run: |
@@ -67,23 +70,26 @@ jobs:
           cp docs/jarvis-neon-nexus.css _site/jarvis-neon-nexus.css
           cp docs/jarvis-neon-nexus-launcher-fix.js _site/jarvis-neon-nexus-launcher-fix.js
           cp docs/jarvis-neon-nexus-command-fix.js _site/jarvis-neon-nexus-command-fix.js
+          cp docs/jarvis-core-3d.js _site/jarvis-core-3d.js
+          cp docs/jarvis-core-3d.css _site/jarvis-core-3d.css
           python3 - <<'PY'
           from pathlib import Path
           p = Path('_site/index.html')
           s = p.read_text(encoding='utf-8')
           head_marker = '</head>'
-          style = '<link rel="stylesheet" href="./jarvis-command-center.css?v=wakeword-match-20261013b">\n<link rel="stylesheet" href="./jarvis-velve.css?v=velve-20261014n">\n<link rel="stylesheet" href="./terranexus.css?v=terranexus-20261014d">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{display:none!important}</style>\n'
+          style = '<link rel="stylesheet" href="./jarvis-command-center.css?v=wakeword-match-20261013b">\n<link rel="stylesheet" href="./jarvis-velve.css?v=velve-20261014n">\n<link rel="stylesheet" href="./terranexus.css?v=terranexus-20261014d">\n<link rel="stylesheet" href="./jarvis-core-3d.css?v=core-3d-20261015a">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{display:none!important}</style>\n'
           import re
           s = re.sub(r'<link[^>]+jarvis-velve\.css\?v=velve-[^\"]+[^>]*>\s*', '', s)
           s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=music-search-20261014a"></script>\n<script src="./jarvis-music.js?v=music-launcher-20261014a"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261014e"></script>\n<script src="./jarvis-superpowers.js?v=status-panel-20261014a"></script>\n<script src="./jarvis-velve-stability.js?v=velve-stability-20261014b"></script>\n<script src="./jarvis-velve.js?v=velve-20261014p"></script>\n<script src="./jarvis-velve-fix.js?v=geocore-local-20261014c"></script>\n<script src="./terranexus.js?v=terranexus-20261014f"></script>\n<script src="./jarvis-neon-nexus.js?v=neon-nexus-20261014f"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=launcher-cleanup-20261014b"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=command-routing-20261014b"></script>\n'
+          injection = '<script src="./jarvis-popup-fix.js?v=popup-safe-20261013"></script>\n<script src="./jarvis-camera-fix.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-ui-patch.js?v=camera-voice-settings-20261013"></script>\n<script src="./jarvis-web.js?v=music-search-20261014a"></script>\n<script src="./jarvis-music.js?v=music-launcher-20261014a"></script>\n<script src="./jarvis-focus-detector.js?v=focus-detector-accuracy-20261014e"></script>\n<script src="./jarvis-superpowers.js?v=status-panel-20261014a"></script>\n<script src="./jarvis-velve-stability.js?v=velve-stability-20261014b"></script>\n<script src="./jarvis-velve.js?v=velve-20261014p"></script>\n<script src="./jarvis-velve-fix.js?v=geocore-local-20261014c"></script>\n<script src="./terranexus.js?v=terranexus-20261014f"></script>\n<script src="./jarvis-neon-nexus.js?v=neon-nexus-20261014f"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=launcher-cleanup-20261014b"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=command-routing-20261014b"></script>\n<script src="./jarvis-core-3d.js?v=core-3d-20261015a"></script>\n'
           s = re.sub(r'<script[^>]+jarvis-velve-stability\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = re.sub(r'<script[^>]+jarvis-velve\.js\?v=velve-[^\"]+[^>]*></script>\s*', '', s)
           s = re.sub(r'<script[^>]+jarvis-velve-fix\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = re.sub(r'<script[^>]+jarvis-neon-nexus\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = re.sub(r'<script[^>]+jarvis-neon-nexus-launcher-fix\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = re.sub(r'<script[^>]+jarvis-neon-nexus-command-fix\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
+          s = re.sub(r'<script[^>]+jarvis-core-3d\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
           PY
