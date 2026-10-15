@@ -1,4 +1,4 @@
-/* JARVIS CORE 3D — connects the central reactor to the existing voice engine. */
+/* JARVIS CORE 3D — clean central reactor with voice activation. */
 (()=>{'use strict';
   const boot=()=>{
     const stage=document.querySelector('.core-stage');
@@ -6,8 +6,9 @@
       stage.dataset.jarvisCore3d='1';stage.classList.add('jarvis-core-enhanced');
       const reactor=document.createElement('div');reactor.className='jarvis-core-3d';reactor.setAttribute('aria-hidden','true');
       reactor.innerHTML='<span class="reactor-ring r1"></span><span class="reactor-ring r2"></span><span class="reactor-ring r3"></span><span class="reactor-ring r4"></span><span class="core-ray ray-a"></span><span class="core-ray ray-b"></span><span class="core-ray ray-c"></span><span class="core-shell"></span>';stage.appendChild(reactor);
-      const hit=document.createElement('button');hit.type='button';hit.className='jarvis-core-voice-hit';hit.setAttribute('aria-label','Activate JARVIS microphone');hit.title='Click the core to speak a command';
-      hit.innerHTML='<span>🎙</span><b>JARVIS</b><small>CLICK TO SPEAK</small>';
+      const hit=document.createElement('button');
+      hit.type='button';hit.className='jarvis-core-voice-hit';hit.setAttribute('aria-label','Activate JARVIS microphone');hit.title='Click the core to speak a command';
+      hit.innerHTML='';
       hit.addEventListener('click',()=>{const v=document.querySelector('#voiceButton');if(v&&!v.disabled){hit.classList.add('listening');v.click();setTimeout(()=>hit.classList.remove('listening'),12000)}else{document.querySelector('#commandInput')?.focus()}});stage.appendChild(hit);
     }
     const mainVoice=document.querySelector('#voiceButton');
