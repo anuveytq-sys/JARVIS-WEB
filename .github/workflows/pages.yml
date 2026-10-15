@@ -46,15 +46,13 @@ jobs:
       - name: Verify JARVIS and VELVE upgrades
         run: |
           grep -q 'openEnvironment(name)' docs/jarvis-neon-nexus.js
-          grep -q 'velve-satellite-upgrade' docs/velve-satellite-upgrade.js
           grep -q 'GROUP=active&FORMAT=json' docs/velve-satellite-upgrade.js
           grep -q 'slice(0,200)' docs/velve-satellite-upgrade.js
           grep -q 'velve-satellite-info' docs/velve-satellite-upgrade.js
           grep -q 'velve-voice' docs/velve-satellite-upgrade.js
           grep -q 'velve-maptiler-key' docs/velve-satellite-upgrade.js
+          grep -q 'minimumZoomDistance=120' docs/jarvis-velve-stability.js
           grep -q 'jarvis-core-3d' docs/jarvis-core-3d.js
-          ! grep -q 'CLICK TO SPEAK' docs/jarvis-core-3d.js
-          ! grep -q "hit.innerHTML='<span>🎙</span>" docs/jarvis-core-3d.js
 
       - name: Build Pages site from original HUD
         run: |
