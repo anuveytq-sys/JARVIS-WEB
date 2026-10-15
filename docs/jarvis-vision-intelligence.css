@@ -502,3 +502,34 @@
     z-index:12;
   }
 }
+
+
+/* Compact side panels: keep both inside the workspace between the HUD header and command dock. */
+@media(min-width:761px){
+  #jvi-root .jvi-grid{grid-template-columns:minmax(190px,17%) minmax(320px,1fr) minmax(190px,17%)}
+  #jvi-root.jvi-left-hidden .jvi-grid{grid-template-columns:minmax(0,1fr) minmax(190px,17%)}
+  #jvi-root.jvi-right-hidden .jvi-grid{grid-template-columns:minmax(190px,17%) minmax(0,1fr)}
+}
+@media(max-width:760px) and (orientation:portrait){
+  #jvi-root .jvi-left,#jvi-root .jvi-right{
+    top:8px!important;bottom:8px!important;
+    width:42%!important;max-width:330px!important;min-width:0!important;
+    height:auto!important;max-height:none!important;
+    overflow-x:hidden!important;overflow-y:auto!important;
+    padding:8px!important;z-index:20;
+  }
+  #jvi-root .jvi-left{left:0!important;right:auto!important}
+  #jvi-root .jvi-right{right:0!important;left:auto!important}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-cam-box{height:clamp(110px,20vh,190px)!important;min-height:110px}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-button-row .jvi-btn{min-height:34px;padding:6px;font-size:8px}
+  #jvi-root .jvi-right .jvi-panel-head{font-size:7px;letter-spacing:.04em}
+  #jvi-root .jvi-right .jvi-score{gap:5px;padding:5px 0 8px}
+  #jvi-root .jvi-right .jvi-score-ring{width:42px;height:42px;flex-basis:42px}
+  #jvi-root .jvi-right .jvi-score-ring span{font-size:12px}
+  #jvi-root .jvi-right .jvi-profile{padding:7px}
+  #jvi-root .jvi-right .jvi-profile h2{font-size:12px}
+  #jvi-root .jvi-right .jvi-profile p{font-size:8px}
+}
+@media(max-width:420px) and (orientation:portrait){
+  #jvi-root .jvi-left,#jvi-root .jvi-right{width:44%!important;padding:6px!important}
+}
