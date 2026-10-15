@@ -44,3 +44,19 @@
 @keyframes nnCoreListening{50%{transform:scale(1.13);filter:brightness(1.5)}}
 
 @media (prefers-reduced-motion:reduce){.jarvis-core-3d *,#neon-nexus .nn-core::before,#neon-nexus .nn-core::after{animation:none!important}}
+
+
+/* Remove only the unwanted rectangular focus/frame around the centre core in NEON NEXUS. Keep the globe and its click/voice behaviour. */
+body.neon-nexus-active .core-stage,
+body.neon-nexus-active .core-stage.jarvis-core-enhanced,
+#neon-nexus .nn-core-area,
+#neon-nexus .nn-core {
+  outline: none !important;
+}
+body.neon-nexus-active .core-stage,
+body.neon-nexus-active .core-stage.jarvis-core-enhanced {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+#neon-nexus .nn-core { -webkit-tap-highlight-color: transparent; }
