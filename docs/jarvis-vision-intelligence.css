@@ -533,3 +533,67 @@
 @media(max-width:420px) and (orientation:portrait){
   #jvi-root .jvi-left,#jvi-root .jvi-right{width:44%!important;padding:6px!important}
 }
+
+
+/* FINAL INPUT ARRAY OPTICS sizing correction: slim side rail, full available workspace height. */
+@media(min-width:761px){
+  #jvi-root .jvi-grid{
+    grid-template-columns:minmax(150px,14%) minmax(0,1fr) minmax(165px,15%)!important;
+    grid-template-rows:minmax(0,1fr)!important;
+    align-items:stretch!important;
+  }
+  #jvi-root.jvi-left-hidden .jvi-grid{
+    grid-template-columns:minmax(0,1fr) minmax(165px,15%)!important;
+  }
+  #jvi-root.jvi-right-hidden .jvi-grid{
+    grid-template-columns:minmax(150px,14%) minmax(0,1fr)!important;
+  }
+  #jvi-root .jvi-grid>[data-jvi-panel="left"],
+  #jvi-root .jvi-grid>[data-jvi-panel="right"]{
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    align-self:stretch!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+  }
+}
+@media(max-width:760px){
+  #jvi-root .jvi-left,#jvi-root .jvi-right{
+    top:0!important;
+    bottom:0!important;
+    height:auto!important;
+    max-height:none!important;
+    width:34%!important;
+    max-width:260px!important;
+    min-width:0!important;
+    padding:7px!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+  }
+  #jvi-root .jvi-left{left:0!important;right:auto!important}
+  #jvi-root .jvi-right{right:0!important;left:auto!important}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-cam-box{
+    width:100%!important;
+    height:clamp(100px,18vh,170px)!important;
+    min-height:100px!important;
+  }
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-button-row .jvi-btn{
+    min-height:32px!important;
+    padding:5px!important;
+    font-size:7px!important;
+    overflow-wrap:anywhere!important;
+  }
+}
+@media(max-width:420px){
+  #jvi-root .jvi-left,#jvi-root .jvi-right{
+    width:34%!important;
+    max-width:220px!important;
+    padding:5px!important;
+  }
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-panel-head,
+  #jvi-root .jvi-grid>[data-jvi-panel="right"] .jvi-panel-head{
+    font-size:6px!important;
+    letter-spacing:0!important;
+  }
+}
