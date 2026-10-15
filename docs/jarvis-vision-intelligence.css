@@ -478,3 +478,12 @@
   #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-cam-box{height:210px!important;min-height:210px}
   #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-button-row .jvi-btn{min-height:40px;font-size:9px}
 }
+
+
+/* Respect the panel hide/restore controls: explicit display rules must never override hidden. */
+#jvi-root .jvi-grid>[data-jvi-panel][hidden],
+#jvi-root [data-jvi-panel][hidden]{
+  display:none!important;
+}
+#jvi-root .jvi-grid.jvi-left-hidden>[data-jvi-panel="left"]{display:none!important}
+#jvi-root .jvi-grid.jvi-right-hidden>[data-jvi-panel="right"]{display:none!important}
