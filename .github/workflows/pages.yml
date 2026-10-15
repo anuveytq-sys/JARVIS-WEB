@@ -91,7 +91,7 @@ jobs:
           s = p.read_text(encoding='utf-8')
           version = os.environ['SITE_VERSION'][:12]
           head_marker = '</head>'
-          style = f'<link rel="stylesheet" href="./jarvis-command-center.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-velve.css?v=pages-{version}">\n<link rel="stylesheet" href="./terranexus.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-core-3d.css?v=pages-{version}">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{display:none!important}</style>\n'
+          style = f'<link rel="stylesheet" href="./jarvis-command-center.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-velve.css?v=pages-{version}">\n<link rel="stylesheet" href="./terranexus.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-core-3d.css?v=pages-{version}">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{{display:none!important}}</style>\n'
           for name in ['jarvis-command-center','jarvis-velve','terranexus','jarvis-core-3d']:
               s = re.sub(rf'<link[^>]+{re.escape(name)}\.css\?v=[^\"]+[^>]*>\s*', '', s)
           s = s.replace(head_marker, style + head_marker, 1)
