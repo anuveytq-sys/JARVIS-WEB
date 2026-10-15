@@ -1,0 +1,46 @@
+/* JARVIS CORE 3D — visual layer only. Existing command/voice logic remains untouched. */
+
+.core-stage.jarvis-core-enhanced{isolation:isolate;filter:drop-shadow(0 0 22px rgba(0,210,255,.18));}
+.core-stage.jarvis-core-enhanced::before{content:"";position:absolute;left:50%;top:50%;width:62%;height:62%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22) 0 2%,rgba(0,235,255,.16) 12%,rgba(0,90,255,.08) 36%,transparent 70%);filter:blur(8px);animation:jarvisCoreBreath 2.8s ease-in-out infinite;z-index:0;pointer-events:none;}
+.core-stage.jarvis-core-enhanced::after{content:"";position:absolute;left:50%;top:50%;width:88%;height:88%;transform:translate(-50%,-50%) rotateX(68deg);border:1px solid rgba(0,232,255,.18);border-radius:50%;box-shadow:0 0 18px rgba(0,180,255,.12),inset 0 0 25px rgba(0,190,255,.08);animation:jarvisCoreRing 12s linear infinite;z-index:1;pointer-events:none;}
+
+.jarvis-core-3d{position:absolute;left:50%;top:50%;width:76%;height:76%;transform:translate(-50%,-50%);transform-style:preserve-3d;z-index:3;pointer-events:none;}
+.jarvis-core-3d .reactor-ring{position:absolute;left:50%;top:50%;border-radius:50%;border:1px solid rgba(0,230,255,.42);box-shadow:0 0 10px rgba(0,220,255,.15),inset 0 0 12px rgba(0,180,255,.06);}
+.jarvis-core-3d .r1{width:100%;height:32%;transform:translate(-50%,-50%) rotateX(70deg);animation:jarvisOrbit1 9s linear infinite;}
+.jarvis-core-3d .r2{width:86%;height:86%;transform:translate(-50%,-50%) rotateX(62deg) rotateY(24deg);animation:jarvisOrbit2 13s linear infinite reverse;}
+.jarvis-core-3d .r3{width:48%;height:104%;transform:translate(-50%,-50%) rotateY(68deg) rotateZ(18deg);animation:jarvisOrbit3 16s linear infinite;}
+.jarvis-core-3d .r4{width:112%;height:112%;transform:translate(-50%,-50%) rotateX(76deg) rotateZ(44deg);border-color:rgba(0,110,255,.18);animation:jarvisOrbit4 22s linear infinite reverse;}
+.jarvis-core-3d .core-shell{position:absolute;left:50%;top:50%;width:42%;height:42%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 36% 28%,#fff 0 1%,#9fffff 3%,#00dfff 10%,#0875ff 34%,#001c55 63%,#000713 100%);box-shadow:0 0 10px #00eaff,0 0 35px rgba(0,220,255,.8),0 0 90px rgba(0,80,255,.42),inset -16px -20px 35px rgba(0,0,0,.65),inset 8px 7px 20px rgba(255,255,255,.3);animation:jarvisCoreFloat 3.2s ease-in-out infinite;}
+.jarvis-core-3d .core-shell::before{content:"";position:absolute;inset:8%;border-radius:50%;border:1px solid rgba(180,255,255,.7);box-shadow:inset 0 0 18px rgba(0,240,255,.6);animation:jarvisCoreSpin 7s linear infinite;}
+.jarvis-core-3d .core-shell::after{content:"";position:absolute;inset:-12%;border-radius:50%;border:1px dashed rgba(0,235,255,.55);animation:jarvisCoreSpin 5s linear infinite reverse;}
+.jarvis-core-3d .core-ray{position:absolute;left:50%;top:50%;width:1px;height:120%;background:linear-gradient(transparent,rgba(0,240,255,.55),transparent);box-shadow:0 0 8px #00eaff;transform-origin:center;opacity:.55;}
+.jarvis-core-3d .ray-a{transform:translate(-50%,-50%) rotateZ(0deg);}.jarvis-core-3d .ray-b{transform:translate(-50%,-50%) rotateZ(60deg);}.jarvis-core-3d .ray-c{transform:translate(-50%,-50%) rotateZ(120deg);}
+
+.jarvis-core-voice-hit{position:absolute;left:50%;top:50%;width:48%;height:48%;transform:translate(-50%,-50%);z-index:20;border:1px solid rgba(0,238,255,.32);border-radius:50%;background:rgba(0,15,35,.05);cursor:pointer;color:#d9fbff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;font:700 9px/1 "Segoe UI",sans-serif;letter-spacing:3px;text-shadow:0 0 8px #00eaff;box-shadow:0 0 0 1px rgba(0,210,255,.06),0 0 24px rgba(0,200,255,.12);transition:.25s ease;}
+.jarvis-core-voice-hit span{font-size:22px;letter-spacing:0;text-shadow:0 0 12px #00eaff;}
+.jarvis-core-voice-hit small{font-size:6px;letter-spacing:2px;color:#72dcec;}
+.jarvis-core-voice-hit:hover,.jarvis-core-voice-hit:focus-visible{transform:translate(-50%,-50%) scale(1.045);background:rgba(0,205,255,.08);box-shadow:0 0 0 1px rgba(0,230,255,.35),0 0 35px rgba(0,220,255,.35);outline:none;}
+.jarvis-core-voice-hit.listening{background:radial-gradient(circle,rgba(0,238,255,.24),rgba(0,120,255,.08) 55%,transparent 72%);animation:jarvisListening 1s ease-in-out infinite;}
+.jarvis-core-voice-hit.listening span{animation:jarvisMicPulse .8s ease-in-out infinite;}
+
+#neon-nexus .nn-core{transform-style:preserve-3d;transition:filter .25s ease,transform .25s ease;box-shadow:0 0 22px rgba(255,0,230,.25),0 0 70px rgba(80,0,255,.22),inset 0 0 35px rgba(0,230,255,.08);}
+#neon-nexus .nn-core::before{content:"";position:absolute;inset:-15%;border-radius:50%;border:1px solid rgba(255,50,230,.34);box-shadow:0 0 18px rgba(255,0,230,.24),inset 0 0 20px rgba(0,210,255,.12);animation:nnCoreGyro 9s linear infinite;pointer-events:none;}
+#neon-nexus .nn-core::after{content:"";position:absolute;inset:-29%;border-radius:50%;border:1px dashed rgba(0,220,255,.25);animation:nnCoreGyro 15s linear infinite reverse;pointer-events:none;}
+#neon-nexus .nn-core-inner{box-shadow:inset 0 0 24px rgba(0,255,255,.32),0 0 26px rgba(0,240,255,.35);}
+#neon-nexus .nn-core.listening,#neon-nexus .nn-core:focus-visible{filter:brightness(1.28) saturate(1.3);outline:none;}
+#neon-nexus .nn-core.listening .nn-core-inner{animation:nnCoreListening .8s ease-in-out infinite;}
+
+@keyframes jarvisCoreBreath{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(.92)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}}
+@keyframes jarvisCoreRing{to{transform:translate(-50%,-50%) rotateX(68deg) rotateZ(360deg)}}
+@keyframes jarvisOrbit1{to{transform:translate(-50%,-50%) rotateX(70deg) rotateZ(360deg)}}
+@keyframes jarvisOrbit2{to{transform:translate(-50%,-50%) rotateX(62deg) rotateY(24deg) rotateZ(-360deg)}}
+@keyframes jarvisOrbit3{to{transform:translate(-50%,-50%) rotateY(68deg) rotateZ(378deg)}}
+@keyframes jarvisOrbit4{to{transform:translate(-50%,-50%) rotateX(76deg) rotateZ(-316deg)}}
+@keyframes jarvisCoreFloat{0%,100%{transform:translate(-50%,-50%) scale(.96)}50%{transform:translate(-50%,-50%) scale(1.04)}}
+@keyframes jarvisCoreSpin{to{transform:rotate(360deg)}}
+@keyframes jarvisListening{0%,100%{box-shadow:0 0 0 1px rgba(0,230,255,.35),0 0 30px rgba(0,220,255,.28)}50%{box-shadow:0 0 0 10px rgba(0,230,255,.05),0 0 70px rgba(0,220,255,.7)}}
+@keyframes jarvisMicPulse{50%{transform:scale(1.18)}}
+@keyframes nnCoreGyro{to{transform:rotateZ(360deg) rotateX(12deg)}}
+@keyframes nnCoreListening{50%{transform:scale(1.13);filter:brightness(1.5)}}
+
+@media (prefers-reduced-motion:reduce){.jarvis-core-3d *,#neon-nexus .nn-core::before,#neon-nexus .nn-core::after{animation:none!important}}
