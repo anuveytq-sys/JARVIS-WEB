@@ -487,3 +487,18 @@
 }
 #jvi-root .jvi-grid.jvi-left-hidden>[data-jvi-panel="left"]{display:none!important}
 #jvi-root .jvi-grid.jvi-right-hidden>[data-jvi-panel="right"]{display:none!important}
+
+
+/* Narrow the Input Array Optics panel so it no longer spans the whole display. */
+@media(min-width:761px){
+  #jvi-root .jvi-grid{grid-template-columns:minmax(190px,18%) minmax(320px,1fr) minmax(220px,23%)}
+  #jvi-root.jvi-right-hidden .jvi-grid{grid-template-columns:minmax(190px,18%) minmax(0,1fr)}
+}
+@media(max-width:760px){
+  #jvi-root .jvi-grid>[data-jvi-panel="left"]{
+    width:min(84vw,340px)!important;
+    max-width:84vw!important;
+    justify-self:start!important;
+    z-index:12;
+  }
+}
