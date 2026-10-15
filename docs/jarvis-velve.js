@@ -117,11 +117,60 @@
     }catch(_){$('#v-air').textContent='offline'}
   }
   function parseTLE(text){const lines=String(text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length-2;i++){if(lines[i+1]?.startsWith('1 ')&&lines[i+2]?.startsWith('2 ')){out.push({name:lines[i].replace(/^0 /,''),l1:lines[i+1],l2:lines[i+2]});i+=2}}return out}
-  async function refreshSatellites(){try{if(!window.satellite)return;const groups=['STARLINK','ONEWEB','GPS-OPS','GALILEO','GLONASS','STATIONS'];const packs=await Promise.all(groups.map(g=>fetch(`https://celestrak.org/NORAD/elements/gp.php?GROUP=${g}&FORMAT=TLE`,{cache:'no-store'}).then(r=>r.ok?r.text():'')));const all=packs.flatMap(parseTLE),seen=new Set();satelliteRecs=[];for(const s of all){const key=s.l1.slice(2,7);if(!seen.has(key)){seen.add(key);satelliteRecs.push(s)}if(satelliteRecs.length>=700)break}satelliteDS.entities.removeAll();satelliteSats=satelliteRecs.map(s=>{try{return {s,rec:window.satellite.twoline2satrec(s.l1,s.l2)}}catch(_){return null}}).filter(Boolean);updateSatellites();$('#v-sat').textContent=satelliteSats.length}catch(_){$('#v-sat').textContent='offline'} }
+  async function refreshSatellites(){
+    try{loadStaticCatalog();updateSatellites();$('#v-sat').textContent=staticCatalog.length+' STATIC'}
+    catch(error){console.warn('[VELVE static satellite catalog]',error);$('#v-sat').textContent='catalog unavailable'}
+  }
+  const STATIC_VISUAL_SCALE=1.65;
+  let staticCatalog=[],staticCatalogEntities=[],staticCatalogLoaded=false,catalogPickHandler=null;
+  function catalogNumber(v,d=0){const x=Number(v);return Number.isFinite(x)?x:d}
+  function catalogOrbitalPosition(s,now){
+    const mu=398600.4418,earth=6378.137,inc=catalogNumber(s.INCLINATION)*Math.PI/180;
+    const raan=catalogNumber(s.RA_OF_ASC_NODE)*Math.PI/180,arg=catalogNumber(s.ARG_OF_PERICENTER)*Math.PI/180;
+    const ecc=Math.max(0,Math.min(.92,catalogNumber(s.ECCENTRICITY))),mm=catalogNumber(s.MEAN_MOTION,15.2)*2*Math.PI/86400;
+    const a=Math.cbrt(mu/(mm*mm)),epoch=Date.parse(s.EPOCH),elapsed=(now-(Number.isFinite(epoch)?epoch:now))/1000;
+    let M=(catalogNumber(s.MEAN_ANOMALY)*Math.PI/180+mm*elapsed)%(2*Math.PI);if(M<0)M+=2*Math.PI;
+    let E=M;for(let i=0;i<8;i++)E-=(E-ecc*Math.sin(E)-M)/(1-ecc*Math.cos(E));
+    const xo=a*(Math.cos(E)-ecc),yo=a*Math.sqrt(1-ecc*ecc)*Math.sin(E),cu=Math.cos(arg),su=Math.sin(arg),cr=Math.cos(raan),sr=Math.sin(raan),ci=Math.cos(inc),si=Math.sin(inc);
+    const x0=xo*cu-yo*su,y0=xo*su+yo*cu;
+    let x=cr*x0-sr*y0*ci,y=sr*x0+cr*y0*ci,z=y0*si;
+    const theta=7.2921159e-5*(now/1000),rx=x*Math.cos(theta)+y*Math.sin(theta),ry=-x*Math.sin(theta)+y*Math.cos(theta);
+    return {x:rx*STATIC_VISUAL_SCALE*1000,y:ry*STATIC_VISUAL_SCALE*1000,z:z*STATIC_VISUAL_SCALE*1000,altitude:Math.max(0,a*(1-ecc)-earth),period:1440/catalogNumber(s.MEAN_MOTION,15.2)};
+  }
+  function loadStaticCatalog(){
+    if(staticCatalogLoaded||!viewer)return;
+    const data=Array.isArray(window.__VELVE_STATIC_SATELLITES)?window.__VELVE_STATIC_SATELLITES:[];
+    staticCatalog=data.filter(s=>s&&s.NORAD_CAT_ID&&s.OBJECT_NAME&&Number(s.MEAN_MOTION)>0).slice(0,240);
+    if(staticCatalog.length<200)throw new Error('Expected 200+ frozen catalog records; found '+staticCatalog.length);
+    staticCatalogEntities=staticCatalog.map((s,i)=>{
+      const id='velve-static-sat-'+String(s.NORAD_CAT_ID),entity=viewer.entities.add({id,name:String(s.OBJECT_NAME),position:Cesium.Cartesian3.ZERO,point:{pixelSize:window.innerWidth<700?15:11,color:i%3===0?Cesium.Color.CYAN:i%3===1?Cesium.Color.LIME:Cesium.Color.YELLOW,outlineColor:Cesium.Color.WHITE,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY}});
+      entity.__velveCatalogRecord=s;entity.__velveCatalogSatellite=true;return entity;
+    });
+    staticCatalogLoaded=true;installCatalogPicking();updateSatellites();
+    const root=document.getElementById('velve-root');if(root){root.dataset.realSatellites=String(staticCatalog.length);root.dataset.satelliteFeed='static-snapshot'}
+    const status=document.querySelector('#velve-status b');if(status)status.textContent=staticCatalog.length+' STATIC SATELLITES LOADED';
+  }
   function updateSatellites(){
+    if(staticCatalogLoaded){const now=Date.now();for(let i=0;i<staticCatalogEntities.length;i++){const e=staticCatalogEntities[i],s=staticCatalog[i];try{const p=catalogOrbitalPosition(s,now);e.position=Cesium.Cartesian3.fromElements(p.x,p.y,p.z)}catch(_){}}try{viewer?.scene.requestRender()}catch(_){}return}
     if(!window.satellite||!satelliteSats.length)return;
     const now=new Date(),gst=window.satellite.gstime(now);
-    satelliteSats.forEach((item,i)=>{try{const pv=window.satellite.propagate(item.rec,now),pos=pv?.position;if(!pos||![pos.x,pos.y,pos.z].every(Number.isFinite))return;const gd=window.satellite.eciToGeodetic(pos,gst);if(!gd)return;const lon=window.satellite.degreesLong(gd.longitude),lat=window.satellite.degreesLat(gd.latitude);const realH=Math.max(0,Number(gd.height)*1000);/* Visual-only orbit exaggeration: keep markers visibly separated from Earth. */const h=Math.max(1800000,realH*1.6);if(!Number.isFinite(lon)||!Number.isFinite(lat)||!Number.isFinite(h))return;let e=satelliteDS.entities.getById('sat-'+i);if(!e)e=satelliteDS.entities.add({id:'sat-'+i,name:item.s.name,point:{pixelSize:9,color:i%3===0?Cesium.Color.CYAN:i%3===1?Cesium.Color.HOTPINK:Cesium.Color.LIME,outlineColor:Cesium.Color.BLACK,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY}});e.position=Cesium.Cartesian3.fromDegrees(lon,lat,h)}catch(_){} });
+    satelliteSats.forEach((item,i)=>{try{const pv=window.satellite.propagate(item.rec,now),pos=pv?.position;if(!pos||![pos.x,pos.y,pos.z].every(Number.isFinite))return;const gd=window.satellite.eciToGeodetic(pos,gst);if(!gd)return;const lon=window.satellite.degreesLong(gd.longitude),lat=window.satellite.degreesLat(gd.latitude);const realH=Math.max(0,Number(gd.height)*1000);const h=Math.max(1800000,realH*1.6);if(!Number.isFinite(lon)||!Number.isFinite(lat)||!Number.isFinite(h))return;let e=satelliteDS.entities.getById('sat-'+i);if(!e)e=satelliteDS.entities.add({id:'sat-'+i,name:item.s.name,point:{pixelSize:9,color:i%3===0?Cesium.Color.CYAN:i%3===1?Cesium.Color.HOTPINK:Cesium.Color.LIME,outlineColor:Cesium.Color.BLACK,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY}});e.position=Cesium.Cartesian3.fromDegrees(lon,lat,h)}catch(_){}});
+  }
+  function addCatalogPanel(){
+    let panel=document.getElementById('velve-satellite-info');if(panel)return panel;
+    const style=document.createElement('style');style.id='velve-satellite-info-style';style.textContent='#velve-satellite-info{position:fixed;right:14px;bottom:18px;width:min(350px,calc(100vw - 24px));max-height:55vh;overflow:auto;z-index:2147483647;display:none;background:rgba(3,10,18,.97);border:1px solid #00eaff;border-radius:12px;box-shadow:0 0 28px #00eaff44;padding:13px;color:#e8fbff;font:12px Arial,sans-serif;box-sizing:border-box}#velve-satellite-info.open{display:block}#velve-satellite-info .vsi-head{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:-13px;background:rgba(3,10,18,.98);padding:2px 0 8px}#velve-satellite-info h3{margin:0;color:#61f5ff;font-size:11px;letter-spacing:1px}#velve-satellite-info .vsi-x{font-size:22px;min-width:36px;min-height:36px;background:#081d28;color:#bdefff;border:1px solid #61f5ff77;border-radius:8px}#velve-satellite-info .vsi-name{font-size:16px;font-weight:bold;margin:3px 0 10px;overflow-wrap:anywhere}#velve-satellite-info .vsi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}#velve-satellite-info .vsi-grid span{display:block;color:#8ba9b7;font-size:9px;letter-spacing:.6px;margin-bottom:2px}#velve-satellite-info .vsi-grid b{font-size:11px;overflow-wrap:anywhere}#velve-satellite-info .vsi-source{margin-top:10px;color:#9bb0bb;font-size:9px;line-height:1.45}@media(max-width:600px){#velve-satellite-info{right:8px;bottom:8px;max-height:43vh;width:calc(100vw - 16px)}}';document.head.appendChild(style);
+    panel=document.createElement('section');panel.id='velve-satellite-info';panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Satellite information');
+    panel.innerHTML='<div class="vsi-head"><h3>VELVE // SATELLITE DATA</h3><button type="button" class="vsi-x" aria-label="Close satellite information">×</button></div><div class="vsi-name" id="vsi-name">Satellite</div><div class="vsi-grid"><div><span>NORAD CATALOG ID</span><b id="vsi-norad">—</b></div><div><span>OBJECT ID</span><b id="vsi-object">—</b></div><div><span>ORBIT CLASS</span><b id="vsi-orbit">—</b></div><div><span>ALTITUDE ESTIMATE</span><b id="vsi-alt">—</b></div><div><span>ORBITAL PERIOD</span><b id="vsi-period">—</b></div><div><span>INCLINATION</span><b id="vsi-inc">—</b></div><div><span>ECCENTRICITY</span><b id="vsi-ecc">—</b></div><div><span>MEAN MOTION</span><b id="vsi-mm">—</b></div><div><span>RAAN</span><b id="vsi-raan">—</b></div><div><span>ARGUMENT OF PERICENTER</span><b id="vsi-arg">—</b></div><div><span>MEAN ANOMALY</span><b id="vsi-ma">—</b></div><div><span>ORBIT EPOCH</span><b id="vsi-epoch">—</b></div><div><span>REVOLUTIONS AT EPOCH</span><b id="vsi-rev">—</b></div></div><div class="vsi-source">Frozen real catalog snapshot from deployment time; markers revolve using the stored orbital elements. Orbit radius is visually enlarged for visibility and is not a live tracking display.</div>';
+    document.body.appendChild(panel);panel.querySelector('.vsi-x').addEventListener('click',()=>panel.classList.remove('open'));return panel;
+  }
+  function showCatalogSatellite(s){
+    const panel=addCatalogPanel(),p=catalogOrbitalPosition(s,Date.now()),set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v??'Not provided')};
+    set('vsi-name',s.OBJECT_NAME);set('vsi-norad',s.NORAD_CAT_ID);set('vsi-object',s.OBJECT_ID||'Not provided');set('vsi-orbit',p.altitude>30000?'GEO / HIGH':p.altitude>2000?'MEO':p.altitude?'LEO':'Orbit data unavailable');set('vsi-alt',Math.round(p.altitude)+' km (catalog estimate)');set('vsi-period',p.period.toFixed(1)+' min');set('vsi-inc',catalogNumber(s.INCLINATION).toFixed(3)+'°');set('vsi-ecc',catalogNumber(s.ECCENTRICITY).toFixed(7));set('vsi-mm',catalogNumber(s.MEAN_MOTION).toFixed(6)+' rev/day');set('vsi-raan',catalogNumber(s.RA_OF_ASC_NODE).toFixed(3)+'°');set('vsi-arg',catalogNumber(s.ARG_OF_PERICENTER).toFixed(3)+'°');set('vsi-ma',catalogNumber(s.MEAN_ANOMALY).toFixed(3)+'°');set('vsi-epoch',s.EPOCH||'Not provided');set('vsi-rev',s.REV_AT_EPOCH??'Not provided');panel.classList.add('open');
+  }
+  function installCatalogPicking(){
+    if(catalogPickHandler||!viewer||!Cesium)return;
+    catalogPickHandler=new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    catalogPickHandler.setInputAction(click=>{try{const picked=viewer.scene.pick(click.position),entity=picked?.id?.__velveCatalogSatellite?picked.id:(picked?.primitive?.id?.__velveCatalogSatellite?picked.primitive.id:null);if(!entity)return;const s=entity.__velveCatalogRecord;viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.camera.cancelFlight();showCatalogSatellite(s);const world=entity.position?.getValue?entity.position.getValue(Cesium.JulianDate.now()):entity.position;if(world){const radial=Cesium.Cartesian3.normalize(Cesium.Cartesian3.clone(world),new Cesium.Cartesian3()),dest=Cesium.Cartesian3.add(world,Cesium.Cartesian3.multiplyByScalar(radial,2200000,new Cesium.Cartesian3()),new Cesium.Cartesian3());viewer.camera.flyTo({destination:dest,duration:.65,complete:()=>{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined}})}}catch(error){console.warn('[VELVE satellite pick]',error)}},Cesium.ScreenSpaceEventType.LEFT_CLICK);
   }
   function startSatelliteLoop(){if(satelliteTimer)clearInterval(satelliteTimer);updateSatellites();satelliteTimer=setInterval(()=>{if(root?.classList.contains('velve-on')){updateSatellites();viewer.scene.requestRender()}},1000)}
   function flyToCoordinates(lat,lon,label,altitude){
