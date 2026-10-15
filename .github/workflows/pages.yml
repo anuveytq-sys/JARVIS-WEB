@@ -46,7 +46,7 @@ jobs:
       - name: Verify VELVE satellite interaction upgrade
         run: |
           node --check docs/velve-satellite-upgrade.js
-          grep -q 'velve-sat-interaction-20261015f' docs/velve-satellite-upgrade.js
+          grep -q 'velve-sat-interaction-20261015g' docs/velve-satellite-upgrade.js
           grep -q 'cartesianToCanvasCoordinates' docs/velve-satellite-upgrade.js
           grep -q 'clickInstalled=true' docs/velve-satellite-upgrade.js
           grep -q "panel.style.setProperty('display','none','important')" docs/velve-satellite-upgrade.js
