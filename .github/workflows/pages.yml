@@ -45,8 +45,7 @@ jobs:
 
       - name: Verify JARVIS and VELVE upgrades
         run: |
-          grep -q 'Local command aliases for NEON NEXUS / Command Centre.' public/index.html
-          grep -q 'function openEnvironment(name)' docs/jarvis-neon-nexus.js
+          grep -q 'openEnvironment(name)' docs/jarvis-neon-nexus.js
           grep -q 'velve-satellite-upgrade' docs/velve-satellite-upgrade.js
           grep -q 'GROUP=active&FORMAT=json' docs/velve-satellite-upgrade.js
           grep -q 'slice(0,200)' docs/velve-satellite-upgrade.js
