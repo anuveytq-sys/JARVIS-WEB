@@ -160,8 +160,8 @@
       #jarvis-settings-modal input, #jarvis-settings-modal button { font-size: 14px; }
       @media (min-width: 768px) {
         #jarvis-settings-trigger {
-          top: 88px !important; right: 28px !important; padding: 11px 16px !important;
-          font-size: 13px !important;
+          top: 88px !important; right: 28px !important; width: 44px !important; height: 44px !important;
+          padding: 0 !important; font-size: 20px !important;
         }
         #jarvis-settings-modal { padding: 32px !important; }
         #jarvis-settings-modal section {
@@ -172,7 +172,7 @@
         #jarvis-settings-modal button { min-height: 44px !important; }
       }
       @media (max-width: 767px) {
-        #jarvis-settings-trigger { top: 86px !important; right: 12px !important; }
+        #jarvis-settings-trigger { top: 86px !important; right: 12px !important; width: 40px !important; height: 40px !important; padding: 0 !important; font-size: 19px !important; }
         #jarvis-settings-modal section { padding: 18px !important; }
       }
     `;
@@ -181,13 +181,14 @@
     const button = document.createElement("button");
     button.id = "jarvis-settings-trigger";
     button.type = "button";
-    button.textContent = "⚙ SETTINGS";
+    button.textContent = "⚙";
+    button.title = "Settings";
     button.setAttribute("aria-label", "JARVIS settings");
     Object.assign(button.style, {
       position: "fixed", top: "86px", right: "16px", zIndex: "2147483647",
-      padding: "10px 13px", borderRadius: "9px", border: "1px solid #00d9ff",
-      background: "rgba(2,18,37,.96)", color: "#baf7ff", font: "bold 12px system-ui,sans-serif",
-      letterSpacing: "1px", boxShadow: "0 0 14px rgba(0,217,255,.22)", cursor: "pointer"
+      width: "42px", height: "42px", padding: "0", borderRadius: "9px", border: "1px solid #00d9ff",
+      background: "rgba(2,18,37,.96)", color: "#baf7ff", font: "bold 20px system-ui,sans-serif",
+      letterSpacing: "0", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 14px rgba(0,217,255,.22)", cursor: "pointer"
     });
 
     const modal = document.createElement("div");
