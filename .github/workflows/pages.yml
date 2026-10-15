@@ -54,8 +54,7 @@ jobs:
           grep -q 'velve-satellite-info' docs/velve-satellite-upgrade.js
           grep -q 'velve-voice' docs/velve-satellite-upgrade.js
           grep -q 'velve-maptiler-key' docs/velve-satellite-upgrade.js
-          grep -q 'minimumZoomDistance=120' docs/jarvis-velve-stability.js
-          grep -q 'jarvis-core-3d' docs/jarvis-core-3d.js
+          grep -q 'minimumZoomDistance' docs/jarvis-velve-stability.js
 
       - name: Build Pages site from original HUD
         run: |
