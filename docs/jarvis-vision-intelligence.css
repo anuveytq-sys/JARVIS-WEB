@@ -298,3 +298,45 @@
 .jvi-system-info-row span{font-size:11px;overflow-wrap:anywhere;color:#e0f5ff}
 .jvi-system-modal-card .jvi-system-note{padding:10px;border-left:2px solid #9d8bff;background:#11152b}
 @media(max-width:480px){.jvi-system-modal-card{padding:18px 14px}.jvi-system-info-row{grid-template-columns:1fr;gap:4px}}
+
+
+/* Results float above the core so analysis never pushes the neural core down. */
+#jvi-root .jvi-results-overlay{
+  position:fixed;inset:0;z-index:2147482000;display:none;align-items:flex-start;justify-content:center;
+  padding:clamp(12px,3vh,28px) 12px;background:linear-gradient(180deg,#020814a8,#02081458 55%,transparent);
+  pointer-events:none;
+}
+#jvi-root .jvi-results-overlay.open{display:flex}
+#jvi-root .jvi-results-window{
+  pointer-events:auto;display:flex;flex-direction:column;width:min(760px,94vw);max-height:min(68vh,680px);
+  border:1px solid #3c8fb0;border-radius:8px;overflow:hidden;
+  background:linear-gradient(145deg,#07172af5,#030914f7);box-shadow:0 16px 50px #000b,0 0 28px #00cfff1c;
+  backdrop-filter:blur(14px);
+}
+#jvi-root .jvi-results-window-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-bottom:1px solid #214a63;background:#061323}
+#jvi-root .jvi-results-window-head .jvi-eyebrow{font-size:8px}
+#jvi-root .jvi-results-close{flex:0 0 25px;width:25px;height:25px;display:grid;place-items:center;border:1px solid #347c9b;border-radius:4px;background:#061629;color:#bcefff;font-size:19px;line-height:1;cursor:pointer}
+#jvi-root .jvi-results-window-body{min-height:0;overflow:auto;padding:10px 12px}
+#jvi-root .jvi-results-window-body .jvi-result-card{position:relative;margin-bottom:8px}
+#jvi-root .jvi-results-window-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border-top:1px solid #214a63;background:#040e1b}
+#jvi-root .jvi-results-window-foot>span{font-size:7px;letter-spacing:.12em;color:#6091aa}
+#jvi-root .jvi-next-analysis{border:1px solid #327c9c;border-radius:4px;background:#08243a;color:#a9f2ff;padding:7px 11px;font-size:8px;font-weight:800;letter-spacing:.08em;cursor:pointer}
+#jvi-root .jvi-next-analysis:hover,#jvi-root .jvi-results-close:hover{background:#10324a;color:#fff}
+#jvi-root .jvi-results{min-height:0;max-height:0;flex:0 0 0;padding:0;overflow:hidden}
+#jvi-root .jvi-tabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#286b8a #06101d;flex-wrap:nowrap}
+#jvi-root .jvi-tabs .jvi-tab{flex:0 0 auto;min-width:68px;white-space:nowrap;font-size:8px;padding:10px 9px;cursor:pointer}
+#jvi-root .jvi-tabs .jvi-tab[data-panel="world"]{min-width:92px;color:#c5baff;border:1px solid #4a4281;background:linear-gradient(90deg,#171333,#0a1729);box-shadow:inset 0 1px #a69aff45}
+#jvi-root .jvi-tabs .jvi-tab[data-panel="world"].active{color:#f0edff;border-color:#9d8aff;box-shadow:inset 0 2px #b5a7ff}
+#jvi-root .jvi-cam-box{height:clamp(200px,30vh,310px)}
+#jvi-root .jvi-left,#jvi-root .jvi-right{overflow:auto;overscroll-behavior:contain}
+@media(max-width:760px){
+ #jvi-root .jvi-cam-box{height:clamp(190px,29vh,270px)}
+ #jvi-root .jvi-tabs .jvi-tab{min-width:66px;padding:9px 8px;font-size:7px}
+ #jvi-root .jvi-tabs .jvi-tab[data-panel="world"]{min-width:88px}
+ #jvi-root .jvi-results-window{width:96vw;max-height:70vh}
+ #jvi-root .jvi-results-overlay{padding-top:8px}
+}
+@media(max-width:480px){
+ #jvi-root .jvi-cam-box{height:clamp(185px,28vh,240px)}
+ #jvi-root .jvi-results-window{max-height:66vh}
+}
