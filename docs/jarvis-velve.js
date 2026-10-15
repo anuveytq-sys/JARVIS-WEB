@@ -121,7 +121,7 @@
     try{loadStaticCatalog();updateSatellites();$('#v-sat').textContent=staticCatalog.length+' STATIC'}
     catch(error){console.warn('[VELVE static satellite catalog]',error);$('#v-sat').textContent='catalog unavailable'}
   }
-  const STATIC_VISUAL_SCALE=1.65;
+  const STATIC_VISUAL_SCALE=1.12;
   let staticCatalog=[],staticCatalogEntities=[],staticCatalogLoaded=false,catalogPickHandler=null;
   function catalogNumber(v,d=0){const x=Number(v);return Number.isFinite(x)?x:d}
   function catalogOrbitalPosition(s,now){
@@ -143,7 +143,7 @@
     staticCatalog=data.filter(s=>s&&s.NORAD_CAT_ID&&s.OBJECT_NAME&&Number(s.MEAN_MOTION)>0).slice(0,240);
     if(staticCatalog.length<200)throw new Error('Expected 200+ frozen catalog records; found '+staticCatalog.length);
     staticCatalogEntities=staticCatalog.map((s,i)=>{
-      const id='velve-static-sat-'+String(s.NORAD_CAT_ID),entity=viewer.entities.add({id,name:String(s.OBJECT_NAME),position:Cesium.Cartesian3.ZERO,point:{pixelSize:window.innerWidth<700?15:11,color:i%3===0?Cesium.Color.CYAN:i%3===1?Cesium.Color.LIME:Cesium.Color.YELLOW,outlineColor:Cesium.Color.WHITE,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY}});
+      const id='velve-static-sat-'+String(s.NORAD_CAT_ID),entity=viewer.entities.add({id,name:String(s.OBJECT_NAME),position:Cesium.Cartesian3.ZERO,point:{pixelSize:window.innerWidth<700?6:5,color:Cesium.Color.fromCssColorString('#ff102a'),outlineColor:Cesium.Color.fromCssColorString('#ff6678'),outlineWidth:1,disableDepthTestDistance:0}});
       entity.__velveCatalogRecord=s;entity.__velveCatalogSatellite=true;return entity;
     });
     staticCatalogLoaded=true;installCatalogPicking();updateSatellites();
