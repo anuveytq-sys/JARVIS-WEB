@@ -3408,13 +3408,18 @@ if (SpeechRecognition) {
 
 voiceButton.addEventListener("click", () => {
   if (!recognition) {
-    speak("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
+    commandInput.placeholder = "Tap here and use your keyboard microphone to dictate a command";
+    commandInput.focus();
+    setState("keyboard dictation available");
+    speak("Voice recognition is not available in this browser. Tap the microphone on your keyboard, dictate your command, then send it.");
     return;
   }
 
   try {
     recognition.start();
-  } catch (e) {}
+  } catch (e) {
+    setState("tap again to start listening");
+  }
 });
 
 /* =========================================================
