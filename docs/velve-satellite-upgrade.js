@@ -1,7 +1,7 @@
 /* VELVE-only satellite upgrade: ~200 real active satellites, visible orbit separation, click details, and reliable voice button. */
 (() => {
   'use strict';
-  const VERSION = 'velve-satellites-20261015c';
+  const VERSION = 'velve-satellites-20261015d';
   let viewer = null, patched = false, loaded = false;
   const sats = [], entities = new Map();
   const css = `#velve-satellite-info{position:fixed;right:18px;bottom:116px;width:min(330px,calc(100vw - 36px));z-index:2147483000;pointer-events:auto;display:none;background:rgba(3,10,18,.94);border:1px solid rgba(0,238,255,.7);border-radius:12px;box-shadow:0 0 28px rgba(0,220,255,.18);padding:14px;color:#dffaff;font-family:Arial,sans-serif;backdrop-filter:blur(10px)}#velve-satellite-info.open{display:block}#velve-satellite-info .vsi-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}#velve-satellite-info h3{font-size:13px;letter-spacing:2px;margin:0;color:#61f5ff}#velve-satellite-info .vsi-x{border:0;background:transparent;color:#bdefff;font-size:23px;line-height:1;cursor:pointer;padding:0 3px}#velve-satellite-info .vsi-name{font-size:17px;font-weight:800;margin:0 0 8px;color:#fff}#velve-satellite-info .vsi-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;font-size:11px}#velve-satellite-info .vsi-grid span{display:block;color:#7695a3;font-size:9px;letter-spacing:1px;margin-bottom:2px}#velve-satellite-info .vsi-grid b{font-size:11px;color:#e9fbff}#velve-satellite-info .vsi-source{margin-top:10px;color:#78909b;font-size:9px;line-height:1.4}.velve-real-sat{filter:drop-shadow(0 0 5px #00eaff)}`;
@@ -27,8 +27,8 @@
     const x=xOrb*cu-yOrb*su, y=xOrb*su+yOrb*cu;
     return{x:(cr*x-sr*y*ci),y:(sr*x+cr*y*ci),z:y*si,altitude:Math.max(0,a*(1-ecc)-earth),period:1440/n(s.MEAN_MOTION,15.2)};
   }
-  function addSatellite(s,i){if(!viewer||!window.Cesium)return;const C=window.Cesium,id='velve-real-sat-'+i,e=viewer.entities.add({id,name:String(s.OBJECT_NAME||s.NAME||'Unknown Satellite'),position:C.Cartesian3.ZERO,point:{pixelSize:8,color:i%3===0?C.Color.CYAN:i%3===1?C.Color.LIME:C.Color.YELLOW,outlineColor:C.Color.BLACK,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY}});e.__velveSat=s;e.__velveRealSat=true;entities.set(id,e);updateEntity(e,s)}
-  function updateEntity(e,s){const p=orbitalPosition(s,Date.now()),C=window.Cesium;e.position=C.Cartesian3.fromElements(p.x*1000,p.y*1000,p.z*1000)}
+  function addSatellite(s,i){if(!viewer||!window.Cesium)return;const C=window.Cesium,id='velve-real-sat-'+i,e=viewer.entities.add({id,name:String(s.OBJECT_NAME||s.NAME||'Unknown Satellite'),position:C.Cartesian3.ZERO,point:{pixelSize:11,color:i%3===0?C.Color.CYAN:i%3===1?C.Color.LIME:C.Color.YELLOW,outlineColor:C.Color.WHITE,outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY},label:{text:String(s.OBJECT_NAME||s.NAME||'Satellite'),font:'10px sans-serif',fillColor:C.Color.WHITE,outlineColor:C.Color.BLACK,outlineWidth:2,style:C.LabelStyle.FILL_AND_OUTLINE,show:false,disableDepthTestDistance:Number.POSITIVE_INFINITY}});e.__velveSat=s;e.__velveRealSat=true;entities.set(id,e);updateEntity(e,s)}
+  function updateEntity(e,s){const p=orbitalPosition(s,Date.now()),C=window.Cesium;const theta=7.2921159e-5*(Date.now()/1000);const x=p.x*Math.cos(theta)+p.y*Math.sin(theta),y=-p.x*Math.sin(theta)+p.y*Math.cos(theta);e.position=C.Cartesian3.fromElements(x*1000,y*1000,p.z*1000);}
   function showSatellite(s){
     const panel=document.getElementById('velve-satellite-info');if(!panel)return;
     const p=orbitalPosition(s,Date.now()),alt=p.altitude;
@@ -39,25 +39,63 @@
     document.getElementById('vsi-period').textContent=Number.isFinite(p.period)?p.period.toFixed(1)+' min':'—';
     document.getElementById('vsi-alt').textContent=Math.round(alt)+' km';
     document.getElementById('vsi-inc').textContent=n(s.INCLINATION).toFixed(2)+'°';
-    panel.classList.add('open');
+    panel.style.display='block';panel.style.visibility='visible';panel.classList.add('open');
   }
   async function loadRealSatellites(){if(loaded||!viewer||!window.Cesium)return;loaded=true;removeSatelliteApiKeyOption();try{const response=await fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json',{cache:'no-store'});if(!response.ok)throw new Error('CelesTrak HTTP '+response.status);const data=await response.json(),list=Array.isArray(data)?data:(data?.data||data?.satellites||[]),chosen=list.filter(s=>s&&(s.OBJECT_NAME||s.NAME)&&(s.NORAD_CAT_ID!=null)).slice(0,200);sats.push(...chosen);chosen.forEach(addSatellite);const count=document.getElementById('v-sat');if(count)count.textContent=chosen.length+' REAL';const root=document.getElementById('velve-root');if(root)root.dataset.realSatellites=String(chosen.length)}catch(err){console.warn('[VELVE satellites]',err);loaded=false;const count=document.getElementById('v-sat');if(count)count.textContent='satellite feed offline'}}
   function installClick(){
     if(!viewer||viewer.__velveSatClick)return;
-    viewer.__velveSatClick=true;const C=window.Cesium;
-    try{viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK)}catch(_){}
-    viewer.screenSpaceEventHandler.setInputAction(m=>{
-      const picked=viewer.scene.pick(m.position),e=picked?.id;
-      if(!e?.__velveRealSat)return;
-      try{viewer.selectedEntity=undefined;viewer.trackedEntity=undefined;viewer.camera.cancelFlight()}catch(_){}
+    viewer.__velveSatClick=true;
+    const C=window.Cesium,canvas=viewer.canvas||viewer.scene.canvas;
+    const pickSatellite=(position)=>{
+      if(!position||!viewer||!window.Cesium)return false;
+      let picked;
+      try{picked=viewer.scene.pick(position)}catch(_){}
+      let e=picked?.id||picked?.primitive?.id||picked?.id?.id;
+      if(typeof e==='string')e=viewer.entities.getById(e);
+      if(!e?.__velveRealSat){
+        try{
+          const all=viewer.scene.drillPick(position,12)||[];
+          const hit=all.map(x=>x?.id||x?.primitive?.id).find(x=>x?.__velveRealSat);
+          if(hit)e=hit;
+        }catch(_){}
+      }
+      if(!e?.__velveRealSat)return false;
+      try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.camera.cancelFlight()}catch(_){}
       showSatellite(e.__velveSat);
-      const p=orbitalPosition(e.__velveSat,Date.now()),v=C.Cartesian3.fromElements(p.x*1000,p.y*1000,p.z*1000);
-      const destination=C.Cartesian3.multiplyByScalar(v,1.12,new C.Cartesian3());
-      try{viewer.camera.flyTo({destination,duration:1.1,complete:()=>{try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined}catch(_){}}})}catch(err){console.warn('[VELVE satellite jump]',err)}
-    },C.ScreenSpaceEventType.LEFT_CLICK);
+      const p=orbitalPosition(e.__velveSat,Date.now());
+      const theta=7.2921159e-5*(Date.now()/1000);
+      const x=p.x*Math.cos(theta)+p.y*Math.sin(theta),y=-p.x*Math.sin(theta)+p.y*Math.cos(theta);
+      const target=C.Cartesian3.fromElements(x*1000,y*1000,p.z*1000);
+      const direction=C.Cartesian3.normalize(C.Cartesian3.negate(target,new C.Cartesian3()),new C.Cartesian3());
+      const destination=C.Cartesian3.add(target,C.Cartesian3.multiplyByScalar(direction,-Math.max(900000,Math.min(2500000,Math.sqrt(x*x+y*y+p.z*p.z)*180)),new C.Cartesian3()),new C.Cartesian3());
+      try{
+        viewer.camera.flyTo({destination,duration:1.0,complete:()=>{try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined}catch(_){}}});
+      }catch(_){}
+      return true;
+    };
+    viewer.__velvePickSatellite=pickSatellite;
+    try{
+      viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+      viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_CLICK);
+    }catch(_){}
+    viewer.screenSpaceEventHandler.setInputAction(m=>{pickSatellite(m.position)},C.ScreenSpaceEventType.LEFT_CLICK);
+    if(canvas){
+      canvas.addEventListener('dblclick',ev=>{ev.preventDefault();ev.stopPropagation();try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.camera.cancelFlight()}catch(_){}},{capture:true});
+      let touchStart=null;
+      canvas.addEventListener('pointerup',ev=>{
+        if(ev.pointerType==='mouse')return;
+        const rect=canvas.getBoundingClientRect(),position=new C.Cartesian2(ev.clientX-rect.left,ev.clientY-rect.top);
+        pickSatellite(position);
+      },{passive:true,capture:true});
+      canvas.addEventListener('click',ev=>{
+        if(ev.detail>1)return;
+        const rect=canvas.getBoundingClientRect(),position=new C.Cartesian2(ev.clientX-rect.left,ev.clientY-rect.top);
+        pickSatellite(position);
+      },{capture:true});
+    }
   }
   function tick(){if(!viewer||!document.getElementById('velve-root')?.classList.contains('velve-on'))return;entities.forEach(e=>updateEntity(e,e.__velveSat));try{viewer.scene.requestRender()}catch(_){}}
-  function init(){viewer=viewer||window.__VELVE_VIEWER||null;if(!viewer||!window.Cesium)return;addPanel();removeSatelliteApiKeyOption();voiceFix();installClick();if(!loaded)loadRealSatellites();if(!window.__VELVE_SAT_TIMER)window.__VELVE_SAT_TIMER=setInterval(tick,3000)}
+  function init(){viewer=viewer||window.__VELVE_VIEWER||null;if(!viewer||!window.Cesium)return;addPanel();removeSatelliteApiKeyOption();voiceFix();installClick();if(!loaded)loadRealSatellites();if(!window.__VELVE_SAT_TIMER)window.__VELVE_SAT_TIMER=setInterval(tick,1000)}
   function watch(){patchViewer();if(viewer&&document.getElementById('velve-root'))init();removeSatelliteApiKeyOption();voiceFix();setTimeout(watch,1000)}
   window.VELVE_SATELLITE_UPGRADE_VERSION=VERSION;watch();
 })();
