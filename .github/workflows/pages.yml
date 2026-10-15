@@ -56,6 +56,88 @@ jobs:
         run: |
           rm -rf _site
           mkdir -p _site
+
+          # Freeze one CelesTrak GP snapshot at deploy time. The browser never
+          # contacts CelesTrak, so VELVE does not do realtime satellite tracking.
+          python3 - <<'PY'
+          import json
+          import urllib.request
+          from pathlib import Path
+
+          url = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json'
+          req = urllib.request.Request(url, headers={'User-Agent': 'JARVIS-WEB-VELVE-static-snapshot/1.0'})
+          with urllib.request.urlopen(req, timeout=90) as r:
+              raw = json.load(r)
+
+          selected = []
+          seen = set()
+          fields = (
+              'OBJECT_NAME','NORAD_CAT_ID','OBJECT_ID','EPOCH','MEAN_MOTION',
+              'ECCENTRICITY','INCLINATION','RA_OF_ASC_NODE','ARG_OF_PERICENTER',
+              'MEAN_ANOMALY','REV_AT_EPOCH'
+          )
+          for item in raw:
+              if not isinstance(item, dict):
+                  continue
+              sid = item.get('NORAD_CAT_ID')
+              name = item.get('OBJECT_NAME')
+              if sid is None or not name or str(sid) in seen:
+                  continue
+              seen.add(str(sid))
+              selected.append({k: item.get(k) for k in fields if k in item})
+              if len(selected) >= 240:
+                  break
+
+          if len(selected) < 200:
+              raise SystemExit(f'Expected at least 200 real satellites, got {len(selected)}')
+
+          payload = json.dumps(selected, separators=(',', ':'))
+          js = r'''/* VELVE frozen satellite catalog: generated during deployment from one CelesTrak snapshot. */
+          (() => {
+            'use strict';
+            const STATIC_SATS = PAYLOAD;
+            window.__VELVE_STATIC_SATELLITES = STATIC_SATS;
+            const nativeFetch = window.fetch ? window.fetch.bind(window) : null;
+            if (nativeFetch) {
+              window.fetch = (input, init) => {
+                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                if (/celestrak(?:\\.org|\\.com)\\/NORAD\\/elements\\/gp\\.php/i.test(url)) {
+                  return Promise.resolve(new Response(JSON.stringify(STATIC_SATS), {
+                    status: 200,
+                    headers: {'Content-Type':'application/json'}
+                  }));
+                }
+                return nativeFetch(input, init);
+              };
+            }
+
+            // The catalog values remain real; only the rendered radius is enlarged
+            // so LEO markers visibly sit away from Earth's surface in God's Eye.
+            const VISUAL_RADIUS_SCALE = 1.35;
+            function boostSatelliteRadius() {
+              const C = window.Cesium;
+              const v = window.__VELVE_VIEWER;
+              if (!C || !v || !v.entities) return;
+              const now = C.JulianDate.now();
+              const values = v.entities.values || [];
+              for (const e of values) {
+                if (!e || e.__velveRealSat !== true || !e.position || !e.position.getValue) continue;
+                try {
+                  const p = e.position.getValue(now);
+                  if (!p) continue;
+                  e.position = C.Cartesian3.multiplyByScalar(p, VISUAL_RADIUS_SCALE, new C.Cartesian3());
+                } catch (_) {}
+              }
+              try { v.scene.requestRender(); } catch (_) {}
+            }
+            window.__VELVE_BOOST_SATELLITE_RADIUS = boostSatelliteRadius;
+            setInterval(boostSatelliteRadius, 350);
+          })();
+          '''.replace('PAYLOAD', payload)
+          Path('_site/velve-static-satellite-feed.js').write_text(js, encoding='utf-8')
+          print(f'Embedded {len(selected)} real satellite records into the static VELVE build.')
+          PY
+
           cp public/index.html _site/index.html
           cp docs/jarvis-web.js _site/jarvis-web.js
           cp docs/jarvis-ui-patch.js _site/jarvis-ui-patch.js
@@ -91,13 +173,14 @@ jobs:
               s = re.sub(rf'<link[^>]+{re.escape(name)}\.css\?v=[^\"]+[^>]*>\s*', '', s)
           s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./velve-satellite-upgrade.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n'
-          for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-satellite-upgrade','terranexus','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d']:
+          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./velve-static-satellite-feed.js?v=pages-{version}"></script>\n<script src="./velve-satellite-upgrade.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n'
+          for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-static-satellite-feed','velve-satellite-upgrade','terranexus','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d']:
               s = re.sub(rf'<script[^>]+{re.escape(name)}\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
           PY
           touch _site/.nojekyll
+          grep -q "velve-static-satellite-feed.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "velve-satellite-upgrade.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
 
       - name: Setup Pages
