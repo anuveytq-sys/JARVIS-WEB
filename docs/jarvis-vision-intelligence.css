@@ -245,3 +245,23 @@
  #jvi-root .jvi-command-wrap input{height:36px;font-size:12px}
  #jvi-root .jvi-console .jvi-btn{height:36px;min-height:36px;min-width:38px;padding:3px 8px}
 }
+
+
+/* Final alignment fix: center the neural core in the free-space viewport.
+   Keep centering in the transform itself while the float animation runs. */
+#jvi-root .jvi-holo.jvi-free-space .jvi-holo-ring,
+#jvi-root .jvi-holo.jvi-free-space .jvi-holo-core{
+  left:50%;
+  top:50%;
+}
+#jvi-root .jvi-holo.jvi-free-space .jvi-holo-core{
+  transform:translate(-50%,-50%);
+  animation:jvi-core-centered-float 4s ease-in-out infinite;
+}
+@keyframes jvi-core-centered-float{
+  0%,100%{transform:translate(-50%,-50%) translateY(-3px)}
+  50%{transform:translate(-50%,-50%) translateY(4px)}
+}
+@media(prefers-reduced-motion:reduce){
+  #jvi-root .jvi-holo.jvi-free-space .jvi-holo-core{animation:none;transform:translate(-50%,-50%)}
+}
