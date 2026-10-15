@@ -352,3 +352,34 @@
 /* Keep the opening briefing reachable, but collapse the result slot after it is replaced by the overlay. */
 #jvi-root .jvi-results{min-height:0;max-height:9vh;flex:0 1 auto;padding:1px 4px 4px;overflow:auto}
 #jvi-root .jvi-results:empty{display:none}
+
+
+/* Smooth, independent scrolling for the Vision Intelligence input panel. */
+#jvi-root .jvi-left{
+  min-height:0;
+  max-height:100%;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  scrollbar-width:thin;
+  scrollbar-color:#287a9b #061323;
+  scroll-behavior:smooth;
+  padding-bottom:28px;
+}
+#jvi-root .jvi-left *,
+#jvi-root .jvi-left [data-jvi-panel="left"]{
+  min-height:0;
+}
+#jvi-root .jvi-left::-webkit-scrollbar{width:7px}
+#jvi-root .jvi-left::-webkit-scrollbar-track{background:#061323;border-radius:8px}
+#jvi-root .jvi-left::-webkit-scrollbar-thumb{background:linear-gradient(#38c5e8,#28628e);border:1px solid #061323;border-radius:8px}
+#jvi-root .jvi-left::-webkit-scrollbar-thumb:hover{background:#65ddf5}
+@media(max-width:760px){
+  #jvi-root .jvi-left{
+    max-height:100dvh;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+}
