@@ -410,3 +410,71 @@
   #jvi-root .jvi-left{height:100%;max-height:100%;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
   #jvi-root .jvi-world-link-block{margin:11px 0;padding:9px}
 }
+
+
+/* INPUT ARRAY OPTICS — stable camera viewport, vertical controls, and a real scroll container.
+   This final override intentionally supersedes older phone rules that shrank the camera
+   and hid the metrics/targets/privacy sections. */
+#jvi-root .jvi-grid{min-height:0;min-width:0}
+#jvi-root .jvi-grid>[data-jvi-panel="left"]{
+  display:flex!important;
+  flex-direction:column!important;
+  align-self:stretch;
+  height:100%;
+  min-height:0;
+  max-height:100%;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  scrollbar-color:#287a9b #061323;
+  padding:12px;
+  gap:0;
+}
+#jvi-root .jvi-grid>[data-jvi-panel="left"]>*{flex-shrink:0;min-width:0}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-panel-head{position:sticky;top:-12px;z-index:5;background:#081629;padding:8px 0;margin:0 0 10px}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-cam-box{
+  display:block!important;
+  position:relative;
+  flex:0 0 auto!important;
+  width:100%;
+  height:clamp(210px,30vh,300px)!important;
+  min-height:210px;
+  margin:0 0 9px;
+  overflow:hidden;
+  border:1px solid #35bce9;
+  border-radius:5px;
+  background:#020812;
+  box-shadow:inset 0 0 28px #009dff22,0 0 14px #008cff12;
+}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] #jvi-video{display:block!important;width:100%;height:100%;min-height:0;object-fit:cover;background:#020812}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] #jvi-placeholder{display:flex;z-index:1}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] #jvi-placeholder.hidden{display:none!important}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-button-row{display:flex;flex-direction:column;gap:7px;width:100%;margin:0 0 8px}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-button-row .jvi-btn{display:block;flex:0 0 auto;width:100%;min-height:40px;padding:10px;white-space:normal;line-height:1.35;font-size:9px;overflow-wrap:anywhere}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-world-link-block{flex:0 0 auto;width:100%;margin:8px 0;padding:11px}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-metrics{display:grid!important;grid-template-columns:minmax(0,1fr);gap:5px;margin:8px 0;padding:9px 0}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-metrics>div{display:block;min-width:0;padding:8px;border-left:2px solid #1d607b}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-metrics small{font-size:7px}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-metrics b{font-size:9px;white-space:normal;overflow-wrap:anywhere}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-section-label{display:flex!important;flex:0 0 auto;margin:12px 0 8px;line-height:1.5}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-targets{display:grid!important;flex:0 0 auto}
+#jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-note{display:block!important;flex:0 0 auto;margin:12px 0 4px}
+#jvi-root .jvi-grid>[data-jvi-panel="left"]::-webkit-scrollbar{width:7px}
+#jvi-root .jvi-grid>[data-jvi-panel="left"]::-webkit-scrollbar-track{background:#061323}
+#jvi-root .jvi-grid>[data-jvi-panel="left"]::-webkit-scrollbar-thumb{background:#287a9b;border-radius:8px}
+@media(max-width:760px){
+  #jvi-root .jvi-grid{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,48vh) minmax(300px,1fr) auto!important;overflow-y:auto!important;overflow-x:hidden!important}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"]{grid-column:1!important;grid-row:1!important;height:48vh!important;min-height:0!important;max-height:48vh!important;padding:10px}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-panel-head{top:-10px}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-cam-box{height:clamp(210px,30vh,270px)!important;min-height:210px}
+  #jvi-root .jvi-grid>.jvi-center{grid-column:1!important;grid-row:2!important;min-height:300px}
+  #jvi-root .jvi-grid>[data-jvi-panel="right"]{grid-column:1!important;grid-row:3!important;max-height:32vh}
+}
+@media(max-width:480px){
+  #jvi-root .jvi-grid{grid-template-rows:minmax(0,48vh) minmax(300px,1fr) auto!important}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"]{height:48vh!important;max-height:48vh!important;padding:9px}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-cam-box{height:210px!important;min-height:210px}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"] .jvi-button-row .jvi-btn{min-height:40px;font-size:9px}
+}
