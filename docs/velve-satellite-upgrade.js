@@ -160,8 +160,8 @@
   }
   function pickSatellite(position){
     if(!viewer||!position||!window.Cesium)return false;
-    const now=Date.now();if(now-lastPickAt<160)return false;lastPickAt=now;
-    const entity=nearestSatellite(position);if(!entity)return false;
+    const now=Date.now();if(now-lastPickAt<160)return false;
+    const entity=nearestSatellite(position);if(!entity)return false;lastPickAt=now;
     const C=window.Cesium;
     try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.camera.cancelFlight();}catch(_){}
     const id=String(entity.id||''),data=entity.__velveSat||catalog.get(id)||null;
