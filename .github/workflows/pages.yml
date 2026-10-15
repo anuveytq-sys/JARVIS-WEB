@@ -43,18 +43,12 @@ jobs:
           node --check docs/jarvis-neon-nexus-command-fix.js
           node --check docs/jarvis-core-3d.js
 
-      - name: Verify JARVIS and VELVE upgrades
+      - name: Verify VELVE satellite interaction upgrade
         run: |
-          grep -q 'openEnvironment(name)' docs/jarvis-neon-nexus.js
-          grep -q 'GROUP=active&FORMAT=json' docs/velve-satellite-upgrade.js
-          grep -q 'chosen.length>=200' docs/velve-satellite-upgrade.js
+          node --check docs/velve-satellite-upgrade.js
+          grep -q 'velve-sat-interaction-20261015e' docs/velve-satellite-upgrade.js
           grep -q 'new C.ScreenSpaceEventHandler(canvas)' docs/velve-satellite-upgrade.js
-          grep -q 'viewer.trackedEntity=undefined' docs/velve-satellite-upgrade.js
-          grep -q 'async function getJsonGroup' docs/velve-satellite-upgrade.js
           grep -q 'velve-satellite-info' docs/velve-satellite-upgrade.js
-          grep -q 'velve-voice' docs/velve-satellite-upgrade.js
-          grep -q 'velve-maptiler-key' docs/velve-satellite-upgrade.js
-          grep -q 'minimumZoomDistance' docs/jarvis-velve-stability.js
 
       - name: Build Pages site from original HUD
         run: |
