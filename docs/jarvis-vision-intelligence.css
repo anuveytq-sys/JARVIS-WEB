@@ -171,3 +171,13 @@
  #jvi-root .jvi-panel-restore{display:flex;flex-wrap:wrap;justify-content:center}
  #jvi-root .jvi-panel-restore[hidden]{display:none!important}
 }
+
+
+/* Reflow the grid when a panel is hidden (root classes are on #jvi-root itself). */
+#jvi-root.jvi-left-hidden .jvi-grid{grid-template-columns:minmax(0,1fr) minmax(250px,25%)}
+#jvi-root.jvi-left-hidden .jvi-center{grid-column:1}
+#jvi-root.jvi-left-hidden .jvi-right{grid-column:2}
+#jvi-root.jvi-right-hidden .jvi-grid{grid-template-columns:minmax(220px,23%) minmax(0,1fr)}
+#jvi-root.jvi-right-hidden .jvi-center{grid-column:2}
+#jvi-root.jvi-left-hidden.jvi-right-hidden .jvi-grid{grid-template-columns:minmax(0,1fr)}
+#jvi-root.jvi-left-hidden.jvi-right-hidden .jvi-center{grid-column:1}
