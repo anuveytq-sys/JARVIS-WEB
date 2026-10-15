@@ -47,7 +47,10 @@ jobs:
         run: |
           grep -q 'openEnvironment(name)' docs/jarvis-neon-nexus.js
           grep -q 'GROUP=active&FORMAT=json' docs/velve-satellite-upgrade.js
-          grep -q 'slice(0,200)' docs/velve-satellite-upgrade.js
+          grep -q 'chosen.length>=200' docs/velve-satellite-upgrade.js
+          grep -q 'new C.ScreenSpaceEventHandler(canvas)' docs/velve-satellite-upgrade.js
+          grep -q 'viewer.trackedEntity=undefined' docs/velve-satellite-upgrade.js
+          grep -q 'GROUP=.*FORMAT=json' docs/velve-satellite-upgrade.js
           grep -q 'velve-satellite-info' docs/velve-satellite-upgrade.js
           grep -q 'velve-voice' docs/velve-satellite-upgrade.js
           grep -q 'velve-maptiler-key' docs/velve-satellite-upgrade.js
