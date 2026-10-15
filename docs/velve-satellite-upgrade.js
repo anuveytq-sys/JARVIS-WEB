@@ -5,16 +5,16 @@
   let viewer = null, patched = false, loaded = false, loading = false, handler = null, lastPickAt = 0, clickInstalled = false;
   const entities = new Map(), catalog = new Map();
   const css = `
-#velve-satellite-info{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100vw - 28px));max-height:48vh;overflow:auto;z-index:2147483647;pointer-events:auto;display:none;visibility:visible;background:rgba(3,10,18,.97);border:1px solid rgba(0,238,255,.8);border-radius:12px;box-shadow:0 0 28px rgba(0,220,255,.25);padding:14px;color:#dffaff;font-family:Arial,sans-serif;backdrop-filter:blur(10px);box-sizing:border-box}
+#velve-satellite-info{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100vw - 28px));max-height:48vh;overflow:auto;z-index:2147483647;pointer-events:auto;display:none;visibility:visible;background:rgba(18,3,7,.97);border:1px solid rgba(255,16,42,.85);border-radius:12px;box-shadow:0 0 28px rgba(255,16,42,.28);padding:14px;color:#ffe9ec;font-family:Arial,sans-serif;backdrop-filter:blur(10px);box-sizing:border-box}
 #velve-satellite-info.open{display:block!important}
 #velve-satellite-info .vsi-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-#velve-satellite-info h3{font-size:12px;letter-spacing:1.5px;margin:0;color:#61f5ff}
-#velve-satellite-info .vsi-x{border:1px solid rgba(97,245,255,.45);border-radius:8px;background:#081d28;color:#bdefff;font-size:25px;line-height:1;cursor:pointer;padding:3px 10px;min-width:42px;min-height:40px;touch-action:manipulation}
+#velve-satellite-info h3{font-size:12px;letter-spacing:1.5px;margin:0;color:#ff536b}
+#velve-satellite-info .vsi-x{border:1px solid rgba(255,83,107,.55);border-radius:8px;background:#310912;color:#ffe5e9;font-size:25px;line-height:1;cursor:pointer;padding:3px 10px;min-width:42px;min-height:40px;touch-action:manipulation}
 #velve-satellite-info .vsi-name{font-size:17px;font-weight:800;margin:0 0 8px;color:#fff;overflow-wrap:anywhere}
 #velve-satellite-info .vsi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:11px}
-#velve-satellite-info .vsi-grid span{display:block;color:#8ba9b7;font-size:9px;letter-spacing:1px;margin-bottom:2px}
-#velve-satellite-info .vsi-grid b{font-size:11px;color:#e9fbff;overflow-wrap:anywhere}
-#velve-satellite-info .vsi-source{margin-top:10px;color:#9bb0bb;font-size:9px;line-height:1.4}
+#velve-satellite-info .vsi-grid span{display:block;color:#c58b94;font-size:9px;letter-spacing:1px;margin-bottom:2px}
+#velve-satellite-info .vsi-grid b{font-size:11px;color:#fff0f2;overflow-wrap:anywhere}
+#velve-satellite-info .vsi-source{margin-top:10px;color:#d5a0a7;font-size:9px;line-height:1.4}
 @media(max-width:600px){#velve-satellite-info{right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));width:calc(100vw - 16px);max-height:42vh;padding:12px}#velve-satellite-info .vsi-grid{gap:6px}}
 `;
   if (!document.getElementById('velve-satellite-upgrade-style')) {
