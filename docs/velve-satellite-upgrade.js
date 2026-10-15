@@ -46,8 +46,8 @@
     if(!viewer||viewer.__velveSatClick)return;
     viewer.__velveSatClick=true;
     const C=window.Cesium,canvas=viewer.canvas||viewer.scene.canvas;
-    const pickSatellite=(position)=>{
-      if(!position||!viewer||!window.Cesium)return false;
+    let lastPickAt=0;\n    const pickSatellite=(position)=>{
+      if(!position||!viewer||!window.Cesium)return false;\n      const now=Date.now();if(now-lastPickAt<450)return false;
       let picked;
       try{picked=viewer.scene.pick(position)}catch(_){}
       let e=picked?.id||picked?.primitive?.id||picked?.id?.id;
