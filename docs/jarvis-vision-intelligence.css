@@ -96,3 +96,78 @@
 #jvi-root .jvi-holo-core span{font-size:30px}
 }
 @media(prefers-reduced-motion:reduce){#jvi-root .jvi-holo-core:before{animation:none}}
+
+
+/* Vision Intelligence: deliberate three-column command-centre layout */
+#jvi-root .jvi-shell{min-width:0;min-height:0;overflow:hidden;padding:10px;gap:9px}
+#jvi-root .jvi-top{flex:0 0 auto}
+#jvi-root .jvi-grid{display:grid!important;grid-template-columns:minmax(220px,23%) minmax(0,1fr) minmax(250px,25%);grid-template-rows:minmax(0,1fr);align-items:stretch;gap:9px;flex:1 1 auto;min-height:0;overflow:hidden}
+#jvi-root .jvi-grid>[data-jvi-panel="left"]{grid-column:1;grid-row:1}
+#jvi-root .jvi-grid>.jvi-center{grid-column:2;grid-row:1;min-width:0;min-height:0;overflow:hidden}
+#jvi-root .jvi-grid>[data-jvi-panel="right"]{grid-column:3;grid-row:1}
+#jvi-root .jvi-panel{display:flex;flex-direction:column;min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:13px}
+#jvi-root .jvi-panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex:0 0 auto;min-height:28px}
+#jvi-root .jvi-panel-head>span{min-width:0}
+#jvi-root .jvi-center{display:flex;flex-direction:column;gap:9px}
+#jvi-root .jvi-center-head{flex:0 0 auto}
+#jvi-root .jvi-holo{flex:1 1 300px;min-height:clamp(240px,35vh,440px);max-height:none}
+#jvi-root .jvi-holo-core{width:clamp(94px,10vw,148px);height:clamp(94px,10vw,148px)}
+#jvi-root .jvi-ring-a{width:clamp(220px,27vw,370px);height:clamp(220px,27vw,370px)}
+#jvi-root .jvi-ring-b{width:clamp(178px,22vw,300px);height:clamp(178px,22vw,300px)}
+#jvi-root .jvi-ring-c{width:clamp(135px,17vw,230px);height:clamp(135px,17vw,230px)}
+#jvi-root .jvi-holo-core{background:radial-gradient(circle at 32% 25%,#eaffff 0,#78f5ff 9%,#1679bd 24%,#09264c 47%,#020915 70%);border:1px solid #9bffff;box-shadow:inset -20px -20px 36px #000e,inset 8px 8px 20px #c1ffffa8,0 0 35px #00d9ffdd,0 0 90px #007bff85,0 0 145px #563cff38}
+#jvi-root .jvi-holo-core span{font-weight:900;color:#efffff}
+#jvi-root .jvi-holo:after{content:"";position:absolute;inset:12%;border:1px solid #5eeaff22;border-radius:50%;transform:perspective(700px) rotateX(72deg);box-shadow:0 0 45px #00bfff12;pointer-events:none}
+#jvi-root .jvi-results{flex:0 1 auto;min-height:95px;max-height:24vh;overflow:auto}
+#jvi-root .jvi-briefing-card{padding:15px 13px 12px}
+#jvi-root .jvi-briefing-card .jvi-panel-x{z-index:3}
+#jvi-root .jvi-briefing-card h2{padding-right:22px}
+#jvi-root .jvi-console{position:relative;z-index:10;flex:0 0 auto;min-height:76px;max-height:118px;margin:0}
+#jvi-root .jvi-command-wrap{min-width:0}
+#jvi-root .jvi-command-wrap input{width:100%;min-width:0}
+#jvi-root .jvi-panel-restore{position:relative;z-index:11;flex:0 0 auto;min-height:30px;align-items:center;border:1px solid #24516a;background:#030b16f2;padding:4px 7px}
+#jvi-root .jvi-panel-restore>span{margin-right:auto;color:#7faec2;font-size:8px;letter-spacing:.12em}
+#jvi-root .jvi-panel-restore button{border-radius:3px}
+#jvi-root .jvi-panel-restore[hidden]{display:none!important}
+#jvi-root .jvi-panels-toggle{font-size:18px}
+#jvi-root .jvi-left-hidden .jvi-grid{grid-template-columns:minmax(0,1fr) minmax(250px,25%)}
+#jvi-root .jvi-left-hidden .jvi-center{grid-column:1}
+#jvi-root .jvi-left-hidden .jvi-right{grid-column:2}
+#jvi-root .jvi-right-hidden .jvi-grid{grid-template-columns:minmax(220px,23%) minmax(0,1fr)}
+#jvi-root .jvi-right-hidden .jvi-center{grid-column:2}
+#jvi-root .jvi-left-hidden.jvi-right-hidden .jvi-grid{grid-template-columns:minmax(0,1fr)}
+#jvi-root .jvi-left-hidden.jvi-right-hidden .jvi-center{grid-column:1}
+@media(max-width:1080px) and (orientation:landscape){
+ #jvi-root .jvi-shell{padding:6px;gap:6px}
+ #jvi-root .jvi-grid{grid-template-columns:minmax(185px,22%) minmax(0,1fr) minmax(205px,24%);gap:6px}
+ #jvi-root .jvi-panel{padding:8px}
+ #jvi-root .jvi-holo{min-height:clamp(205px,33vh,340px)}
+ #jvi-root .jvi-ring-a{width:clamp(190px,25vw,290px);height:clamp(190px,25vw,290px)}
+ #jvi-root .jvi-ring-b{width:clamp(150px,20vw,235px);height:clamp(150px,20vw,235px)}
+ #jvi-root .jvi-ring-c{width:clamp(115px,15vw,180px);height:clamp(115px,15vw,180px)}
+ #jvi-root .jvi-holo-core{width:clamp(78px,9vw,118px);height:clamp(78px,9vw,118px)}
+}
+@media(max-width:760px) and (orientation:portrait){
+ #jvi-root .jvi-shell{padding:6px;gap:6px}
+ #jvi-root .jvi-grid{display:block!important;position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
+ #jvi-root .jvi-center{position:absolute;inset:0;width:100%;height:100%;grid-column:auto;grid-row:auto;overflow:hidden}
+ #jvi-root .jvi-left,#jvi-root .jvi-right{display:none!important;position:absolute;top:0;bottom:0;width:min(86vw,330px);max-height:none;z-index:20;padding:12px;background:linear-gradient(145deg,#081629f7,#020812fc);box-shadow:0 0 45px #000d}
+ #jvi-root .jvi-left{left:0;right:auto}
+ #jvi-root .jvi-right{right:0;left:auto}
+ #jvi-root.jvi-mobile-left-open .jvi-left:not([hidden]),#jvi-root.jvi-mobile-right-open .jvi-right:not([hidden]){display:flex!important}
+ #jvi-root .jvi-center-head{min-height:66px;padding:8px}
+ #jvi-root .jvi-center-head h1{font-size:clamp(16px,4vw,23px)}
+ #jvi-root .jvi-center-head p{font-size:9px}
+ #jvi-root .jvi-holo{min-height:clamp(220px,34vh,330px);flex:1 1 auto}
+ #jvi-root .jvi-ring-a{width:clamp(205px,62vw,285px);height:clamp(205px,62vw,285px)}
+ #jvi-root .jvi-ring-b{width:clamp(165px,50vw,230px);height:clamp(165px,50vw,230px)}
+ #jvi-root .jvi-ring-c{width:clamp(125px,38vw,175px);height:clamp(125px,38vw,175px)}
+ #jvi-root .jvi-holo-core{width:clamp(82px,23vw,112px);height:clamp(82px,23vw,112px)}
+ #jvi-root .jvi-results{max-height:23vh;min-height:76px}
+ #jvi-root .jvi-console{min-height:66px;max-height:90px;padding:6px 7px calc(6px + env(safe-area-inset-bottom));gap:6px}
+ #jvi-root .jvi-command-wrap label,#jvi-root .jvi-command-wrap small{display:none}
+ #jvi-root .jvi-command-wrap input{height:40px;font-size:12px}
+ #jvi-root .jvi-console .jvi-btn{height:40px;min-width:40px}
+ #jvi-root .jvi-panel-restore{display:flex;flex-wrap:wrap;justify-content:center}
+ #jvi-root .jvi-panel-restore[hidden]{display:none!important}
+}
