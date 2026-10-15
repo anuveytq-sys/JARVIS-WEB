@@ -1,8 +1,8 @@
 /* VELVE satellite interaction upgrade: reliable mobile tap picking, 200-catalog feed with group fallbacks, details panel, no entity tracking. */
 (() => {
   'use strict';
-  const VERSION = 'velve-sat-interaction-20261015e';
-  let viewer = null, patched = false, loaded = false, loading = false, handler = null, lastPickAt = 0;
+  const VERSION = 'velve-sat-interaction-20261015f';
+  let viewer = null, patched = false, loaded = false, loading = false, handler = null, lastPickAt = 0, clickInstalled = false;
   const entities = new Map(), catalog = new Map();
   const css = `
 #velve-satellite-info{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100vw - 28px));max-height:48vh;overflow:auto;z-index:2147483647;pointer-events:auto;display:none!important;visibility:visible;background:rgba(3,10,18,.97);border:1px solid rgba(0,238,255,.8);border-radius:12px;box-shadow:0 0 28px rgba(0,220,255,.25);padding:14px;color:#dffaff;font-family:Arial,sans-serif;backdrop-filter:blur(10px);box-sizing:border-box}
@@ -55,7 +55,7 @@
     text('vsi-alt',altitude?Math.round(altitude)+' km':'Not provided');
     text('vsi-inc',Number.isFinite(Number(s?.INCLINATION))?Number(s.INCLINATION).toFixed(2)+'°':'Not provided');
     text('vsi-source',s?'Catalog metadata where available. Marker movement is a visual orbital estimate, not certified live tracking.':'This is a satellite marker from VELVE’s existing orbital layer; detailed catalog metadata was not available for this marker.');
-    panel.classList.add('open'); panel.style.setProperty('display','block','important');
+    panel.classList.add('open'); panel.style.setProperty('display','block','important'); panel.style.setProperty('visibility','visible','important'); panel.style.setProperty('pointer-events','auto','important');
     return panel;
   }
   function n(v,d=0){const x=Number(v);return Number.isFinite(x)?x:d;}
@@ -125,52 +125,71 @@
   }
   function pickSatellite(position){
     if(!viewer||!position||!window.Cesium)return false;
-    const now=Date.now();if(now-lastPickAt<300)return false;lastPickAt=now;
-    const C=window.Cesium;let picks=[];
-    try{const p=viewer.scene.pick(position);if(p)picks.push(p);}catch(_){}
-    try{picks.push(...(viewer.scene.drillPick(position,30)||[]));}catch(_){}
-    let e=null;
-    for(const p of picks){
+    const now=Date.now();if(now-lastPickAt<220)return false;lastPickAt=now;
+    const C=window.Cesium,scene=viewer.scene;let candidates=[];
+    try{const p=scene.pick(position);if(p)candidates.push(p);}catch(_){}
+    try{candidates.push(...(scene.drillPick(position,40)||[]));}catch(_){}
+    let entity=null;
+    for(const p of candidates){
       const candidate=entityFromPick(p);if(!candidate)continue;
       const id=String(candidate.id||'');
-      if(candidate.__velveRealSat||id.startsWith('sat-')||id.startsWith('velve-real-sat-')){e=candidate;break;}
+      if(candidate.__velveRealSat||id.startsWith('sat-')||id.startsWith('velve-real-sat-')){entity=candidate;break;}
     }
-    if(!e)return false;
+    // Mobile fallback: Cesium can miss a tiny point on touchscreens. Find the nearest
+    // rendered satellite marker within a forgiving tap radius using canvas coordinates.
+    if(!entity){
+      let best=Infinity;const radius=window.innerWidth<700?52:30;
+      for(const e of entities.values()){
+        try{
+          const world=e.position?.getValue?e.position.getValue(C.JulianDate.now()):e.position;
+          if(!world)continue;
+          const screen=scene.cartesianToCanvasCoordinates(world);
+          if(!screen)continue;
+          const dx=screen.x-position.x,dy=screen.y-position.y,d=Math.hypot(dx,dy);
+          if(d<best&&d<=radius){best=d;entity=e;}
+        }catch(_){}
+      }
+    }
+    if(!entity)return false;
     try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.camera.cancelFlight();}catch(_){}
-    const data=e.__velveSat||catalog.get(String(e.id))||null;
-    showSatellite(data,e.name||String(e.id||'Satellite'),String(e.id||''));
-    // Briefly move the camera toward the marker, without tracking or selecting it.
+    const data=entity.__velveSat||catalog.get(String(entity.id))||null;
+    showSatellite(data,entity.name||String(entity.id||'Satellite'),String(entity.id||''));
+    // Move the camera toward the marker once, but never track or select the entity.
     try{
-      const pos=e.position?.getValue?e.position.getValue(window.Cesium.JulianDate.now()):e.position;
-      if(pos){
-        const target=window.Cesium.Cartesian3.clone(pos),radial=window.Cesium.Cartesian3.normalize(target,new window.Cesium.Cartesian3());
-        const cameraPos=window.Cesium.Cartesian3.add(target,window.Cesium.Cartesian3.multiplyByScalar(radial,1800000,new window.Cesium.Cartesian3()),new window.Cesium.Cartesian3());
-        viewer.camera.setView({destination:cameraPos,orientation:{direction:window.Cesium.Cartesian3.normalize(window.Cesium.Cartesian3.subtract(target,cameraPos,new window.Cesium.Cartesian3()),new window.Cesium.Cartesian3()),up:window.Cesium.Cartesian3.UNIT_Z}});
+      const world=entity.position?.getValue?entity.position.getValue(C.JulianDate.now()):entity.position;
+      if(world){
+        const radial=C.Cartesian3.normalize(C.Cartesian3.clone(world),new C.Cartesian3());
+        const destination=C.Cartesian3.add(world,C.Cartesian3.multiplyByScalar(radial,850000,new C.Cartesian3()),new C.Cartesian3());
+        viewer.camera.flyTo({destination,duration:0.8,complete:()=>{try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;}catch(_){}}});
       }
     }catch(_){}
     setTimeout(()=>{try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;}catch(_){}},0);
     return true;
   }
   function installClick(){
-    if(!viewer||!window.Cesium)return;
+    if(!viewer||!window.Cesium||clickInstalled)return;
     const C=window.Cesium,canvas=viewer.scene.canvas;
-    try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);}catch(_){}
-    if(viewer.__velveSatPointerHandler){try{canvas.removeEventListener('pointerup',viewer.__velveSatPointerHandler,true)}catch(_){}viewer.__velveSatPointerHandler=null;}
-    if(handler){try{handler.destroy()}catch(_){}handler=null;}
-    handler=new C.ScreenSpaceEventHandler(canvas);
-    handler.setInputAction(m=>{pickSatellite(m.position);},C.ScreenSpaceEventType.LEFT_CLICK);
-    // Touch/pointer fallback: use one tap only; suppress the duplicate synthesized click.
-    let lastTouchAt=0;
+    try{
+      viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;
+      viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+      viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_CLICK);
+    }catch(_){}
+    // Use the viewer's existing handler, so Cesium and VELVE don't compete for taps.
+    try{
+      viewer.screenSpaceEventHandler.setInputAction(m=>{pickSatellite(m.position);},C.ScreenSpaceEventType.LEFT_CLICK);
+      viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    }catch(_){}
+    let lastPointerAt=0;
     const touchPick=ev=>{
       if(ev.pointerType==='mouse')return;
-      const now=Date.now();if(now-lastTouchAt<650)return;lastTouchAt=now;
-      const rect=canvas.getBoundingClientRect(),pos=new C.Cartesian2(ev.clientX-rect.left,ev.clientY-rect.top);
+      const now=Date.now();if(now-lastPointerAt<250)return;lastPointerAt=now;
+      const rect=canvas.getBoundingClientRect();
+      const pos=new C.Cartesian2(ev.clientX-rect.left,ev.clientY-rect.top);
       pickSatellite(pos);
     };
     canvas.addEventListener('pointerup',touchPick,{capture:true,passive:true});
     viewer.__velveSatPointerHandler=touchPick;
-    // No double-click tracking: remove it again in case Cesium reinstalls defaults.
-    viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    clickInstalled=true;
   }
   function voiceFix(){
     const b=document.getElementById('velve-voice');if(!b||b.dataset.vsatVoice==='1')return;b.dataset.vsatVoice='1';
