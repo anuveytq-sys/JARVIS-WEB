@@ -340,3 +340,7 @@
  #jvi-root .jvi-cam-box{height:clamp(185px,28vh,240px)}
  #jvi-root .jvi-results-window{max-height:66vh}
 }
+
+/* Keep the opening briefing reachable, but collapse the result slot after it is replaced by the overlay. */
+#jvi-root .jvi-results{min-height:0;max-height:9vh;flex:0 1 auto;padding:1px 4px 4px;overflow:auto}
+#jvi-root .jvi-results:empty{display:none}
