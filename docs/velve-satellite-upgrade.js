@@ -35,7 +35,7 @@
     panel.innerHTML='<div class="vsi-head"><h3>SATELLITE // INFORMATION</h3><button type="button" class="vsi-x" aria-label="Close satellite information">×</button></div><div class="vsi-name" id="vsi-name">Select a satellite</div><div class="vsi-grid"><div><span>NORAD ID</span><b id="vsi-norad">—</b></div><div><span>COUNTRY / OPERATOR</span><b id="vsi-country">—</b></div><div><span>ORBIT</span><b id="vsi-orbit">—</b></div><div><span>PERIOD</span><b id="vsi-period">—</b></div><div><span>ALTITUDE</span><b id="vsi-alt">—</b></div><div><span>INCLINATION</span><b id="vsi-inc">—</b></div></div><div class="vsi-source" id="vsi-source">Catalog metadata where available. Orbital markers are a visualization, not certified live tracking.</div>';
     document.body.appendChild(panel);
     const close=panel.querySelector('.vsi-x');
-    const hide=ev=>{ev.preventDefault();ev.stopPropagation();panel.classList.remove('open');};
+    const hide=ev=>{ev.preventDefault();ev.stopPropagation();panel.classList.remove('open');panel.style.setProperty('display','none','important');};
     close.addEventListener('click',hide); close.addEventListener('pointerup',hide);
     return panel;
   }
