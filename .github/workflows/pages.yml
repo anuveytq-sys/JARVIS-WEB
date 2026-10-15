@@ -36,17 +36,23 @@ jobs:
           node --check docs/jarvis-velve.js
           node --check docs/jarvis-velve-fix.js
           node --check docs/jarvis-velve-stability.js
+          node --check docs/velve-satellite-upgrade.js
           node --check docs/terranexus.js
           node --check docs/jarvis-neon-nexus.js
           node --check docs/jarvis-neon-nexus-launcher-fix.js
           node --check docs/jarvis-neon-nexus-command-fix.js
           node --check docs/jarvis-core-3d.js
 
-      - name: Verify JARVIS command routing and clean 3D voice core
+      - name: Verify JARVIS and VELVE upgrades
         run: |
           grep -q 'Local command aliases for NEON NEXUS / Command Centre.' public/index.html
           grep -q 'function openEnvironment(name)' docs/jarvis-neon-nexus.js
-          grep -q 'command-routing-20261014c' .github/workflows/pages.yml
+          grep -q 'velve-satellite-upgrade' docs/velve-satellite-upgrade.js
+          grep -q 'GROUP=active&FORMAT=json' docs/velve-satellite-upgrade.js
+          grep -q 'slice(0,200)' docs/velve-satellite-upgrade.js
+          grep -q 'velve-satellite-info' docs/velve-satellite-upgrade.js
+          grep -q 'velve-voice' docs/velve-satellite-upgrade.js
+          grep -q 'velve-maptiler-key' docs/velve-satellite-upgrade.js
           grep -q 'jarvis-core-3d' docs/jarvis-core-3d.js
           ! grep -q 'CLICK TO SPEAK' docs/jarvis-core-3d.js
           ! grep -q "hit.innerHTML='<span>🎙</span>" docs/jarvis-core-3d.js
@@ -68,6 +74,7 @@ jobs:
           cp docs/jarvis-velve.js _site/jarvis-velve.js
           cp docs/jarvis-velve-fix.js _site/jarvis-velve-fix.js
           cp docs/jarvis-velve-stability.js _site/jarvis-velve-stability.js
+          cp docs/velve-satellite-upgrade.js _site/velve-satellite-upgrade.js
           cp docs/terranexus.js _site/terranexus.js
           cp docs/terranexus.css _site/terranexus.css
           cp docs/jarvis-neon-nexus.js _site/jarvis-neon-nexus.js
@@ -85,21 +92,18 @@ jobs:
           version = os.environ['SITE_VERSION'][:12]
           head_marker = '</head>'
           style = f'<link rel="stylesheet" href="./jarvis-command-center.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-velve.css?v=pages-{version}">\n<link rel="stylesheet" href="./terranexus.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-core-3d.css?v=pages-{version}">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{display:none!important}</style>\n'
-          s = re.sub(r'<link[^>]+jarvis-command-center\.css\?v=[^\"]+[^>]*>\s*', '', s)
-          s = re.sub(r'<link[^>]+jarvis-velve\.css\?v=[^\"]+[^>]*>\s*', '', s)
-          s = re.sub(r'<link[^>]+terranexus\.css\?v=[^\"]+[^>]*>\s*', '', s)
-          s = re.sub(r'<link[^>]+jarvis-core-3d\.css\?v=[^\"]+[^>]*>\s*', '', s)
+          for name in ['jarvis-command-center','jarvis-velve','terranexus','jarvis-core-3d']:
+              s = re.sub(rf'<link[^>]+{re.escape(name)}\.css\?v=[^\"]+[^>]*>\s*', '', s)
           s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n'
-          for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','terranexus','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d']:
+          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./velve-satellite-upgrade.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n'
+          for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-satellite-upgrade','terranexus','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d']:
               s = re.sub(rf'<script[^>]+{re.escape(name)}\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
           PY
           touch _site/.nojekyll
-          grep -q "jarvis-core-3d.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-core-3d.css?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q "velve-satellite-upgrade.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
