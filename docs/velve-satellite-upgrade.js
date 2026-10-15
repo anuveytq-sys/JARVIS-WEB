@@ -48,7 +48,8 @@
     const C=window.Cesium,canvas=viewer.canvas||viewer.scene.canvas;
     let lastPickAt=0;
     const pickSatellite=(position)=>{
-      if(!position||!viewer||!window.Cesium)return false;\n      const now=Date.now();if(now-lastPickAt<450)return false;
+      if(!position||!viewer||!window.Cesium)return false;
+      const now=Date.now();if(now-lastPickAt<450)return false;
       let picked;
       try{picked=viewer.scene.pick(position)}catch(_){}
       let e=picked?.id||picked?.primitive?.id||picked?.id?.id;
