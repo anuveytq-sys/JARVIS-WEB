@@ -148,11 +148,3 @@
 #terranexus-overlay.open{position:fixed!important;inset:0!important;display:flex!important;flex-direction:column!important}
 #terranexus-overlay .tn-console{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;order:10!important;flex:0 0 auto!important;margin-top:auto!important}
 @media(max-width:740px){#terranexus-overlay .tn-layout{bottom:calc(76px + env(safe-area-inset-bottom))!important}#terranexus-overlay .tn-console{position:absolute!important;left:5px!important;right:5px!important;bottom:5px!important;top:auto!important;margin:0!important;z-index:20!important;order:initial!important}}
-
-/* TERRANEXUS live physics controls */
-#terranexus-overlay .tn-physics{position:absolute;right:10px;bottom:10px;z-index:4;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;max-width:calc(100% - 20px);padding:9px 11px;border:1px solid #b98b62;border-radius:12px;background:rgba(255,246,227,.94);box-shadow:0 5px 18px rgba(60,35,16,.16);backdrop-filter:blur(10px);pointer-events:auto}
-#terranexus-overlay .tn-physics label{display:grid;gap:5px;min-width:115px;max-width:175px;color:#78573c;font-size:10px;font-weight:700}
-#terranexus-overlay .tn-physics label span{display:flex;justify-content:space-between;gap:8px;white-space:nowrap}
-#terranexus-overlay .tn-physics label b{color:#a45f2b;font-variant-numeric:tabular-nums}
-#terranexus-overlay .tn-physics input[type=range]{width:100%;min-height:24px;accent-color:#a96d3d;cursor:pointer}
-@media(max-width:700px){#terranexus-overlay .tn-physics{left:8px;right:8px;bottom:8px;gap:6px;padding:7px;max-width:none}#terranexus-overlay .tn-physics label{flex:1 1 125px;min-width:100px;max-width:none;font-size:9px}#terranexus-overlay .tn-caption{bottom:82px;max-width:calc(100% - 20px)}}
