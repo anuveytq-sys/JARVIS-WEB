@@ -118,6 +118,8 @@ document.addEventListener("submit",e=>{if(e.target&&e.target.id==="commandForm"&
 document.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>ask(b.dataset.q,true));
 }
 function dispatchOpen(){install();$("jvi-root").classList.add("open");document.body.classList.add("jvi-active");if(!key())status("KEY REQUIRED")}
+function routeMainVoiceCommands(){try{if(typeof recognition==="undefined"||!recognition||recognition.__jviRouted)return;const prior=recognition.onresult;if(typeof prior!=="function")return;recognition.onresult=function(e){const q=e&&e.results&&e.results[0]&&e.results[0][0]&&e.results[0][0].transcript;if(q&&isOpen(q)){dispatchOpen();try{setState("idle")}catch(_){}try{speak("Opening Vision Intelligence.")}catch(_){}return}return prior.call(this,e)};recognition.__jviRouted=true}catch(_){}}
+setTimeout(routeMainVoiceCommands,0);
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
 const original=window.fetch.bind(window);window.fetch=async function(input,init){const url=typeof input==="string"?input:(input&&input.url)||"";if(/\/api\/command(?:[?#]|$)/.test(url)){let body=init&&init.body;if(!body&&input&&input.clone)try{body=await input.clone().text()}catch(e){}try{const p=typeof body==="string"?JSON.parse(body):body;if(p&&isOpen(p.command)){dispatchOpen();return new Response(JSON.stringify({ok:true,reply:"Opening Vision Intelligence."}),{status:200,headers:{"Content-Type":"application/json"}})}}catch(e){}}return original(input,init)};
 })();
