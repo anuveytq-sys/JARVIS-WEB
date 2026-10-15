@@ -92,48 +92,7 @@ jobs:
               raise SystemExit(f'Expected at least 200 real satellites, got {len(selected)}')
 
           payload = json.dumps(selected, separators=(',', ':'))
-          js = r'''/* VELVE frozen satellite catalog: generated during deployment from one CelesTrak snapshot. */
-          (() => {
-            'use strict';
-            const STATIC_SATS = PAYLOAD;
-            window.__VELVE_STATIC_SATELLITES = STATIC_SATS;
-            const nativeFetch = window.fetch ? window.fetch.bind(window) : null;
-            if (nativeFetch) {
-              window.fetch = (input, init) => {
-                const url = typeof input === 'string' ? input : (input && input.url) || '';
-                if (/celestrak(?:\\.org|\\.com)\\/NORAD\\/elements\\/gp\\.php/i.test(url)) {
-                  return Promise.resolve(new Response(JSON.stringify(STATIC_SATS), {
-                    status: 200,
-                    headers: {'Content-Type':'application/json'}
-                  }));
-                }
-                return nativeFetch(input, init);
-              };
-            }
-
-            // The catalog values remain real; only the rendered radius is enlarged
-            // so LEO markers visibly sit away from Earth's surface in God's Eye.
-            const VISUAL_RADIUS_SCALE = 1.35;
-            function boostSatelliteRadius() {
-              const C = window.Cesium;
-              const v = window.__VELVE_VIEWER;
-              if (!C || !v || !v.entities) return;
-              const now = C.JulianDate.now();
-              const values = v.entities.values || [];
-              for (const e of values) {
-                if (!e || e.__velveRealSat !== true || !e.position || !e.position.getValue) continue;
-                try {
-                  const p = e.position.getValue(now);
-                  if (!p) continue;
-                  e.position = C.Cartesian3.multiplyByScalar(p, VISUAL_RADIUS_SCALE, new C.Cartesian3());
-                } catch (_) {}
-              }
-              try { v.scene.requestRender(); } catch (_) {}
-            }
-            window.__VELVE_BOOST_SATELLITE_RADIUS = boostSatelliteRadius;
-            setInterval(boostSatelliteRadius, 350);
-          })();
-          '''.replace('PAYLOAD', payload)
+          js = '/* VELVE frozen satellite catalog generated at deploy time; no runtime feed requests. */\\nwindow.__VELVE_STATIC_SATELLITES = ' + payload + ';\\n'
           Path('_site/velve-static-satellite-feed.js').write_text(js, encoding='utf-8')
           print(f'Embedded {len(selected)} real satellite records into the static VELVE build.')
           PY
@@ -173,7 +132,7 @@ jobs:
               s = re.sub(rf'<link[^>]+{re.escape(name)}\.css\?v=[^\"]+[^>]*>\s*', '', s)
           s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./velve-static-satellite-feed.js?v=pages-{version}"></script>\n<script src="./velve-satellite-upgrade.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n'
+          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\\n<script src="./velve-static-satellite-feed.js?v=pages-{version}"></script>\\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n'
           for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-static-satellite-feed','velve-satellite-upgrade','terranexus','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d']:
               s = re.sub(rf'<script[^>]+{re.escape(name)}\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = s.replace(marker, injection + marker, 1)
@@ -181,7 +140,8 @@ jobs:
           PY
           touch _site/.nojekyll
           grep -q "velve-static-satellite-feed.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "velve-satellite-upgrade.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q 'function loadStaticCatalog' _site/jarvis-velve.js
+          grep -q "velve-static-satellite-feed.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
