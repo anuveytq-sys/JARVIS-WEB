@@ -265,3 +265,36 @@
 @media(prefers-reduced-motion:reduce){
   #jvi-root .jvi-holo.jvi-free-space .jvi-holo-core{animation:none;transform:translate(-50%,-50%)}
 }
+
+
+/* Clickable System Briefing and live system-information dialog. */
+#jvi-root .jvi-briefing-open{
+  display:inline-flex;align-items:center;gap:7px;padding:0;border:0;background:transparent;
+  color:#a8eaff;font:inherit;letter-spacing:inherit;cursor:pointer;text-align:left;
+}
+#jvi-root .jvi-briefing-open:hover{color:#fff;text-shadow:0 0 12px #00d9ff8c}
+.jvi-system-modal{
+  position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;
+  padding:18px;background:#020713d9;backdrop-filter:blur(8px);
+}
+.jvi-system-modal-card{
+  position:relative;width:min(620px,94vw);max-height:min(82vh,760px);overflow:auto;
+  padding:24px;border:1px solid #3f9ab9;border-radius:12px;
+  background:linear-gradient(145deg,#0b1b30,#030914 75%);color:#dff8ff;
+  box-shadow:0 0 50px #007bff2b,inset 0 0 28px #00cfff0a;
+}
+.jvi-system-modal-card h2{margin:8px 35px 8px 0;font-size:clamp(22px,4vw,30px);color:#eafcff}
+.jvi-system-modal-card>p{color:#9db8c9;font-size:12px;line-height:1.65}
+.jvi-system-close{
+  position:absolute;right:12px;top:12px;width:34px;height:34px;border:1px solid #347c9b;
+  border-radius:5px;background:#061629;color:#bcefff;font-size:24px;cursor:pointer;
+}
+.jvi-system-info-list{display:grid;gap:7px;margin:18px 0}
+.jvi-system-info-row{
+  display:grid;grid-template-columns:minmax(120px,.7fr) minmax(0,1.3fr);gap:12px;
+  padding:10px;border:1px solid #21435c;background:#061323;border-radius:5px;
+}
+.jvi-system-info-row b{font-size:10px;letter-spacing:.06em;color:#7bdcf5;text-transform:uppercase}
+.jvi-system-info-row span{font-size:11px;overflow-wrap:anywhere;color:#e0f5ff}
+.jvi-system-modal-card .jvi-system-note{padding:10px;border-left:2px solid #9d8bff;background:#11152b}
+@media(max-width:480px){.jvi-system-modal-card{padding:18px 14px}.jvi-system-info-row{grid-template-columns:1fr;gap:4px}}
