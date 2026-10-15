@@ -1,11 +1,11 @@
 /* VELVE satellite interaction upgrade: reliable mobile tap picking, 200-catalog feed with group fallbacks, details panel, no entity tracking. */
 (() => {
   'use strict';
-  const VERSION = 'velve-sat-interaction-20261015f';
+  const VERSION = 'velve-sat-interaction-20261015g';
   let viewer = null, patched = false, loaded = false, loading = false, handler = null, lastPickAt = 0, clickInstalled = false;
   const entities = new Map(), catalog = new Map();
   const css = `
-#velve-satellite-info{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100vw - 28px));max-height:48vh;overflow:auto;z-index:2147483647;pointer-events:auto;display:none!important;visibility:visible;background:rgba(3,10,18,.97);border:1px solid rgba(0,238,255,.8);border-radius:12px;box-shadow:0 0 28px rgba(0,220,255,.25);padding:14px;color:#dffaff;font-family:Arial,sans-serif;backdrop-filter:blur(10px);box-sizing:border-box}
+#velve-satellite-info{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100vw - 28px));max-height:48vh;overflow:auto;z-index:2147483647;pointer-events:auto;display:none;visibility:visible;background:rgba(3,10,18,.97);border:1px solid rgba(0,238,255,.8);border-radius:12px;box-shadow:0 0 28px rgba(0,220,255,.25);padding:14px;color:#dffaff;font-family:Arial,sans-serif;backdrop-filter:blur(10px);box-sizing:border-box}
 #velve-satellite-info.open{display:block!important}
 #velve-satellite-info .vsi-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 #velve-satellite-info h3{font-size:12px;letter-spacing:1.5px;margin:0;color:#61f5ff}
@@ -123,45 +123,55 @@
     if(e&&typeof e==='object'&&e.id&&typeof e.id==='object'&&!e.position)e=e.id;
     return e;
   }
+  function isSatelliteEntity(e){
+    const id=String(e?.id||'');
+    return !!e&&(e.__velveRealSat===true||id.startsWith('velve-real-sat-')||id.startsWith('sat-'));
+  }
+  function getVisibleSatelliteEntities(){
+    const all=new Map();
+    for(const e of entities.values())all.set(String(e.id),e);
+    try{for(const e of viewer.entities.values||[])if(isSatelliteEntity(e))all.set(String(e.id),e);}catch(_){}
+    try{const sources=viewer.dataSources;for(let i=0;i<sources.length;i++){const ds=sources.get(i);for(const e of (ds?.entities?.values||[]))if(isSatelliteEntity(e))all.set(String(e.id),e);}}catch(_){}
+    return [...all.values()];
+  }
+  function canvasPosition(clientX,clientY){
+    const canvas=viewer.scene.canvas,rect=canvas.getBoundingClientRect();
+    const x=clientX-rect.left,y=clientY-rect.top;
+    const sx=canvas.clientWidth?canvas.width/canvas.clientWidth:1,sy=canvas.clientHeight?canvas.height/canvas.clientHeight:1;
+    return {css:new window.Cesium.Cartesian2(x,y),buffer:new window.Cesium.Cartesian2(x*sx,y*sy)};
+  }
+  function nearestSatellite(position){
+    const C=window.Cesium,scene=viewer.scene,canvas=scene.canvas;
+    const sx=canvas.clientWidth?canvas.width/canvas.clientWidth:1,sy=canvas.clientHeight?canvas.height/canvas.clientHeight:1;
+    const positions=[position];if(sx!==1||sy!==1)positions.push(new C.Cartesian2(position.x*sx,position.y*sy));
+    for(const pos of positions){
+      try{const e=entityFromPick(scene.pick(pos));if(isSatelliteEntity(e))return e;}catch(_){}
+      try{for(const p of (scene.drillPick(pos,80)||[])){const e=entityFromPick(p);if(isSatelliteEntity(e))return e;}}catch(_){}
+    }
+    const radius=window.innerWidth<700?90:42;let best=null,bestDistance=Infinity;
+    for(const e of getVisibleSatelliteEntities()){
+      try{const world=e.position?.getValue?e.position.getValue(C.JulianDate.now()):e.position;if(!world)continue;
+        const screen=scene.cartesianToCanvasCoordinates(world);if(!screen)continue;
+        const d=Math.hypot(screen.x-position.x,screen.y-position.y);
+        if(d<bestDistance&&d<=radius){best=e;bestDistance=d;}
+      }catch(_){}
+    }
+    return best;
+  }
   function pickSatellite(position){
     if(!viewer||!position||!window.Cesium)return false;
-    const now=Date.now();if(now-lastPickAt<220)return false;lastPickAt=now;
-    const C=window.Cesium,scene=viewer.scene;let candidates=[];
-    try{const p=scene.pick(position);if(p)candidates.push(p);}catch(_){}
-    try{candidates.push(...(scene.drillPick(position,40)||[]));}catch(_){}
-    let entity=null;
-    for(const p of candidates){
-      const candidate=entityFromPick(p);if(!candidate)continue;
-      const id=String(candidate.id||'');
-      if(candidate.__velveRealSat||id.startsWith('sat-')||id.startsWith('velve-real-sat-')){entity=candidate;break;}
-    }
-    // Mobile fallback: Cesium can miss a tiny point on touchscreens. Find the nearest
-    // rendered satellite marker within a forgiving tap radius using canvas coordinates.
-    if(!entity){
-      let best=Infinity;const radius=window.innerWidth<700?52:30;
-      for(const e of entities.values()){
-        try{
-          const world=e.position?.getValue?e.position.getValue(C.JulianDate.now()):e.position;
-          if(!world)continue;
-          const screen=scene.cartesianToCanvasCoordinates(world);
-          if(!screen)continue;
-          const dx=screen.x-position.x,dy=screen.y-position.y,d=Math.hypot(dx,dy);
-          if(d<best&&d<=radius){best=d;entity=e;}
-        }catch(_){}
-      }
-    }
-    if(!entity)return false;
+    const now=Date.now();if(now-lastPickAt<160)return false;lastPickAt=now;
+    const entity=nearestSatellite(position);if(!entity)return false;
+    const C=window.Cesium;
     try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.camera.cancelFlight();}catch(_){}
-    const data=entity.__velveSat||catalog.get(String(entity.id))||null;
-    showSatellite(data,entity.name||String(entity.id||'Satellite'),String(entity.id||''));
-    // Move the camera toward the marker once, but never track or select the entity.
+    const id=String(entity.id||''),data=entity.__velveSat||catalog.get(id)||null;
+    showSatellite(data,entity.name||data?.OBJECT_NAME||data?.NAME||'Satellite',data?.NORAD_CAT_ID??data?.NORAD_ID??id.replace(/^sat-/,''));
     try{
       const world=entity.position?.getValue?entity.position.getValue(C.JulianDate.now()):entity.position;
-      if(world){
-        const radial=C.Cartesian3.normalize(C.Cartesian3.clone(world),new C.Cartesian3());
-        const destination=C.Cartesian3.add(world,C.Cartesian3.multiplyByScalar(radial,850000,new C.Cartesian3()),new C.Cartesian3());
-        viewer.camera.flyTo({destination,duration:0.8,complete:()=>{try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;}catch(_){}}});
-      }
+      if(world){const radial=C.Cartesian3.normalize(C.Cartesian3.clone(world),new C.Cartesian3());
+        const offset=window.innerWidth<700?2200000:1500000;
+        const destination=C.Cartesian3.add(world,C.Cartesian3.multiplyByScalar(radial,offset,new C.Cartesian3()),new C.Cartesian3());
+        viewer.camera.flyTo({destination,duration:0.55,complete:()=>{try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;}catch(_){}}});}
     }catch(_){}
     setTimeout(()=>{try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;}catch(_){}},0);
     return true;
@@ -169,27 +179,26 @@
   function installClick(){
     if(!viewer||!window.Cesium||clickInstalled)return;
     const C=window.Cesium,canvas=viewer.scene.canvas;
-    try{
-      viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;
-      viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-      viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_CLICK);
-    }catch(_){}
-    // Use the viewer's existing handler, so Cesium and VELVE don't compete for taps.
-    try{
-      viewer.screenSpaceEventHandler.setInputAction(m=>{pickSatellite(m.position);},C.ScreenSpaceEventType.LEFT_CLICK);
-      viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-    }catch(_){}
-    let lastPointerAt=0;
-    const touchPick=ev=>{
-      if(ev.pointerType==='mouse')return;
-      const now=Date.now();if(now-lastPointerAt<250)return;lastPointerAt=now;
-      const rect=canvas.getBoundingClientRect();
-      const pos=new C.Cartesian2(ev.clientX-rect.left,ev.clientY-rect.top);
-      pickSatellite(pos);
+    try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);}catch(_){}
+    // Preserve Cesium's native LEFT_CLICK handler and add independent touch/mouse picking.
+    let down=null,lastTouch=0;
+    const onDown=ev=>{if(ev.target!==canvas)return;down={x:ev.clientX,y:ev.clientY,id:ev.pointerId,type:ev.pointerType};};
+    const onUp=ev=>{
+      if(!down||ev.pointerId!==down.id)return;
+      const moved=Math.hypot(ev.clientX-down.x,ev.clientY-down.y);down=null;
+      if(moved>(ev.pointerType==='mouse'?12:34))return;
+      if(ev.pointerType!=='mouse'){const t=Date.now();if(t-lastTouch<260)return;lastTouch=t;}
+      const p=canvasPosition(ev.clientX,ev.clientY);
+      if(!pickSatellite(p.css))pickSatellite(p.buffer);
     };
-    canvas.addEventListener('pointerup',touchPick,{capture:true,passive:true});
-    viewer.__velveSatPointerHandler=touchPick;
-    clickInstalled=true;
+    canvas.addEventListener('pointerdown',onDown,{capture:true,passive:true});
+    canvas.addEventListener('pointerup',onUp,{capture:true,passive:true});
+    canvas.addEventListener('pointercancel',()=>{down=null;},{capture:true,passive:true});
+    canvas.addEventListener('touchend',ev=>{
+      if(!ev.changedTouches?.length)return;const t=ev.changedTouches[0],p=canvasPosition(t.clientX,t.clientY);
+      if(!pickSatellite(p.css))pickSatellite(p.buffer);
+    },{capture:true,passive:true});
+    viewer.__velveSatPointerHandler=onUp;clickInstalled=true;
   }
   function voiceFix(){
     const b=document.getElementById('velve-voice');if(!b||b.dataset.vsatVoice==='1')return;b.dataset.vsatVoice='1';
