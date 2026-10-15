@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const VERSION = 'velve-sat-interaction-20261015e';
-  let viewer = null, patched = false, loaded = false, loading = false, handler = null;
+  let viewer = null, patched = false, loaded = false, loading = false, handler = null, lastPickAt = 0;
   const entities = new Map(), catalog = new Map();
   const css = `
 #velve-satellite-info{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100vw - 28px));max-height:48vh;overflow:auto;z-index:2147483647;pointer-events:auto;display:none!important;visibility:visible;background:rgba(3,10,18,.97);border:1px solid rgba(0,238,255,.8);border-radius:12px;box-shadow:0 0 28px rgba(0,220,255,.25);padding:14px;color:#dffaff;font-family:Arial,sans-serif;backdrop-filter:blur(10px);box-sizing:border-box}
@@ -125,6 +125,7 @@
   }
   function pickSatellite(position){
     if(!viewer||!position||!window.Cesium)return false;
+    const now=Date.now();if(now-lastPickAt<300)return false;lastPickAt=now;
     const C=window.Cesium;let picks=[];
     try{const p=viewer.scene.pick(position);if(p)picks.push(p);}catch(_){}
     try{picks.push(...(viewer.scene.drillPick(position,30)||[]));}catch(_){}
@@ -154,6 +155,7 @@
     if(!viewer||!window.Cesium)return;
     const C=window.Cesium,canvas=viewer.scene.canvas;
     try{viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;viewer.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);}catch(_){}
+    if(viewer.__velveSatPointerHandler){try{canvas.removeEventListener('pointerup',viewer.__velveSatPointerHandler,true)}catch(_){}viewer.__velveSatPointerHandler=null;}
     if(handler){try{handler.destroy()}catch(_){}handler=null;}
     handler=new C.ScreenSpaceEventHandler(canvas);
     handler.setInputAction(m=>{pickSatellite(m.position);},C.ScreenSpaceEventType.LEFT_CLICK);
