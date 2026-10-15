@@ -151,31 +151,52 @@
 
   function addSettingsUI() {
     const existingButton = document.getElementById("jarvis-settings-trigger");
+    const placeSettingsButton = button => {
+      const statusBar = document.querySelector(".system-status");
+      const statusText = document.getElementById("systemStatus");
+      if (statusBar) {
+        // Keep the button beside SYSTEM ONLINE in the original HUD top bar.
+        if (statusText && statusText.parentElement === statusBar) {
+          statusText.insertAdjacentElement("afterend", button);
+        } else {
+          statusBar.appendChild(button);
+        }
+      } else {
+        document.body.appendChild(button);
+      }
+      Object.assign(button.style, {
+        position: "relative", top: "-3px", right: "auto", left: "auto",
+        zIndex: "2147483647", width: "30px", height: "30px", minWidth: "30px",
+        padding: "0", margin: "0 0 0 5px", borderRadius: "8px",
+        border: "1px solid #00d9ff", background: "rgba(2,18,37,.96)",
+        color: "#baf7ff", font: "bold 19px system-ui,sans-serif",
+        letterSpacing: "0", display: "inline-flex", alignItems: "center",
+        justifyContent: "center", boxSizing: "border-box",
+        boxShadow: "0 0 14px rgba(0,217,255,.22)", cursor: "pointer",
+        flex: "0 0 auto", verticalAlign: "middle"
+      });
+    };
     if (existingButton) {
-      // Normalize an existing trigger created by an earlier HUD script too.
-      // Keep its existing click handler and settings behavior intact.
+      // Preserve the existing click handler and settings behavior.
       existingButton.textContent = "⚙";
       existingButton.title = "Settings";
       existingButton.setAttribute("aria-label", "JARVIS settings");
-      Object.assign(existingButton.style, {
-        width: "42px", height: "42px", minWidth: "42px", padding: "0",
-        fontSize: "20px", letterSpacing: "0", display: "flex",
-        alignItems: "center", justifyContent: "center", boxSizing: "border-box"
-      });
+      placeSettingsButton(existingButton);
       return;
     }
     const responsiveStyle = document.createElement("style");
     responsiveStyle.id = "jarvis-settings-responsive-style";
     responsiveStyle.textContent = `
-      #jarvis-settings-trigger { touch-action: manipulation; }
+      #jarvis-settings-trigger {
+        position: relative !important; top: -3px !important; right: auto !important;
+        left: auto !important; width: 30px !important; height: 30px !important;
+        min-width: 30px !important; padding: 0 !important; margin: 0 0 0 5px !important;
+        font-size: 19px !important; touch-action: manipulation;
+      }
       #jarvis-settings-modal { overflow-y: auto; }
       #jarvis-settings-modal section { max-height: calc(100dvh - 36px); overflow-y: auto; }
       #jarvis-settings-modal input, #jarvis-settings-modal button { font-size: 14px; }
       @media (min-width: 768px) {
-        #jarvis-settings-trigger {
-          top: 88px !important; right: 28px !important; width: 44px !important; height: 44px !important;
-          padding: 0 !important; font-size: 20px !important;
-        }
         #jarvis-settings-modal { padding: 32px !important; }
         #jarvis-settings-modal section {
           width: min(560px, calc(100vw - 64px)) !important;
@@ -185,7 +206,10 @@
         #jarvis-settings-modal button { min-height: 44px !important; }
       }
       @media (max-width: 767px) {
-        #jarvis-settings-trigger { top: 86px !important; right: 12px !important; width: 40px !important; height: 40px !important; padding: 0 !important; font-size: 19px !important; }
+        #jarvis-settings-trigger {
+          width: 26px !important; height: 26px !important; min-width: 26px !important;
+          margin-left: 4px !important; font-size: 17px !important;
+        }
         #jarvis-settings-modal section { padding: 18px !important; }
       }
     `;
@@ -197,12 +221,7 @@
     button.textContent = "⚙";
     button.title = "Settings";
     button.setAttribute("aria-label", "JARVIS settings");
-    Object.assign(button.style, {
-      position: "fixed", top: "86px", right: "16px", zIndex: "2147483647",
-      width: "42px", height: "42px", padding: "0", borderRadius: "9px", border: "1px solid #00d9ff",
-      background: "rgba(2,18,37,.96)", color: "#baf7ff", font: "bold 20px system-ui,sans-serif",
-      letterSpacing: "0", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 14px rgba(0,217,255,.22)", cursor: "pointer"
-    });
+    placeSettingsButton(button);
 
     const modal = document.createElement("div");
     modal.id = "jarvis-settings-modal";
@@ -631,7 +650,7 @@
     row.append(save, remove, close);
     card.append(heading, intro, warning, voiceSection, providerLabel, providerSelect, label, input, modelLabel, modelSelect, openRouterSection, status, row);
     modal.appendChild(card);
-    document.body.append(button, modal);
+    document.body.append(modal);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addSettingsUI, { once: true });
