@@ -403,6 +403,8 @@
     let commandInProgress = false;
     let stoppedByUser = false;
     let restartTimer = 0;
+    let taskMonitorTimer = 0;
+    let taskMonitorStarted = false;
 
     const wakeStyle = document.createElement("style");
     wakeStyle.textContent = `
@@ -457,7 +459,7 @@
       const input = document.getElementById("commandInput");
       if (input) input.value = "";
       resetHud();
-      setStatus(wakeEnabled ? "WAKE WORD: ON" : "WAKE WORD: OFF");
+      setStatus(wakeEnabled ? "WAKE WORD: ON" : "ENABLE WAKE WORD");
       if (wakeEnabled) scheduleWakeRestart(900);
     }
 
@@ -470,6 +472,10 @@
 
     function startCommandCapture() {
       commandInProgress = true;
+      clearTimeout(restartTimer);
+      clearInterval(taskMonitorTimer);
+      taskMonitorStarted = false;
+      setStatus("LISTENING");
       stoppedByUser = false;
       document.body.classList.remove("jarvis-voice-stopped");
       try { window.__jarvisVoiceStop = false; } catch (_) {}
@@ -517,9 +523,29 @@
         input.value = transcript;
         // Submit through the original JARVIS command handler, preserving existing behavior.
         form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-        commandInProgress = false;
-        setStatus("COMMAND SENT");
-        scheduleWakeRestart(1800);
+        // Keep the button on LISTENING while the original JARVIS command
+        // handler processes the request. Return to WAKE WORD: ON only after
+        // the HUD leaves its thinking state and any spoken reply finishes.
+        taskMonitorStarted = false;
+        const monitorStartedAt = Date.now();
+        clearInterval(taskMonitorTimer);
+        taskMonitorTimer = setInterval(() => {
+          if (!wakeEnabled) {
+            clearInterval(taskMonitorTimer);
+            return;
+          }
+          const thinking = document.body.classList.contains("thinking");
+          const speaking = !!window.speechSynthesis?.speaking;
+          if (thinking) taskMonitorStarted = true;
+          const elapsed = Date.now() - monitorStartedAt;
+          const taskFinished = taskMonitorStarted ? (!thinking && !speaking) : (elapsed > 1800 && !speaking && !thinking);
+          if (taskFinished || elapsed > 60000) {
+            clearInterval(taskMonitorTimer);
+            commandInProgress = false;
+            setStatus("WAKE WORD: ON");
+            scheduleWakeRestart(350);
+          }
+        }, 250);
       };
 
       commandRecognition.onerror = event => {
@@ -569,7 +595,7 @@
 
       current.onstart = () => {
         if (wakeRecognition !== current || !wakeEnabled) return;
-        setStatus("LISTENING FOR JARVIS");
+        setStatus("WAKE WORD: ON");
       };
       current.onresult = event => {
         if (wakeRecognition !== current || !wakeEnabled || commandInProgress) return;
@@ -609,7 +635,7 @@
       };
       try {
         current.start();
-        setStatus("STARTING MICROPHONE…");
+        setStatus("WAKE WORD: ON");
       } catch (error) {
         if (wakeRecognition === current && wakeEnabled) {
           setStatus(error && error.name === "NotAllowedError" ? "MIC PERMISSION NEEDED" : "RETRYING MICROPHONE…");
@@ -621,6 +647,9 @@
     toggle.addEventListener("click", () => {
       if (wakeEnabled) {
         wakeEnabled = false;
+        commandInProgress = false;
+        clearTimeout(restartTimer);
+        clearInterval(taskMonitorTimer);
         try { wakeRecognition?.abort(); } catch (_) {}
         try { commandRecognition?.abort(); } catch (_) {}
         setStatus("ENABLE WAKE WORD");
