@@ -2,7 +2,7 @@
 (()=>{'use strict';
   // PATCH: keep the floating NEXUS launcher exclusive to the main HUD; it must never
   // remain visible over VELVE or TERRANEXUS environments.
-  const VERSION='neon-nexus-20261014f';
+  const VERSION='neon-nexus-20261016a';
   const STORE='jarvisSuperpowersV1';
   const $=(s,r=document)=>r.querySelector(s);
   const safeState=()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(_){return {}}};
@@ -33,7 +33,116 @@
   function renderMemory(mode){const box=mode==='memory'?$('#nn-memory'):$('#nn-services');if(!box)return;const s=safeState(),mem=Array.isArray(s.memory)?s.memory:[];const services=[['JARVIS CORE','Natural-language commands, voice input, spoken replies, calculations, browser tools, local memory, task list, web search, time/date, quick actions.'],['NEON NEXUS','Shared task stream, service directory, command routing, voice dictation, neural 3D interface.'],['VELVE','Interactive Earth globe, city navigation, device-location navigation, satellite and aircraft feeds, earthquake feed, weather panel.'],['TERRANEXUS','Interactive 3D science models, element library, component inspector, built-in demonstrations and optional AI explanations.'],['WEB BRIDGE','Visible replies, configured AI provider routing, browser speech output and status feedback.'],['BROWSER UTILITIES','Fullscreen, clipboard, command history, local storage, quick status and Google web search.']];if(mode==='memory'){const rows=mem.map(m=>'<div class="nn-memory-item"><i>⌘</i><span>'+escapeHTML(m)+'</span></div>');if(!rows.length)rows.push('<div class="nn-memory-item nn-memory-default"><i>✧</i><span>NEURAL CORE INITIALIZED<small>Use “remember that …” in JARVIS and saved notes will appear here. Service directory remains available under SERVICES.</small></span></div>');box.innerHTML=rows.join('');$('#nn-memory-count').textContent=mem.length+' SAVED'}else{box.innerHTML=services.map(x=>'<div class="nn-service"><span class="nn-service-icon">✧</span><div><b>'+escapeHTML(x[0])+'</b><small>'+escapeHTML(x[1])+'</small></div></div>').join('');$('#nn-services-count').textContent=String(services.length).padStart(2,'0')+' MODULES'}}
   function action(kind){if(kind==='main'){close();return}if(kind==='time'){showToast(new Date().toLocaleString());speak('The time is '+new Date().toLocaleTimeString());return}if(kind==='status'){showToast('JARVIS CORE, NEON NEXUS, VELVE and TERRANEXUS are installed and ready.');return}if(kind==='tasks'){render();$('#nn-tasks')?.scrollTo({top:0,behavior:'smooth'});showToast('Task stream refreshed.');return}if(kind==='memory'){renderMemory('memory');$('#nn-memory')?.scrollTo({top:0,behavior:'smooth'});showToast('Saved memory panel ready.');return}if(kind==='services'){renderMemory('services');$('#nn-services')?.scrollTo({top:0,behavior:'smooth'});showToast('Services directory ready.');return}if(kind==='fullscreen'){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.();return}}
   function submitCommand(e){e.preventDefault();const input=$('#nn-input'),q=(input.value||'').trim();if(!q)return;input.value='';if(/^(search|google|look up|web search)\b/i.test(q)){const query=q.replace(/^(search(?: the web)?(?: for)?|google|look up|web search(?: for)?)\s*/i,'').trim();if(query){window.open('https://www.google.com/search?q='+encodeURIComponent(query),'_blank','noopener');showToast('Opening web search for '+query);logTask('Web search: '+query)}return}logTask('Command: '+q);try{if(typeof window.sendCommand==='function'){window.sendCommand(q);showToast('Command sent to JARVIS core.')}else{showToast('Main JARVIS command engine is not ready.');speak('The JARVIS command engine is not ready yet.')}}catch(_){showToast('Could not send command to JARVIS.')}}
-  function voice(){const mainVoiceButton=document.querySelector('#voiceButton');if(mainVoiceButton&&!mainVoiceButton.disabled){$('#nn-voice')?.classList.add('listening');if($('#nn-core-state'))$('#nn-core-state').textContent='LISTENING';showToast('JARVIS voice input starting… speak your command.');try{mainVoiceButton.click();clearTimeout(voice.resetTimer);voice.resetTimer=setTimeout(()=>{$('#nn-voice')?.classList.remove('listening');if($('#nn-core-state')&&$('#nn-core-state').textContent==='LISTENING')$('#nn-core-state').textContent='CORE STANDBY'},12000);return}catch(_){$('#nn-voice')?.classList.remove('listening')}}const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showToast('Voice recognition is not available in this browser. Allow microphone access or use keyboard dictation.');$('#nn-input')?.focus();return}try{if(recognition){try{recognition.abort()}catch(_){}recognition=null}recognition=new SR();recognition.lang=navigator.language||'en-US';recognition.interimResults=false;recognition.maxAlternatives=1;$('#nn-voice')?.classList.add('listening');if($('#nn-core-state'))$('#nn-core-state').textContent='LISTENING';recognition.onresult=e=>{const heard=e.results?.[0]?.[0]?.transcript||'';$('#nn-input').value=heard;showToast(heard?'Heard: '+heard:'No speech detected. Tap Speak and try again.');if(heard)submitCommand({preventDefault(){}})};recognition.onerror=e=>{const err=e?.error||'unknown';const message=err==='not-allowed'||err==='service-not-allowed'?'Microphone access is blocked. Allow microphone access for this site in browser settings.':err==='no-speech'?'No speech detected. Tap Speak and try again.':err==='network'?'Voice service network error. Check your connection and try again.':'Voice input unavailable ('+err+'). Try the JARVIS HUD voice button or type your command.';showToast(message)};recognition.onend=()=>{$('#nn-voice')?.classList.remove('listening');if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';recognition=null};recognition.start();showToast('Listening… speak your command.')}catch(_){$('#nn-voice')?.classList.remove('listening');if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';showToast('Could not start microphone. Allow microphone access and try again.')}}
+  function voice(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){
+      showToast('Voice recognition is not supported in this browser. Use your keyboard microphone or type a command.');
+      $('#nn-input')?.focus();
+      return;
+    }
+    if(voice.listening&&recognition){
+      voice.cancelRequested=true;
+      try{recognition.stop()}catch(_){}
+      showToast('Voice input stopped.');
+      return;
+    }
+    if(recognition){
+      try{recognition.onresult=recognition.onerror=recognition.onend=null;recognition.abort()}catch(_){}
+      recognition=null;
+    }
+    const generation=(voice.generation||0)+1;
+    voice.generation=generation;
+    voice.listening=true;
+    voice.cancelRequested=false;
+    voice.heard='';
+    voice.finished=false;
+    let finalText='';
+    try{
+      const rec=new SR();
+      recognition=rec;
+      rec.lang=/^(hi|en)(-|$)/i.test(navigator.language||'')?(navigator.language||'en-IN'):'en-IN';
+      rec.continuous=true;
+      rec.interimResults=true;
+      rec.maxAlternatives=1;
+      $('#nn-voice')?.classList.add('listening');
+      if($('#nn-core-state'))$('#nn-core-state').textContent='LISTENING';
+      showToast('Listening… speak your command.');
+      const reset=()=>{
+        if(generation!==voice.generation)return;
+        voice.listening=false;
+        $('#nn-voice')?.classList.remove('listening');
+        if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';
+        recognition=null;
+      };
+      const finish=(text)=>{
+        if(generation!==voice.generation||voice.finished)return;
+        const heard=String(text||'').trim();
+        if(!heard)return;
+        voice.finished=true;
+        $('#nn-input').value=heard;
+        showToast('Heard: '+heard);
+        reset();
+        submitCommand({preventDefault(){}});
+      };
+      rec.onstart=()=>{
+        if(generation!==voice.generation)return;
+        showToast('Listening… speak clearly, then pause.');
+      };
+      rec.onspeechstart=()=>{
+        if(generation===voice.generation)showToast('Speech detected… listening.');
+      };
+      rec.onresult=e=>{
+        if(generation!==voice.generation)return;
+        let interim='',heardFinal='';
+        for(let i=e.resultIndex||0;i<e.results.length;i++){
+          const result=e.results[i],transcript=result&&result[0]?String(result[0].transcript||''):'';
+          if(result.isFinal)heardFinal+=transcript;
+          else interim+=transcript;
+        }
+        const heard=(heardFinal||interim).trim();
+        if(heard){
+          voice.heard=heard;
+          $('#nn-input').value=heard;
+          if(heardFinal.trim())finalText+=heardFinal;
+          showToast((heardFinal.trim()?'Heard: ':'Hearing: ')+heard.slice(0,100));
+        }
+        if(heardFinal.trim())finish(finalText||heardFinal);
+      };
+      rec.onerror=e=>{
+        if(generation!==voice.generation||voice.finished)return;
+        const err=String(e&&e.error||'unknown').toLowerCase();
+        const messages={
+          'not-allowed':'Microphone access is blocked. Allow microphone access for this site in browser settings.',
+          'service-not-allowed':'Microphone access is blocked. Allow microphone access for this site in browser settings.',
+          'securityerror':'Microphone access is blocked. Open this site securely and allow microphone access.',
+          'no-speech':'No speech detected. Tap the microphone and try again.',
+          'audio-capture':'Microphone is busy or unavailable. Check your microphone settings.',
+          'network':'Speech service network error. Check your internet connection and try again.',
+          'aborted':'Voice input was interrupted. Tap the microphone to retry.'
+        };
+        showToast(messages[err]||('Voice input unavailable ('+err+'). You can type your command instead.'));
+        reset();
+      };
+      rec.onend=()=>{
+        if(generation!==voice.generation||voice.finished)return;
+        const heard=finalText||voice.heard;
+        const cancelled=voice.cancelRequested;
+        reset();
+        if(cancelled)return;
+        if(heard.trim())finish(heard);
+        else showToast('Listening ended without speech. Tap the microphone and speak again.');
+      };
+      // Start synchronously from this tap for mobile-browser permission compatibility.
+      rec.start();
+    }catch(err){
+      voice.listening=false;
+      $('#nn-voice')?.classList.remove('listening');
+      if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';
+      recognition=null;
+      const name=String(err&&err.name||'').toLowerCase();
+      showToast(name==='notallowederror'||name==='securityerror'?'Microphone permission is blocked. Allow access in browser settings.':'Could not start the microphone. Tap to retry or type your command.');
+    }
+  }
   function escHandler(e){if(e.key==='Escape'&&root?.classList.contains('open'))close()}
   function openEnvironment(name){
     if(name==='nexus'){open();return}
