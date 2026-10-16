@@ -1,0 +1,16 @@
+/* Vision Intelligence UX sizing/interaction enhancement layer. Loaded after the preserved VI base stylesheet. */
+@media(min-width:761px){
+  #jvi-root .jvi-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,5.4fr) minmax(0,1fr)!important}
+  #jvi-root .jvi-grid>[data-jvi-panel="left"]{width:100%!important;max-width:clamp(185px,18vw,235px)!important;min-width:0!important;justify-self:start!important}
+  #jvi-root .jvi-grid>[data-jvi-panel="right"]{width:100%!important;max-width:clamp(175px,17vw,220px)!important;min-width:0!important;justify-self:end!important}
+}
+@media(max-width:760px) and (orientation:portrait){
+  #jvi-root .jvi-grid>[data-jvi-panel="left"]{width:34vw!important;max-width:205px!important;min-width:0!important}
+  #jvi-root .jvi-grid>[data-jvi-panel="right"]{width:31vw!important;max-width:188px!important;min-width:0!important}
+}
+@media(max-width:420px) and (orientation:portrait){
+  #jvi-root .jvi-grid>[data-jvi-panel="left"]{width:34vw!important;max-width:145px!important}
+  #jvi-root .jvi-grid>[data-jvi-panel="right"]{width:31vw!important;max-width:132px!important}
+}
+#jvi-root .jvi-holo-core{cursor:pointer}
+#jvi-root .jvi-holo{cursor:text}
