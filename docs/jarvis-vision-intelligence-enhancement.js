@@ -2,6 +2,7 @@
 (()=>{'use strict';
   if(window.__JVI_ENHANCEMENT__)return; window.__JVI_ENHANCEMENT__=true;
   const speak=t=>{try{if(typeof window.speak==='function')window.speak(t);else if('speechSynthesis'in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}}catch(_) {}};
+  const cleanSpeech=s=>String(s||'').replace(/\s+/g,' ').trim().replace(/[*_#`]/g,'').slice(0,1800);
   const openVI=()=>{
     try{if(typeof window.sendCommand==='function'){window.sendCommand('open vision intelligence');return true}}catch(_){}
     const root=document.getElementById('jvi-root');
@@ -16,11 +17,33 @@
     new MutationObserver(announce).observe(root,{attributes:true,attributeFilter:['class']});
     const core=root.querySelector('.jvi-holo-core');
     if(core)core.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();root.querySelector('#jvi-voice')?.click();});
-    /* Do not focus the command field when the user clicks the central hologram. */
     const close=root.querySelector('#jvi-close');
     if(close)close.addEventListener('click',()=>setTimeout(()=>speak('Vision Intelligence closed.'),20));
     const cmd=root.querySelector('#jvi-command');
     if(cmd)cmd.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){const q=(cmd.value||'').trim().toLowerCase();if(/^(?:close|exit|leave|quit)\s+(?:this\s+)?(?:environment|vision(?:\s+intelligence)?|vi)$/.test(q)||/^(?:close|exit)\s+(?:vision\s+intelligence|vi)$/.test(q)){e.preventDefault();close?.click();}}});
+
+    /* Speak meaningful AI scan results without changing the existing analysis engine. */
+    const speechState={last:'',ready:false,timer:0};
+    const resultText=()=>{
+      const title=root.querySelector('#jvi-profile-title')?.textContent||'';
+      const body=root.querySelector('#jvi-profile-text')?.textContent||'';
+      const summary=root.querySelector('#jvi-summary')?.textContent||'';
+      const combined=cleanSpeech([title,body].filter(Boolean).join('. '));
+      return combined.length>=20?combined:cleanSpeech(summary);
+    };
+    const speakResult=()=>{
+      if(!speechState.ready)return;
+      clearTimeout(speechState.timer);
+      speechState.timer=setTimeout(()=>{
+        const text=resultText();
+        if(!text||text===speechState.last)return;
+        if(/^(no target selected|your analysis appears here|acquire a visual target to begin contextual analysis)\.?$/i.test(text))return;
+        speechState.last=text;
+        speak('Scan analysis complete. '+text);
+      },350);
+    };
+    new MutationObserver(speakResult).observe(root,{childList:true,subtree:true,characterData:true});
+    setTimeout(()=>{speechState.ready=true;speechState.last=resultText();},1200);
   }
   function installNeonShortcut(){
     const box=document.getElementById('nn-environments'); if(!box||box.__viShortcut)return;
