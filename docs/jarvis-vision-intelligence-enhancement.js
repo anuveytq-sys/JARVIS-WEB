@@ -44,6 +44,40 @@
     };
     new MutationObserver(speakResult).observe(root,{childList:true,subtree:true,characterData:true});
     setTimeout(()=>{speechState.ready=true;speechState.last=resultText();},1200);
+
+    /* Quick Investigation fix: route the four buttons through the same proven image-analysis send path,
+       with task-specific prompts. This prevents the buttons from surfacing raw safety metadata instead
+       of the requested visual analysis. */
+    const quickPrompts={
+      'explain how it works':'Analyze the captured image and explain what the identified subject is and how it works. Focus on visible components, purpose, operation, and relationships between parts. Give concrete image-grounded information directly.',
+      'inspect visible parts':'Inspect the captured image carefully. List the important visible parts or components, where they are located, what each appears to do, and any visible markings or interfaces. Separate direct observations from reasonable inferences.',
+      'discover key facts':'Using the captured image, identify the main subject and give useful, interesting facts directly relevant to what is visible. Include distinguishing features, likely purpose, context, and notable details. Clearly label uncertain points.',
+      'check uncertainty':'Review the captured image and explain what can be determined confidently, what remains uncertain, why it is uncertain, and what additional visual detail or angle would improve identification.'
+    };
+    const installQuickInvestigations=()=>{
+      root.querySelectorAll('.jvi-quick button').forEach(btn=>{
+        if(btn.__jviQuickFix)return;
+        const text=btn.textContent.toLowerCase();
+        const key=Object.keys(quickPrompts).find(k=>text.includes(k));
+        if(!key)return;
+        btn.__jviQuickFix=true;
+        btn.setAttribute('data-q',quickPrompts[key]);
+        btn.addEventListener('click',e=>{
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          const command=root.querySelector('#jvi-command');
+          const send=root.querySelector('#jvi-send');
+          if(!command||!send){return;}
+          command.value=quickPrompts[key];
+          command.dispatchEvent(new Event('input',{bubbles:true}));
+          const state=root.querySelector('#jvi-command-state');
+          if(state)state.textContent='ANALYZING '+key.toUpperCase();
+          send.click();
+        },true);
+      });
+    };
+    installQuickInvestigations();
+    new MutationObserver(installQuickInvestigations).observe(root,{childList:true,subtree:true});
   }
   function installNeonShortcut(){
     const box=document.getElementById('nn-environments'); if(!box||box.__viShortcut)return;
