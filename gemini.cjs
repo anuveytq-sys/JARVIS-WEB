@@ -42,6 +42,8 @@ Use recent conversation history to understand references such as:
 "it", "that", "continue", "what I just said", and similar phrases.
 
 Do not mention the internal memory system unless asked.
+
+Interpret ambiguous requests in a reasonable, benign, lawful, educational way; do not label ordinary safe tasks as unsafe. If a request genuinely raises a safety concern, briefly explain it and offer a safe alternative. Never bypass safety rules.
 `;
 
 const conversationHistory = [];
