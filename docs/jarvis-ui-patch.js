@@ -505,7 +505,7 @@
         if (!wakeEnabled || !commandInProgress) return;
 
         commandRecognition = new Recognition();
-        commandRecognition.lang = "en-US";
+        commandRecognition.lang = "en-IN";
         commandRecognition.continuous = false;
         commandRecognition.interimResults = false;
         commandRecognition.maxAlternatives = 1;
@@ -607,7 +607,7 @@
 
       const recognition = new Recognition();
       wakeRecognition = recognition;
-      recognition.lang = "en-US";
+      recognition.lang = "en-IN";
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
@@ -709,30 +709,12 @@
       document.body.classList.remove("jarvis-voice-stopped");
       try { window.__jarvisVoiceStop = false; } catch (_) {}
 
-      // Explicitly request microphone permission on secure browsers before
-      // starting the wake listener. This gives a real permission error instead
-      // of showing WAKE WORD: ON when the browser cannot access the microphone.
-      const beginListening = () => {
-        if (!wakeEnabled) return;
-        startWakeRecognition();
-      };
-      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
-        setStatus("REQUESTING MICROPHONE");
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-          stream.getTracks().forEach(track => track.stop());
-          beginListening();
-        }).catch(error => {
-          console.warn("[JARVIS wake word] microphone permission failed:", error);
-          wakeEnabled = false;
-          setStatus(error && (error.name === "NotAllowedError" || error.name === "PermissionDeniedError")
-            ? "MIC PERMISSION NEEDED"
-            : "MICROPHONE UNAVAILABLE");
-        });
-      } else {
-        // Some supported speech-recognition implementations manage permission
-        // internally and do not expose getUserMedia in the current context.
-        beginListening();
-      }
+      // Start speech recognition immediately inside the user's tap handler.
+      // Awaiting getUserMedia first can lose iOS Safari's transient user activation,
+      // leaving SpeechRecognition unable to start even after mic permission succeeds.
+      // SpeechRecognition itself requests/uses microphone permission and reports errors.
+      setStatus("STARTING MICROPHONE");
+      startWakeRecognition();
     });
 
     // Keep a spoken "stop" effective even if an AI reply was still pending.
