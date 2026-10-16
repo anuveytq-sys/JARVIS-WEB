@@ -78,14 +78,16 @@
     // IMPORTANT: do not await getUserMedia here. On iOS Safari that can lose the
     // original tap/user-activation before recognition.start(), causing an abort.
     const generation = ++state.generation;
+    let wakePaused = false;
+    const pauseWake = () => { if (wakePaused) return; wakePaused = true; try { window.__jarvisPauseWakeWordForEnvironment?.(); } catch (_) {} };
+    const resumeWake = () => { if (!wakePaused) return; wakePaused = false; try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {} };
+    // Declare the helpers before calling them; otherwise the click handler hits
+    // the const temporal-dead-zone and exits before SpeechRecognition can start.
     pauseWake();
     state.cancelRequested = false;
     state.finished = false;
     state.heard = '';
     let gotFinal = false;
-    let wakePaused = false;
-    const pauseWake = () => { if(wakePaused)return; wakePaused=true; try{window.__jarvisPauseWakeWordForEnvironment?.()}catch(_){} };
-    const resumeWake = () => { if(!wakePaused)return; wakePaused=false; try{window.__jarvisResumeWakeWordAfterEnvironment?.()}catch(_){} };
     const recognition = new Recognition();
     state.recognition = recognition;
     state.listening = true;
