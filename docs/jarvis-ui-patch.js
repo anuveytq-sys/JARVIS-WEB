@@ -492,7 +492,7 @@
             const words = String(item?.[0]?.transcript || "").trim();
             if (!words) continue;
             if (item.isFinal) finalTranscript += (finalTranscript ? " " : "") + words;
-            transcript = (finalTranscript + " " + words).trim();
+            transcript = item.isFinal ? finalTranscript : (finalTranscript + " " + words).trim();
           }
           if (transcript) setStatus("LISTENING FOR COMMAND");
           if (!event.results?.[event.results.length - 1]?.isFinal) return;
