@@ -27,6 +27,8 @@
     state.listening = false;
     state.recognition = null;
     setButton(false);
+    // Recognition may report onend after this final result; release the shared mic now.
+    try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {}
     const heard = String(text || '').trim();
     if (!heard) {
       if (!state.cancelRequested) setStatus('NO SPEECH HEARD — TAP 🎙 AND SPEAK');
