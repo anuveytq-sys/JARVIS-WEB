@@ -12,7 +12,7 @@
   #jvi-root .jvi-grid>[data-jvi-panel="left"]{width:36vw!important;max-width:155px!important}
   #jvi-root .jvi-grid>[data-jvi-panel="right"]{width:34vw!important;max-width:142px!important}
 }
-/* The top ☷ control already provides panel restore/open access; keep the bottom restore strip hidden so it never covers the neural core. */
-#jvi-root .jvi-panel-restore{display:none!important}
+/* Keep the restore strip hidden in its normal state, but do NOT override the native hidden attribute: the top ☷ button must be able to reveal it. */
+#jvi-root .jvi-panel-restore[hidden]{display:none!important}
 #jvi-root .jvi-holo-core{cursor:pointer}
-#jvi-root .jvi-holo{cursor:text}
+#jvi-root .jvi-holo{cursor:default}
