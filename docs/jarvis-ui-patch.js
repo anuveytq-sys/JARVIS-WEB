@@ -391,8 +391,7 @@
     return nativeFetch(input, init);
   };
 
-  // Optional hands-free wake word. This is isolated from the Settings UI and
-  // uses the existing command form for normal commands.
+  // Optional hands-free wake word. The existing HUD and command handler remain unchanged.
   (() => {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (document.getElementById("jarvis-wake-word-toggle")) return;
@@ -401,7 +400,6 @@
     let commandRecognition = null;
     let wakeEnabled = false;
     let commandInProgress = false;
-    let stoppedByUser = false;
     let restartTimer = 0;
     let commandStartTimer = 0;
 
@@ -414,7 +412,6 @@
         font: 700 10px/1.3 system-ui,sans-serif; letter-spacing: .4px;
         box-shadow: 0 0 12px rgba(0,217,255,.18); touch-action: manipulation;
       }
-      body.jarvis-voice-stopped #jarvis-web-bridge-panel { display: none !important; }
       @media (max-width: 767px) {
         #jarvis-wake-word-toggle { right: 8px; bottom: 82px; font-size: 9px; }
       }
@@ -435,34 +432,17 @@
 
     function resetHud() {
       document.body.classList.remove("listening", "thinking");
-      const ids = [
+      for (const [id, value] of [
         ["coreState", "STANDBY"],
         ["voiceStatus", "READY"],
         ["systemStatus", "SYSTEM ONLINE"]
-      ];
-      for (const [id, value] of ids) {
+      ]) {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
       }
     }
 
-    function cancelCurrentActivity() {
-      stoppedByUser = true;
-      commandInProgress = false;
-      clearTimeout(restartTimer);
-      try { commandRecognition?.abort(); } catch (_) {}
-      try { wakeRecognition?.abort(); } catch (_) {}
-      try { window.speechSynthesis?.cancel(); } catch (_) {}
-      try { window.__jarvisVoiceStop = true; } catch (_) {}
-      document.body.classList.add("jarvis-voice-stopped");
-      const input = document.getElementById("commandInput");
-      if (input) input.value = "";
-      resetHud();
-      setStatus(wakeEnabled ? "WAKE WORD: ON" : "WAKE WORD: OFF");
-      if (wakeEnabled) scheduleWakeRestart(900);
-    }
-
-    function scheduleWakeRestart(delay = 700) {
+    function scheduleWakeRestart(delay = 650) {
       clearTimeout(restartTimer);
       restartTimer = setTimeout(() => {
         if (wakeEnabled && !commandInProgress) startWakeRecognition();
@@ -472,68 +452,59 @@
     function startCommandCapture() {
       if (!Recognition || !wakeEnabled || commandInProgress) return;
       commandInProgress = true;
-      stoppedByUser = false;
       clearTimeout(restartTimer);
       clearTimeout(commandStartTimer);
-      document.body.classList.remove("jarvis-voice-stopped");
-      try { window.__jarvisVoiceStop = false; } catch (_) {}
-
-      // Switch the visible button first. The user can see LISTENING FOR COMMAND
-      // before command recognition starts, then speak the requested task.
       document.body.classList.add("listening");
       const core = document.getElementById("coreState");
-      const status = document.getElementById("voiceStatus");
-      const system = document.getElementById("systemStatus");
+      const voiceStatus = document.getElementById("voiceStatus");
+      const systemStatus = document.getElementById("systemStatus");
       if (core) core.textContent = "LISTENING";
-      if (status) status.textContent = "LISTENING";
-      if (system) system.textContent = "VOICE ACTIVE";
+      if (voiceStatus) voiceStatus.textContent = "LISTENING FOR COMMAND";
+      if (systemStatus) systemStatus.textContent = "VOICE ACTIVE";
       setStatus("LISTENING FOR COMMAND");
 
-      // End wake-word recognition before opening command recognition. A short
-      // handoff gives the UI time to update and avoids overlapping mic sessions.
-      const previousWakeRecognition = wakeRecognition;
-      if (previousWakeRecognition) {
-        previousWakeRecognition.onresult = null;
-        previousWakeRecognition.onerror = null;
-        previousWakeRecognition.onend = null;
-        try { previousWakeRecognition.abort(); } catch (_) {}
-      }
+      const previous = wakeRecognition;
       wakeRecognition = null;
+      if (previous) {
+        previous.onresult = null;
+        previous.onerror = null;
+        previous.onend = null;
+        try { previous.abort(); } catch (_) {}
+      }
 
       commandStartTimer = setTimeout(() => {
         commandStartTimer = 0;
         if (!wakeEnabled || !commandInProgress) return;
 
-        commandRecognition = new Recognition();
-        commandRecognition.lang = "en-IN";
-        commandRecognition.continuous = false;
-        commandRecognition.interimResults = false;
-        commandRecognition.maxAlternatives = 1;
+        const recognition = new Recognition();
+        commandRecognition = recognition;
+        recognition.lang = "en-IN";
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        let finalTranscript = "";
 
-        commandRecognition.onstart = () => {
-          if (!commandInProgress) return;
-          document.body.classList.add("listening");
-          const coreNow = document.getElementById("coreState");
-          const statusNow = document.getElementById("voiceStatus");
-          const systemNow = document.getElementById("systemStatus");
-          if (coreNow) coreNow.textContent = "LISTENING";
-          if (statusNow) statusNow.textContent = "LISTENING";
-          if (systemNow) systemNow.textContent = "VOICE ACTIVE";
-          setStatus("LISTENING FOR COMMAND");
-        };
+        recognition.onstart = () => setStatus("LISTENING FOR COMMAND");
+        recognition.onresult = event => {
+          let transcript = finalTranscript;
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const item = event.results[i];
+            const words = String(item?.[0]?.transcript || "").trim();
+            if (!words) continue;
+            if (item.isFinal) finalTranscript += (finalTranscript ? " " : "") + words;
+            transcript = (finalTranscript + " " + words).trim();
+          }
+          if (transcript) setStatus("LISTENING FOR COMMAND");
+          if (!event.results?.[event.results.length - 1]?.isFinal) return;
+          transcript = String(finalTranscript || transcript).trim();
+          if (!transcript) return;
 
-        commandRecognition.onresult = event => {
-          const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
           const normalized = transcript.toLowerCase().replace(/[.!?,]/g, "").trim();
           if (/^(stop|stop jarvis|cancel|cancel task|stop everything)$/.test(normalized)) {
-            cancelCurrentActivity();
-            return;
-          }
-          if (!transcript) {
             commandInProgress = false;
             resetHud();
             setStatus("WAKE WORD: ON");
-            scheduleWakeRestart();
+            scheduleWakeRestart(500);
             return;
           }
 
@@ -541,68 +512,75 @@
           const form = document.getElementById("commandForm");
           if (!input || !form) {
             commandInProgress = false;
-            setStatus("COMMAND BOX NOT FOUND");
+            resetHud();
+            setStatus("WAKE WORD: ON");
             scheduleWakeRestart();
             return;
           }
+
           input.value = transcript;
-          // Submit through the original JARVIS command handler, preserving existing behavior.
+          // Pass commands through the original JARVIS form and its existing handler.
           form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
           commandInProgress = false;
-          setStatus("COMMAND SENT");
-          scheduleWakeRestart(1200);
+          resetHud();
+          setStatus("WAKE WORD: ON");
+          scheduleWakeRestart(1000);
         };
 
-        commandRecognition.onerror = event => {
+        recognition.onerror = event => {
+          console.warn("[JARVIS command capture] recognition error:", event?.error || "unknown");
           commandInProgress = false;
-          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            setStatus("MIC PERMISSION NEEDED");
+          if (event?.error === "not-allowed" || event?.error === "service-not-allowed") {
             wakeEnabled = false;
+            resetHud();
+            setStatus("ENABLE WAKE WORD");
             return;
           }
           resetHud();
           if (wakeEnabled) {
             setStatus("WAKE WORD: ON");
-            scheduleWakeRestart(900);
-          }
-        };
-        commandRecognition.onend = () => {
-          if (commandInProgress) {
-            commandInProgress = false;
-            resetHud();
-            if (wakeEnabled) setStatus("WAKE WORD: ON");
             scheduleWakeRestart(700);
           }
         };
 
-        try {
-          commandRecognition.start();
-        } catch (error) {
+        recognition.onend = () => {
+          if (!commandInProgress) return;
           commandInProgress = false;
+          resetHud();
+          if (wakeEnabled) {
+            setStatus("WAKE WORD: ON");
+            scheduleWakeRestart(500);
+          }
+        };
+
+        try {
+          recognition.start();
+        } catch (error) {
           console.warn("[JARVIS command capture] start failed:", error);
-          setStatus(error?.name === "NotAllowedError"
-            ? "MIC PERMISSION NEEDED"
-            : "TAP TO RETRY WAKE WORD");
-          if (wakeEnabled && error?.name !== "NotAllowedError") scheduleWakeRestart(900);
+          commandInProgress = false;
+          resetHud();
+          if (wakeEnabled) {
+            setStatus("WAKE WORD: ON");
+            scheduleWakeRestart(900);
+          }
         }
-      }, 300);
+      }, 250);
     }
 
     function startWakeRecognition() {
       if (!wakeEnabled || commandInProgress) return;
       if (!Recognition) {
+        wakeEnabled = false;
         setStatus("VOICE NOT SUPPORTED");
         return;
       }
 
-      // Stop the previous session without letting its onend handler launch
-      // another restart. This avoids a rapid abort/restart loop on mobile Safari.
-      const previousRecognition = wakeRecognition;
-      if (previousRecognition) {
-        previousRecognition.onresult = null;
-        previousRecognition.onerror = null;
-        previousRecognition.onend = null;
-        try { previousRecognition.abort(); } catch (_) {}
+      const previous = wakeRecognition;
+      if (previous) {
+        previous.onresult = null;
+        previous.onerror = null;
+        previous.onend = null;
+        try { previous.abort(); } catch (_) {}
       }
 
       const recognition = new Recognition();
@@ -612,30 +590,24 @@
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
-      let wakeStartWatchdog = 0;
       recognition.onstart = () => {
-        clearTimeout(wakeStartWatchdog);
         if (wakeRecognition === recognition && wakeEnabled && !commandInProgress) {
-          setStatus("LISTENING FOR JARVIS");
+          setStatus("WAKE WORD: ON");
         }
       };
 
-      // Do not claim the microphone is listening just because start() did not throw.
-      // Show recognized words so we can tell whether this browser is returning audio.
       recognition.onresult = event => {
         if (wakeRecognition !== recognition || !wakeEnabled || commandInProgress) return;
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          const phrase = String(result[0]?.transcript || "")
-            .toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
-          if (phrase) setStatus("HEARD: " + phrase.slice(-42).toUpperCase());
-          // Accept the original greetings plus the common short wake phrase.
-          if (/\b(?:(?:hey|hello|hi)\s+)?jarvis\b/.test(phrase)) {
-            clearTimeout(wakeStartWatchdog);
-            startCommandCapture();
-            return;
-          }
-        }
+        // Check the complete current result list so "hello" + "Jarvis" split
+        // into separate recognition results still triggers the wake phrase.
+        const spoken = Array.from(event.results || [])
+          .map(item => String(item?.[0]?.transcript || ""))
+          .join(" ")
+          .toLowerCase()
+          .replace(/[^a-z ]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (/\bjarvis\b/.test(spoken)) startCommandCapture();
       };
 
       recognition.onerror = event => {
@@ -644,42 +616,31 @@
         console.warn("[JARVIS wake word] recognition error:", code);
         if (code === "not-allowed" || code === "service-not-allowed") {
           wakeEnabled = false;
-          setStatus("MIC PERMISSION NEEDED");
-        } else if (code === "audio-capture") {
-          setStatus("MICROPHONE UNAVAILABLE");
-        } else if (code === "network") {
-          setStatus("SPEECH NETWORK ERROR");
-          if (wakeEnabled && !commandInProgress) scheduleWakeRestart(1500);
-        } else if (code === "no-speech") {
-          setStatus("NO SPEECH DETECTED — RETRYING");
-          if (wakeEnabled && !commandInProgress) scheduleWakeRestart(900);
-        } else if (wakeEnabled && !commandInProgress && code !== "aborted") {
-          setStatus("VOICE ERROR: " + code.toUpperCase());
-          scheduleWakeRestart(1200);
+          clearTimeout(restartTimer);
+          setStatus("ENABLE WAKE WORD");
+          return;
+        }
+        // Keep the requested simple ON state while the browser retries.
+        if (wakeEnabled && !commandInProgress) {
+          setStatus("WAKE WORD: ON");
+          scheduleWakeRestart(code === "network" ? 1400 : 650);
         }
       };
 
       recognition.onend = () => {
         if (wakeRecognition !== recognition) return;
         wakeRecognition = null;
-        if (wakeEnabled && !commandInProgress) scheduleWakeRestart(500);
+        if (wakeEnabled && !commandInProgress) scheduleWakeRestart(400);
       };
 
       try {
-        setStatus("STARTING SPEECH RECOGNITION");
+        // Keep the requested button state immediately after the tap.
+        setStatus("WAKE WORD: ON");
         recognition.start();
-        // Safari can silently fail to begin; show a diagnostic instead of false "ON".
-        wakeStartWatchdog = setTimeout(() => {
-          if (wakeRecognition === recognition && wakeEnabled && !commandInProgress) {
-            setStatus("NO LISTEN EVENT — TRY SAFARI");
-          }
-        }, 5000);
       } catch (error) {
         console.warn("[JARVIS wake word] start failed:", error);
-        setStatus(error?.name === "NotAllowedError"
-          ? "MIC PERMISSION NEEDED"
-          : "TAP TO RETRY WAKE WORD");
-        if (wakeEnabled) scheduleWakeRestart(1200);
+        setStatus("WAKE WORD: ON");
+        if (wakeEnabled) scheduleWakeRestart(900);
       }
     }
 
@@ -689,51 +650,37 @@
         commandInProgress = false;
         clearTimeout(restartTimer);
         clearTimeout(commandStartTimer);
-        try {
-          if (wakeRecognition) {
-            wakeRecognition.onresult = null;
-            wakeRecognition.onerror = null;
-            wakeRecognition.onend = null;
-            wakeRecognition.abort();
-          }
-        } catch (_) {}
-        try {
-          if (commandRecognition) {
-            commandRecognition.onresult = null;
-            commandRecognition.onerror = null;
-            commandRecognition.onend = null;
-            commandRecognition.abort();
-          }
-        } catch (_) {}
+        for (const recognition of [wakeRecognition, commandRecognition]) {
+          if (!recognition) continue;
+          recognition.onresult = null;
+          recognition.onerror = null;
+          recognition.onend = null;
+          try { recognition.abort(); } catch (_) {}
+        }
         wakeRecognition = null;
         commandRecognition = null;
         resetHud();
         setStatus("ENABLE WAKE WORD");
         return;
       }
+
       if (!Recognition) {
-        setStatus("VOICE NOT SUPPORTED — USE SAFARI");
-        console.warn("[JARVIS wake word] SpeechRecognition is unavailable in this browser.");
+        setStatus("VOICE NOT SUPPORTED — TRY SAFARI");
         return;
       }
 
       wakeEnabled = true;
       commandInProgress = false;
-      stoppedByUser = false;
       clearTimeout(restartTimer);
       clearTimeout(commandStartTimer);
       document.body.classList.remove("jarvis-voice-stopped");
       try { window.__jarvisVoiceStop = false; } catch (_) {}
-
-      // Start speech recognition immediately inside the user's tap handler.
-      // Awaiting getUserMedia first can lose iOS Safari's transient user activation,
-      // leaving SpeechRecognition unable to start even after mic permission succeeds.
-      // SpeechRecognition itself requests/uses microphone permission and reports errors.
-      setStatus("STARTING MICROPHONE");
+      setStatus("WAKE WORD: ON");
+      // Start inside the tap handler for mobile Safari's user-activation rules.
       startWakeRecognition();
     });
 
-    // Keep a spoken "stop" effective even if an AI reply was still pending.
+    // Preserve the existing stop-speech guard used by the original HUD.
     const originalSpeak = window.speechSynthesis?.speak?.bind(window.speechSynthesis);
     if (originalSpeak && !window.speechSynthesis.__jarvisStopGuard) {
       window.speechSynthesis.speak = function(utterance) {
