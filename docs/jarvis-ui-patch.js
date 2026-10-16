@@ -580,49 +580,48 @@
       if (!wakeEnabled || commandInProgress) return;
       clearTimeout(restartTimer);
 
-      // Keep each recognition session isolated. Aborting an old session can
-      // fire onend asynchronously; it must not restart over the new session.
+      // Use the original JARVIS wake listener lifecycle; do not patch the
+      // browser's SpeechRecognition prototype or create a second microphone engine.
       const previous = wakeRecognition;
       wakeRecognition = null;
       if (previous) {
-        previous.__jarvisWakeActive = false;
         try { previous.abort(); } catch (_) {}
       }
 
       const current = new Recognition();
       wakeRecognition = current;
-      current.__jarvisWakeActive = true;
       current.lang = "en-US";
       current.continuous = true;
       current.interimResults = true;
       current.maxAlternatives = 1;
 
       current.onstart = () => {
-        if (wakeRecognition !== current || !wakeEnabled) return;
-        setStatus("WAKE WORD: ON");
+        if (wakeRecognition === current && wakeEnabled) setStatus("WAKE WORD: ON");
       };
+
       current.onresult = event => {
         if (wakeRecognition !== current || !wakeEnabled || commandInProgress) return;
-        for (let i = 0; i < event.results.length; i++) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
-          // Check every recognition alternative: on phones the first guess can
-          // be wrong even when another alternative correctly hears "Jarvis".
-          for (let a = 0; a < (result?.length || 0); a++) {
-            const phrase = String(result[a]?.transcript || "")
+          const alternatives = [];
+          for (let a = 0; a < (result.length || 1); a++) {
+            const transcript = String(result[a]?.transcript || "")
               .toLowerCase()
               .replace(/[^a-z ]/g, " ")
-              .replace(/\s+/g, " ")
+              .replace(/\\s+/g, " ")
               .trim();
-            // Accept "Jarvis", "Hey Jarvis", "Hello Jarvis", and
-            // "What's up Jarvis" without requiring a fixed phrase prefix.
-            if (/(^| )jarvis( |$)/.test(phrase)) {
-              current.__jarvisWakeActive = false;
-              startCommandCapture();
-              return;
-            }
+            if (transcript) alternatives.push(transcript);
+          }
+          if (alternatives.some(phrase =>
+            /\\b(?:hey|hello|hi)\\s+jarvis\\b/.test(phrase) ||
+            /\\bjarvis\\b/.test(phrase)
+          )) {
+            startCommandCapture();
+            return;
           }
         }
       };
+
       current.onerror = event => {
         if (wakeRecognition !== current) return;
         const code = event && event.error;
@@ -630,19 +629,24 @@
           wakeEnabled = false;
           setStatus(code === "audio-capture" ? "MICROPHONE UNAVAILABLE" : "MIC PERMISSION NEEDED");
         } else if (wakeEnabled && !commandInProgress && code !== "aborted") {
-          scheduleWakeRestart(code === "no-speech" ? 350 : 900);
+          scheduleWakeRestart(code === "no-speech" ? 500 : 900);
         }
       };
+
       current.onend = () => {
-        if (wakeRecognition !== current) return;
-        if (wakeEnabled && !commandInProgress) scheduleWakeRestart(450);
+        if (wakeRecognition === current && wakeEnabled && !commandInProgress) {
+          scheduleWakeRestart(500);
+        }
       };
+
       try {
         current.start();
+        // Some browsers fire onstart asynchronously; show the enabled state
+        // immediately, then let onstart confirm the session.
         setStatus("WAKE WORD: ON");
       } catch (error) {
         if (wakeRecognition === current && wakeEnabled) {
-          setStatus(error && error.name === "NotAllowedError" ? "MIC PERMISSION NEEDED" : "RETRYING MICROPHONE…");
+          setStatus(error && error.name === "NotAllowedError" ? "MIC PERMISSION NEEDED" : "TAP TO RETRY WAKE WORD");
           scheduleWakeRestart(900);
         }
       }
