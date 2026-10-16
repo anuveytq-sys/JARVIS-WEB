@@ -1,7 +1,7 @@
 /* Vision Intelligence UX enhancement layer. Keeps the core VI module intact. */
 (()=>{'use strict';
   if(window.__JVI_ENHANCEMENT__)return; window.__JVI_ENHANCEMENT__=true;
-  const speak=t=>{try{if(typeof window.speak==='function')window.speak(t);else if('speechSynthesis'in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}}catch(_){}};
+  const speak=t=>{try{if(typeof window.speak==='function')window.speak(t);else if('speechSynthesis'in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}}catch(_) {}};
   const openVI=()=>{
     try{if(typeof window.sendCommand==='function'){window.sendCommand('open vision intelligence');return true}}catch(_){}
     const root=document.getElementById('jvi-root');
@@ -15,9 +15,8 @@
     const announce=()=>{const now=root.classList.contains('open');if(now===wasOpen)return;wasOpen=now;if(now){speak('Vision Intelligence online.')}else{speak('Vision Intelligence closed.')}};
     new MutationObserver(announce).observe(root,{attributes:true,attributeFilter:['class']});
     const core=root.querySelector('.jvi-holo-core');
-    if(core)core.addEventListener('click',e=>{e.stopPropagation();root.querySelector('#jvi-voice')?.click();});
-    const holo=root.querySelector('.jvi-holo');
-    if(holo)holo.addEventListener('click',e=>{if(e.target.closest('.jvi-holo-core'))return;root.querySelector('#jvi-command')?.focus({preventScroll:true});});
+    if(core)core.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();root.querySelector('#jvi-voice')?.click();});
+    /* Do not focus the command field when the user clicks the central hologram. */
     const close=root.querySelector('#jvi-close');
     if(close)close.addEventListener('click',()=>setTimeout(()=>speak('Vision Intelligence closed.'),20));
     const cmd=root.querySelector('#jvi-command');
