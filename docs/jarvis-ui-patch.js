@@ -574,14 +574,22 @@
       current.onresult = event => {
         if (wakeRecognition !== current || !wakeEnabled || commandInProgress) return;
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const phrase = String(event.results[i]?.[0]?.transcript || "")
-            .toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
-          // Match "Jarvis" regardless of whether the browser also hears
-          // "hey", "hello", or other words before the wake name.
-          if (/(^| )jarvis( |$)/.test(phrase)) {
-            current.__jarvisWakeActive = false;
-            startCommandCapture();
-            return;
+          const result = event.results[i];
+          // Check every recognition alternative: on phones the first guess can
+          // be wrong even when another alternative correctly hears "Jarvis".
+          for (let a = 0; a < (result?.length || 0); a++) {
+            const phrase = String(result[a]?.transcript || "")
+              .toLowerCase()
+              .replace(/[^a-z ]/g, " ")
+              .replace(/\s+/g, " ")
+              .trim();
+            // Accept "Jarvis", "Hey Jarvis", "Hello Jarvis", and
+            // "What's up Jarvis" without requiring a fixed phrase prefix.
+            if (/(^| )jarvis( |$)/.test(phrase)) {
+              current.__jarvisWakeActive = false;
+              startCommandCapture();
+              return;
+            }
           }
         }
       };
