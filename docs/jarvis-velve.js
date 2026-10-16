@@ -217,17 +217,35 @@
       }
     }finally{flying=false}
   }
-  async function geocode(q){const raw=String(q||'').trim(),key=raw.toLowerCase().replace(/\\s+/g,' ');if(CITY_ALIASES[key]){const a=CITY_ALIASES[key];return {name:a.name,country:a.country,latitude:a.lat,longitude:a.lon,feature_code:'PPLC'}}const name=raw.replace(/\\s+city$/i,'');const d=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en&format=json`).then(r=>{if(!r.ok)throw new Error('Geocoding service unavailable');return r.json()});const rs=d.results||[];if(!rs.length)return null;const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' ').trim();const exact=rs.filter(r=>norm(r.name)===norm(name));const candidates=exact.length?exact:rs;const city=candidates.find(r=>['PPLC','PPLA','PPLA2','PPLA3','PPLA4'].includes(r.feature_code));const r=city||candidates.sort((a,b)=>(Number(b.population)||0)-(Number(a.population)||0))[0];if(!r||!Number.isFinite(Number(r.latitude))||!Number.isFinite(Number(r.longitude)))return null;return r}
+  function normalizePlaceName(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+  async function geocode(q){
+    const raw=String(q||'').trim(),key=normalizePlaceName(raw);
+    if(CITY_ALIASES[key]){const a=CITY_ALIASES[key];return {name:a.name,country:a.country,latitude:a.lat,longitude:a.lon,feature_code:'PPLC'}}
+    const countryData=window.__VELVE_COUNTRIES||{},countryAliases=window.__VELVE_COUNTRY_ALIASES||{};
+    const countryName=countryAliases[key]||Object.keys(countryData).find(n=>normalizePlaceName(n)===key);
+    if(countryName&&countryData[countryName]){
+      const c=countryData[countryName];
+      return {name:c.name,country:c.name,latitude:c.lat,longitude:c.lon,feature_code:'COUNTRY_CAPITAL',isCountry:true,capital:c.capital};
+    }
+    const name=raw.replace(/\s+city$/i,'');
+    const d=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en&format=json`).then(r=>{if(!r.ok)throw new Error('Geocoding service unavailable');return r.json()});
+    const rs=d.results||[];if(!rs.length)return null;
+    const exact=rs.filter(r=>normalizePlaceName(r.name)===normalizePlaceName(name)),candidates=exact.length?exact:rs;
+    const city=candidates.find(r=>['PPLC','PPLA','PPLA2','PPLA3','PPLA4'].includes(r.feature_code));
+    const found=city||candidates.sort((a,b)=>(Number(b.population)||0)-(Number(a.population)||0))[0];
+    if(!found||!Number.isFinite(Number(found.latitude))||!Number.isFinite(Number(found.longitude)))return null;
+    return found;
+  }
   async function flyTo(name){
     if(flying)return false; flying=true; setStatus('LOCATING '+String(name).toUpperCase());
     try{const r=await geocode(name);if(!r){say(`I could not locate ${name}. Try the city name and country.`);setStatus('LOCATION NOT FOUND');return false}
       const lat=Number(r.latitude??r.lat),lon=Number(r.longitude??r.lon);
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180){say('I could not verify that city location.');setStatus('INVALID CITY COORDINATES');return false}
       selected={name:r.name||String(name),country:r.country||'',lat,lon};$('#v-focus').textContent=selected.name+(selected.country?', '+selected.country:'');
-      // City-level overview: top-down and centered on the verified city coordinates.
-      const altitude=450000;const destination=Cesium.Cartesian3.fromDegrees(lon,lat,altitude);
+      // Cities use a closer view; bundled country entries use a wider capital-centered country overview.
+      const altitude=r.isCountry?((['Russia','Canada','China','United States','Brazil','Australia','India'].includes(r.name))?1800000:(['Vatican City','Monaco','Singapore','Nauru','Tuvalu','San Marino'].includes(r.name)?300000:950000)):450000;const destination=Cesium.Cartesian3.fromDegrees(lon,lat,altitude);
       await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};try{viewer.camera.cancelFlight();viewer.camera.flyTo({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0},duration:2.8,maximumHeight:12000000,complete:finish,cancel:finish})}catch(_){try{viewer.camera.setView({destination,orientation:{heading:0,pitch:Cesium.Math.toRadians(-90),roll:0}})}catch(__){}finish()}setTimeout(finish,5000)});
-      await refreshWeather();setStatus('FOCUS: '+selected.name.toUpperCase());say(`Moving to ${selected.name}${selected.country?', '+selected.country:''}.`);return true
+      await refreshWeather();setStatus('FOCUS: '+selected.name.toUpperCase());say(r.isCountry?`Moving to ${selected.name}. Showing a country overview centered near its capital, ${r.capital}.`:`Moving to ${selected.name}${selected.country?', '+selected.country:''}.`);return true
     }catch(error){console.error('[VELVE] city navigation failed',error);setStatus('CITY SEARCH TEMPORARILY UNAVAILABLE');say('City navigation is temporarily unavailable. Please try again.');return false}
     finally{flying=false}
   }
