@@ -50,3 +50,49 @@
 #jvi-root .jvi-center-head>div:first-child::-webkit-scrollbar{width:5px}
 #jvi-root .jvi-center-head>div:first-child::-webkit-scrollbar-thumb{background:#286b8a;border-radius:5px}
 #jvi-root .jvi-center-head .jvi-core-orb{flex:0 0 36px;align-self:center}
+
+
+/* Android/touch-device stability layer.
+   Preserve every environment and control while avoiding repeated GPU-heavy compositing
+   and Android browser viewport-height jumps that can make panels appear to flicker. */
+@media (hover:none) and (pointer:coarse){
+  #neon-nexus .nn-clock,
+  #neon-nexus .nn-panel,
+  #neon-nexus .nn-console{
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  #neon-nexus .nn-clock{background:rgba(18,9,27,.96)!important}
+  #neon-nexus .nn-panel{
+    background:linear-gradient(145deg,rgba(26,10,33,.97),rgba(10,6,18,.97))!important;
+    contain:layout style;
+    isolation:isolate;
+  }
+  #neon-nexus .nn-network{opacity:.48}
+  #neon-nexus .nn-vignette{box-shadow:none!important}
+  #neon-nexus .nn-core,
+  #neon-nexus .nn-core-inner,
+  #neon-nexus .nn-core-latitude,
+  #neon-nexus .nn-core-glint{backface-visibility:hidden}
+  #jvi-root .jvi-panel,
+  #jvi-root .jvi-results-window,
+  #jvi-root .jvi-profile,
+  #jvi-root .jvi-results{
+    contain:layout style;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  #jvi-root .jvi-panel{isolation:isolate}
+}
+@media (max-width:740px) and (hover:none) and (pointer:coarse){
+  /* svh is stable while Android's browser bars expand/collapse; keep all six
+     NEON NEXUS panels anchored rather than recalculating against a jumping vh. */
+  #neon-nexus .nn-panel{height:21svh!important}
+  #neon-nexus .nn-panel-env,
+  #neon-nexus .nn-panel-services{top:67px!important}
+  #neon-nexus .nn-panel-tasks,
+  #neon-nexus .nn-panel-memory{top:calc(67px + 21svh + 5px)!important}
+  #neon-nexus .nn-panel-system,
+  #neon-nexus .nn-panel-actions{top:calc(67px + 42svh + 10px)!important}
+  #neon-nexus .nn-core-area{height:35svh!important}
+}
