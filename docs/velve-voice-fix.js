@@ -1,23 +1,18 @@
-/* VELVE voice fix: isolated microphone/speech-recognition handler for the VELVE/God's Eye environment. */
+/* VELVE voice fix: start speech recognition directly from the user gesture for mobile Safari/browser compatibility. */
 (() => {
   'use strict';
-  const VERSION = 'velve-voice-fix-20261016a';
+  const VERSION = 'velve-voice-fix-20261016b';
   const state = window.__VELVE_VOICE_FIX || (window.__VELVE_VOICE_FIX = {
-    installed: false,
-    recognition: null,
-    listening: false,
-    permissionStream: null
+    installed: false, recognition: null, listening: false, cancelRequested: false,
+    finished: false, heard: '', generation: 0
   });
 
   const button = () => document.getElementById('velve-voice');
   const input = () => document.getElementById('velve-input');
   const send = () => document.getElementById('velve-send');
   const status = () => document.querySelector('#velve-status b');
-  const setStatus = (text) => {
-    const el = status();
-    if (el) el.textContent = text;
-  };
-  const setButton = (listening) => {
+  const setStatus = text => { const el = status(); if (el) el.textContent = text; };
+  const setButton = listening => {
     const b = button();
     if (!b) return;
     b.classList.toggle('listening', !!listening);
@@ -26,123 +21,147 @@
     b.title = listening ? 'Listening… tap to stop' : 'Voice input';
   };
 
-  async function requestMicrophonePermission() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      return true;
-    } catch (err) {
-      const name = String(err?.name || '').toLowerCase();
-      if (name === 'notallowederror' || name === 'securityerror') {
-        setStatus('ALLOW MICROPHONE');
-      } else {
-        setStatus('MICROPHONE UNAVAILABLE');
-      }
-      return false;
-    }
-  }
-
-  function finish(heard) {
+  function finish(text, generation) {
+    if (generation !== state.generation || state.finished) return;
+    state.finished = true;
     state.listening = false;
     state.recognition = null;
     setButton(false);
+    const heard = String(text || '').trim();
     if (!heard) {
-      setStatus('READY FOR VOICE');
+      if (!state.cancelRequested) setStatus('NO SPEECH HEARD — TAP 🎙 AND SPEAK');
       return;
     }
     const field = input();
-    if (!field) return;
+    if (!field) { setStatus('COMMAND FIELD UNAVAILABLE'); return; }
     field.value = heard;
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
     setStatus('VOICE COMMAND RECEIVED');
     const sendButton = send();
-    if (sendButton) requestAnimationFrame(() => sendButton.click());
+    if (sendButton) window.setTimeout(() => {
+      if (generation === state.generation) sendButton.click();
+    }, 120);
   }
 
-  async function startVoice() {
-    if (state.listening) {
-      try { state.recognition?.stop(); } catch (_) {}
-      return;
-    }
+  function stopByUser() {
+    state.cancelRequested = true;
+    state.listening = false;
+    setButton(false);
+    try { state.recognition?.stop(); } catch (_) {}
+    state.recognition = null;
+    setStatus('VOICE STOPPED');
+  }
 
-    const R = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!R) {
+  function startVoice() {
+    if (state.listening) { stopByUser(); return; }
+
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
       const field = input();
       if (field) {
-        field.placeholder = 'Voice input is not supported by this browser — use the keyboard microphone';
-        field.focus({ preventScroll: true });
+        field.placeholder = 'Browser speech recognition unavailable — use your keyboard microphone';
+        field.focus();
       }
-      setStatus('BROWSER VOICE NOT SUPPORTED');
+      setStatus('USE KEYBOARD MICROPHONE');
       return;
     }
 
-    const allowed = await requestMicrophonePermission();
-    if (!allowed) return;
-
-    const recognition = new R();
+    // IMPORTANT: do not await getUserMedia here. On iOS Safari that can lose the
+    // original tap/user-activation before recognition.start(), causing an abort.
+    const generation = ++state.generation;
+    state.cancelRequested = false;
+    state.finished = false;
+    state.heard = '';
+    let gotFinal = false;
+    const recognition = new Recognition();
     state.recognition = recognition;
     state.listening = true;
-    let heard = '';
-    let gotResult = false;
-
-    recognition.lang = /^(hi|en)-/i.test(navigator.language || '') ? navigator.language : 'en-IN';
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      setButton(true);
-      setStatus('LISTENING — SPEAK NOW');
-    };
-
-    recognition.onresult = (event) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0]?.transcript || '';
-      }
-      transcript = transcript.trim();
-      if (transcript) {
-        heard = transcript;
-        gotResult = true;
-        const field = input();
-        if (field) field.value = transcript;
-        setStatus('HEARING: ' + transcript.slice(0, 48));
-      }
-      const last = event.results[event.results.length - 1];
-      if (last?.isFinal) finish(heard);
-    };
-
-    recognition.onerror = (event) => {
-      const error = String(event?.error || '').toLowerCase();
-      if (error === 'not-allowed' || error === 'service-not-allowed') setStatus('ALLOW MICROPHONE');
-      else if (error === 'no-speech') setStatus('NO SPEECH HEARD — TRY AGAIN');
-      else if (error === 'audio-capture') setStatus('MICROPHONE UNAVAILABLE');
-      else if (error === 'network') setStatus('VOICE NETWORK ERROR');
-      else if (error === 'aborted') setStatus('VOICE STOPPED');
-      else setStatus('VOICE ERROR — TRY AGAIN');
-      state.listening = false;
-      state.recognition = null;
-      setButton(false);
-    };
-
-    recognition.onend = () => {
-      if (!state.listening) return;
-      state.listening = false;
-      state.recognition = null;
-      setButton(false);
-      if (!gotResult) setStatus('NO SPEECH HEARD — TRY AGAIN');
-      else if (heard) finish(heard);
-    };
+    setButton(true);
+    setStatus('STARTING MICROPHONE…');
 
     try {
+      recognition.lang = /^(hi|en)(-|$)/i.test(navigator.language || '') ? navigator.language : 'en-IN';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        if (generation !== state.generation) return;
+        setStatus('LISTENING — SPEAK NOW');
+        setButton(true);
+      };
+      recognition.onresult = event => {
+        if (generation !== state.generation) return;
+        let interim = '';
+        let finalText = '';
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          const transcript = result && result[0] ? String(result[0].transcript || '') : '';
+          if (result.isFinal) finalText += transcript;
+          else interim += transcript;
+        }
+        const text = (finalText || interim).trim();
+        if (text) {
+          state.heard = text;
+          const field = input();
+          if (field) field.value = text;
+          setStatus((finalText ? 'HEARD: ' : 'HEARING: ') + text.slice(0, 48));
+        }
+        if (finalText.trim()) {
+          gotFinal = true;
+          finish(finalText, generation);
+        }
+      };
+      recognition.onerror = event => {
+        if (generation !== state.generation || state.finished) return;
+        const error = String(event && event.error || '').toLowerCase();
+        if (error === 'not-allowed' || error === 'service-not-allowed' || error === 'securityerror') {
+          state.listening = false; state.recognition = null; setButton(false);
+          setStatus('MICROPHONE BLOCKED — ALLOW IT IN BROWSER SETTINGS');
+        } else if (error === 'no-speech') {
+          state.listening = false; state.recognition = null; setButton(false);
+          setStatus('NO SPEECH HEARD — TAP 🎙 AND SPEAK');
+        } else if (error === 'audio-capture') {
+          state.listening = false; state.recognition = null; setButton(false);
+          setStatus('MICROPHONE BUSY OR UNAVAILABLE');
+        } else if (error === 'network') {
+          state.listening = false; state.recognition = null; setButton(false);
+          setStatus('SPEECH SERVICE NETWORK ERROR — CHECK INTERNET');
+        } else if (error === 'aborted' && state.cancelRequested) {
+          state.listening = false; state.recognition = null; setButton(false);
+          setStatus('VOICE STOPPED');
+        } else if (error === 'aborted') {
+          // Some mobile browsers emit an unsolicited abort while starting.
+          state.listening = false; state.recognition = null; setButton(false);
+          setStatus('VOICE INTERRUPTED — TAP 🎙 TO RETRY');
+        } else {
+          state.listening = false; state.recognition = null; setButton(false);
+          setStatus('VOICE ERROR: ' + (error || 'UNKNOWN') + ' — TAP TO RETRY');
+        }
+      };
+      recognition.onend = () => {
+        if (generation !== state.generation) return;
+        if (state.finished) return;
+        state.listening = false;
+        state.recognition = null;
+        setButton(false);
+        if (state.cancelRequested) { setStatus('VOICE STOPPED'); return; }
+        if (state.heard) finish(state.heard, generation);
+        else if (!gotFinal) setStatus('LISTENING ENDED — NO SPEECH; TAP 🎙 TO RETRY');
+      };
+
+      // Must be called synchronously during the actual button tap/click.
       recognition.start();
     } catch (err) {
+      if (generation !== state.generation) return;
       state.listening = false;
       state.recognition = null;
       setButton(false);
-      setStatus('VOICE START FAILED — TRY AGAIN');
+      const name = String(err && err.name || '').toLowerCase();
+      setStatus(name === 'notallowederror' || name === 'securityerror'
+        ? 'MICROPHONE BLOCKED — ALLOW IT IN BROWSER SETTINGS'
+        : 'VOICE START FAILED — TAP 🎙 TO RETRY');
     }
   }
 
@@ -152,22 +171,20 @@
     if (b.dataset.velveVoiceFix === VERSION) return true;
     b.dataset.velveVoiceFix = VERSION;
     state.installed = true;
-    b.onclick = (event) => {
+    // Capture the tap before older VELVE handlers can cancel or replace it.
+    b.addEventListener('click', event => {
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
       startVoice();
-    };
-    b.addEventListener('pointerdown', () => { b.style.touchAction = 'manipulation'; }, { passive: true });
+    }, true);
+    b.style.touchAction = 'manipulation';
+    b.setAttribute('type', 'button');
     return true;
   }
 
   function watch() {
     install();
-    if (!document.getElementById('velve-root') || !document.body) {
-      setTimeout(watch, 400);
-      return;
-    }
-    setTimeout(watch, 1200);
+    window.setTimeout(watch, 500);
   }
 
   window.VELVE_VOICE_FIX_VERSION = VERSION;
