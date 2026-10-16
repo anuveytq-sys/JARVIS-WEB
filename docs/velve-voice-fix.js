@@ -76,10 +76,14 @@
     // IMPORTANT: do not await getUserMedia here. On iOS Safari that can lose the
     // original tap/user-activation before recognition.start(), causing an abort.
     const generation = ++state.generation;
+    pauseWake();
     state.cancelRequested = false;
     state.finished = false;
     state.heard = '';
     let gotFinal = false;
+    let wakePaused = false;
+    const pauseWake = () => { if(wakePaused)return; wakePaused=true; try{window.__jarvisPauseWakeWordForEnvironment?.()}catch(_){} };
+    const resumeWake = () => { if(!wakePaused)return; wakePaused=false; try{window.__jarvisResumeWakeWordAfterEnvironment?.()}catch(_){} };
     const recognition = new Recognition();
     state.recognition = recognition;
     state.listening = true;
@@ -145,6 +149,7 @@
           state.listening = false; state.recognition = null; setButton(false);
           setStatus('VOICE ERROR: ' + (error || 'UNKNOWN') + ' — TAP TO RETRY');
         }
+        resumeWake();
       };
       recognition.onspeechstart = () => {
         if (generation === state.generation) setStatus('SPEECH DETECTED — LISTENING');
@@ -158,6 +163,7 @@
         if (state.cancelRequested) { setStatus('VOICE STOPPED'); return; }
         if (state.heard) finish(state.heard, generation);
         else if (!gotFinal) setStatus('LISTENING ENDED — NO SPEECH; TAP 🎙 TO RETRY');
+        resumeWake();
       };
 
       // Must be called synchronously during the actual button tap/click.
@@ -171,6 +177,7 @@
       setStatus(name === 'notallowederror' || name === 'securityerror'
         ? 'MICROPHONE BLOCKED — ALLOW IT IN BROWSER SETTINGS'
         : 'VOICE START FAILED — TAP 🎙 TO RETRY');
+      resumeWake();
     }
   }
 
