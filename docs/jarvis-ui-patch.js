@@ -593,9 +593,9 @@
       wakeRecognition = current;
       current.__jarvisWakeActive = true;
       current.lang = "en-US";
-      current.continuous = false;
+      current.continuous = true;
       current.interimResults = true;
-      current.maxAlternatives = 3;
+      current.maxAlternatives = 1;
 
       current.onstart = () => {
         if (wakeRecognition !== current || !wakeEnabled) return;
