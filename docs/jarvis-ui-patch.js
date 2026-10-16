@@ -548,39 +548,65 @@
 
     function startWakeRecognition() {
       if (!wakeEnabled || commandInProgress) return;
-      try { wakeRecognition?.abort(); } catch (_) {}
-      wakeRecognition = new Recognition();
-      wakeRecognition.lang = "en-US";
-      wakeRecognition.continuous = true;
-      wakeRecognition.interimResults = true;
-      wakeRecognition.maxAlternatives = 1;
+      clearTimeout(restartTimer);
 
-      wakeRecognition.onresult = event => {
+      // Keep each recognition session isolated. Aborting an old session can
+      // fire onend asynchronously; it must not restart over the new session.
+      const previous = wakeRecognition;
+      wakeRecognition = null;
+      if (previous) {
+        previous.__jarvisWakeActive = false;
+        try { previous.abort(); } catch (_) {}
+      }
+
+      const current = new Recognition();
+      wakeRecognition = current;
+      current.__jarvisWakeActive = true;
+      current.lang = "en-US";
+      current.continuous = true;
+      current.interimResults = true;
+      current.maxAlternatives = 3;
+
+      current.onstart = () => {
+        if (wakeRecognition !== current || !wakeEnabled) return;
+        setStatus("LISTENING FOR JARVIS");
+      };
+      current.onresult = event => {
+        if (wakeRecognition !== current || !wakeEnabled || commandInProgress) return;
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const phrase = String(event.results[i][0]?.transcript || "")
+          const phrase = String(event.results[i]?.[0]?.transcript || "")
             .toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
-          if (/\b(?:hey\s+)?jarvis\b/.test(phrase)) {
+          // Match "Jarvis" regardless of whether the browser also hears
+          // "hey", "hello", or other words before the wake name.
+          if (/(^| )jarvis( |$)/.test(phrase)) {
+            current.__jarvisWakeActive = false;
             startCommandCapture();
             return;
           }
         }
       };
-      wakeRecognition.onerror = event => {
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      current.onerror = event => {
+        if (wakeRecognition !== current) return;
+        const code = event && event.error;
+        if (code === "not-allowed" || code === "service-not-allowed" || code === "audio-capture") {
           wakeEnabled = false;
-          setStatus("MIC PERMISSION NEEDED");
-        } else if (wakeEnabled && !commandInProgress) {
-          scheduleWakeRestart(1200);
+          setStatus(code === "audio-capture" ? "MICROPHONE UNAVAILABLE" : "MIC PERMISSION NEEDED");
+        } else if (wakeEnabled && !commandInProgress && code !== "aborted") {
+          scheduleWakeRestart(code === "no-speech" ? 350 : 900);
         }
       };
-      wakeRecognition.onend = () => {
-        if (wakeEnabled && !commandInProgress) scheduleWakeRestart(500);
+      current.onend = () => {
+        if (wakeRecognition !== current) return;
+        if (wakeEnabled && !commandInProgress) scheduleWakeRestart(450);
       };
       try {
-        wakeRecognition.start();
-        setStatus("WAKE WORD: ON");
-      } catch (_) {
-        setStatus("TAP TO RETRY WAKE WORD");
+        current.start();
+        setStatus("STARTING MICROPHONE…");
+      } catch (error) {
+        if (wakeRecognition === current && wakeEnabled) {
+          setStatus(error && error.name === "NotAllowedError" ? "MIC PERMISSION NEEDED" : "RETRYING MICROPHONE…");
+          scheduleWakeRestart(900);
+        }
       }
     }
 
