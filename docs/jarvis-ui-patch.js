@@ -406,14 +406,14 @@
     const wakeStyle = document.createElement("style");
     wakeStyle.textContent = `
       #jarvis-wake-word-toggle {
-        position: fixed; right: 12px; bottom: 84px; z-index: 2147483642;
+        position: fixed; right: 12px; bottom: 112px; z-index: 2147483642;
         border: 1px solid #00d9ff; border-radius: 8px; padding: 8px 10px;
         background: rgba(2,18,37,.96); color: #baf7ff;
         font: 700 10px/1.3 system-ui,sans-serif; letter-spacing: .4px;
         box-shadow: 0 0 12px rgba(0,217,255,.18); touch-action: manipulation;
       }
       @media (max-width: 767px) {
-        #jarvis-wake-word-toggle { right: 8px; bottom: 82px; font-size: 9px; }
+        #jarvis-wake-word-toggle { right: 8px; bottom: 108px; font-size: 9px; }
       }
     `;
     (document.head || document.documentElement).appendChild(wakeStyle);
