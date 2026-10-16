@@ -558,9 +558,13 @@
         scheduleWakeRestart(900);
       };
       commandRecognition.onend = () => {
+        // Recognition ending is not the same as the AI task finishing.
+        // The task monitor owns the return to WAKE WORD: ON after submission.
+        if (commandInProgress && taskMonitorTimer) return;
         if (commandInProgress) {
           commandInProgress = false;
           resetHud();
+          setStatus("WAKE WORD: ON");
           scheduleWakeRestart(700);
         }
       };
