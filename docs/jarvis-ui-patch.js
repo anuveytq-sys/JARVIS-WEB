@@ -402,6 +402,7 @@
     let wakeEnabled = false;
     let commandInProgress = false;
     let stoppedByUser = false;
+    let externalVoiceBusy = false;
     let restartTimer = 0;
     let commandStartTimer = 0;
 
@@ -465,7 +466,7 @@
     function scheduleWakeRestart(delay = 700) {
       clearTimeout(restartTimer);
       restartTimer = setTimeout(() => {
-        if (wakeEnabled && !commandInProgress) startWakeRecognition();
+        if (wakeEnabled && !commandInProgress && !externalVoiceBusy) startWakeRecognition();
       }, delay);
     }
 
@@ -589,7 +590,7 @@
     }
 
     function startWakeRecognition() {
-      if (!wakeEnabled || commandInProgress) return;
+      if (!wakeEnabled || commandInProgress || externalVoiceBusy) return;
       if (!Recognition) {
         setStatus("VOICE NOT SUPPORTED");
         return;
@@ -652,12 +653,13 @@
       recognition.onend = () => {
         if (wakeRecognition !== recognition) return;
         wakeRecognition = null;
-        if (wakeEnabled && !commandInProgress) scheduleWakeRestart(500);
+        if (wakeEnabled && !commandInProgress && !externalVoiceBusy) scheduleWakeRestart(250);
       };
 
       try {
         recognition.start();
-        setStatus("WAKE WORD: ON");
+        // Show ON only after onstart confirms the recognizer is actually listening.
+        setStatus("STARTING MICROPHONE");
       } catch (error) {
         console.warn("[JARVIS wake word] start failed:", error);
         setStatus(error?.name === "NotAllowedError"
@@ -666,6 +668,25 @@
         if (wakeEnabled) scheduleWakeRestart(1200);
       }
     }
+
+    // Share microphone ownership with the existing environment voice buttons.
+    // This prevents the always-on wake listener competing for the same mobile mic.
+    window.__jarvisPauseWakeWordForEnvironment = function() {
+      externalVoiceBusy = true;
+      clearTimeout(restartTimer);
+      clearTimeout(commandStartTimer);
+      commandInProgress = false;
+      for (const rec of [wakeRecognition, commandRecognition]) {
+        if (!rec) continue;
+        try { rec.onresult = rec.onerror = rec.onend = null; rec.abort(); } catch (_) {}
+      }
+      wakeRecognition = null;
+      commandRecognition = null;
+    };
+    window.__jarvisResumeWakeWordAfterEnvironment = function() {
+      externalVoiceBusy = false;
+      if (wakeEnabled) scheduleWakeRestart(350);
+    };
 
     toggle.addEventListener("click", () => {
       if (wakeEnabled) {
