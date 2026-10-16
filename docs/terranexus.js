@@ -85,7 +85,74 @@ function loop(){if(!renderer||!scene)return;requestAnimationFrame(loop);tick+=.0
 function findElement(q){q=q.toLowerCase();return els.find(e=>e.sym.toLowerCase()===q||e.name.toLowerCase()===q||q.includes(e.name.toLowerCase()+' atom'))}
 function match(q){let t=q.toLowerCase(),e=findElement(t.replace(/.*(?:element|atom)\s+/,'').trim())||findElement(t);if(/periodic table|element|atom|electron|proton|neutron|nucleus/.test(t)){if(e)element=e;return'atom'}if(/quantum orbital|orbital shape|s orbital|p orbital/.test(t))return'orbital';if(/thermodynamic|heat engine|carnot|thermal efficiency/.test(t))return'thermo';if(/electrolysis|electrolyser|electrolyzer|split water/.test(t))return'electrolysis';if(/torque|rotational equilibrium|moment arm/.test(t))return'torque';if(/wave interference|superposition|constructive interference|destructive interference/.test(t))return'interference';if(/reaction energy|activation energy|reaction coordinate|chemical kinetics/.test(t))return'kinetics';if(/stress.?strain|yield point|tensile strength|material stress/.test(t))return'stress';if(/orbital mechanics|kepler orbit|elliptical orbit/.test(t))return'orbitalmotion';if(/engine|piston|crankshaft|machine part|cylinder block/.test(t))return'engine';if(/gear|gearbox/.test(t))return'gears';if(/electric motor|motor|rotor|stator/.test(t))return'motor';if(/pendulum|gravity|oscillat/.test(t))return'pendulum';if(/lever|fulcrum|simple machine/.test(t))return'lever';if(/solar system|planet|sun|orbit/.test(t))return'solar';if(/combust|chemical reaction|reaction/.test(t))return'combustion';if(/photosynthesis|plant chemistry/.test(t))return'photosynthesis';if(/dna|double helix/.test(t))return'dna';if(/projectile|trajectory|ballistic/.test(t))return'projectile';if(/spring|hooke|oscillat/.test(t))return'spring';if(/collision|momentum|elastic impact/.test(t))return'collision';if(/electric circuit|circuit|resistor|led|battery/.test(t))return'circuit';if(/ammonia|nh3/.test(t))return'ammonia';if(/benzene|c6h6|aromatic ring/.test(t))return'benzene';if(/water|h2o/.test(t))return'water';if(/methane|ch4/.test(t))return'methane';if(/carbon dioxide|co2/.test(t))return'co2';return null}
 async function command(){let q=$('tn-input').value.trim();if(!q)return;$('tn-input').value='';$('tn-status').textContent='Interpreting request…';let id=match(q);if(id){show(id);$('tn-status').textContent='Loaded '+demos[id][0]+'. Select a component to inspect it.';say(demos[id][0]+' ready.');return}let key=sessionStorage.getItem('tnGeminiKey');if(!key){$('tn-status').textContent='No built-in model matched. Try a magnetic field, wave, lens, cell, greenhouse effect or hydraulic press; add a Gemini key in Settings for open-ended AI explanations.';return}try{$('tn-status').textContent='Asking your configured AI…';let r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:'You are TERRANEXUS, an educational science workshop. Explain accurately and concisely; state that the available interactive models are atom, water, methane, carbon dioxide, combustion, photosynthesis, engine, gears, electric motor, pendulum, lever, solar system, DNA, magnetic field, transverse wave, convex lens, animal cell, greenhouse effect and hydraulic press. Never claim an unavailable model is loaded. User request: '+q}]}],generationConfig:{temperature:.35,maxOutputTokens:500}})});let d=await r.json();if(!r.ok)throw Error(d.error?.message||'AI request failed');let a=d.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'No response';$('tn-status').textContent=a;say(a)}catch(e){$('tn-status').textContent='AI request failed: '+e.message+'. Built-in demos still work.'}}
-function listen(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('tn-status').textContent='Voice input unavailable in this browser; type a command instead.';return}let r=new SR();r.lang='en-IN';r.onstart=()=>$('tn-voice').classList.add('listening');r.onresult=e=>{$('tn-input').value=e.results[0][0].transcript;command()};r.onerror=e=>$('tn-status').textContent='Voice input issue: '+e.error;r.onend=()=>$('tn-voice').classList.remove('listening');r.start()}
+function listen(){
+  const button=$('tn-voice'),field=$('tn-input'),status=$('tn-status');
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const active=listen.recognition;
+  if(listen.listening&&active){
+    listen.cancelled=true;listen.listening=false;
+    try{active.stop()}catch(_){}
+    button?.classList.remove('listening');
+    if(status)status.textContent='VOICE INPUT STOPPED';
+    listen.releaseWake();
+    return;
+  }
+  if(!SR){
+    if(status)status.textContent='VOICE INPUT UNAVAILABLE IN THIS BROWSER — TYPE A COMMAND OR USE THE KEYBOARD MICROPHONE.';
+    field?.focus();
+    return;
+  }
+  if(active){
+    try{active.onstart=active.onresult=active.onerror=active.onend=null;active.abort()}catch(_){}
+    listen.recognition=null;
+  }
+  const generation=(listen.generation||0)+1;
+  listen.generation=generation;listen.cancelled=false;listen.listening=true;
+  let wakePaused=false;
+  const pauseWake=()=>{if(wakePaused)return;wakePaused=true;try{window.__jarvisPauseWakeWordForEnvironment?.()}catch(_){}};
+  const resumeWake=()=>{if(!wakePaused)return;wakePaused=false;try{window.__jarvisResumeWakeWordAfterEnvironment?.()}catch(_){}};
+  listen.releaseWake=()=>{if(listen.wakeTimer)clearTimeout(listen.wakeTimer);listen.wakeTimer=setTimeout(resumeWake,450)};
+  // Pause the main wake-word recognizer while TERRANEXUS owns the microphone.
+  pauseWake();
+  const recognition=new SR();
+  listen.recognition=recognition;
+  button?.classList.add('listening');
+  if(status)status.textContent='STARTING MICROPHONE…';
+  const finish=(message)=>{if(generation!==listen.generation)return;listen.listening=false;listen.recognition=null;button?.classList.remove('listening');if(message&&status)status.textContent=message;listen.releaseWake()};
+  recognition.lang=/^(hi|en)(-|$)/i.test(navigator.language||'')?navigator.language:'en-IN';
+  recognition.continuous=false;
+  recognition.interimResults=true;
+  recognition.maxAlternatives=1;
+  recognition.onstart=()=>{if(generation===listen.generation&&status)status.textContent='LISTENING — SPEAK NOW';};
+  recognition.onresult=e=>{
+    if(generation!==listen.generation)return;
+    let transcript='';
+    for(let i=e.resultIndex||0;i<e.results.length;i++){
+      const result=e.results[i];if(result&&result[0])transcript+=String(result[0].transcript||'');
+    }
+    transcript=transcript.trim();
+    if(transcript&&field)field.value=transcript;
+    if(transcript&&status)status.textContent='HEARD: '+transcript.slice(0,80);
+    if(transcript&&Array.from(e.results).some(r=>r.isFinal)){
+      finish('VOICE COMMAND RECEIVED');
+      command();
+    }
+  };
+  recognition.onerror=e=>{
+    if(generation!==listen.generation)return;
+    const error=String(e?.error||'').toLowerCase();
+    const messages={
+      'not-allowed':'MICROPHONE BLOCKED — ALLOW MICROPHONE PERMISSION IN YOUR BROWSER.',
+      'service-not-allowed':'MICROPHONE BLOCKED — ALLOW MICROPHONE PERMISSION IN YOUR BROWSER.',
+      'audio-capture':'MICROPHONE BUSY OR UNAVAILABLE.',
+      'no-speech':'NO SPEECH HEARD — TAP THE VOICE BUTTON AND SPEAK.',
+      'network':'SPEECH SERVICE NETWORK ERROR — CHECK YOUR INTERNET CONNECTION.'
+    };
+    finish(listen.cancelled?'VOICE INPUT STOPPED':(messages[error]||('VOICE INPUT ERROR: '+error)));
+  };
+  recognition.onend=()=>{if(generation===listen.generation&&listen.listening)finish(listen.cancelled?'VOICE INPUT STOPPED':'VOICE INPUT ENDED — TAP 🎙 TO TRY AGAIN');else listen.releaseWake()};
+  try{recognition.start()}catch(error){finish('COULD NOT START MICROPHONE — TAP 🎙 TO RETRY');}
+}
 function open(){build();root.classList.add('open');document.body.classList.add('terranexus-active');$('tn-input').focus();say('TERRANEXUS holographic science workshop online.')}
 function close(){if(root)root.classList.remove('open');document.body.classList.remove('terranexus-active');say('Returning to JARVIS.')}
 window.TERRANEXUS={open:open,close:close,show:show,version:REALISM_VERSION};
