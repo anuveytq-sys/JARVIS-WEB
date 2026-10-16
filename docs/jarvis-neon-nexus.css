@@ -74,6 +74,8 @@ body.neon-nexus-active #nn-launcher,body.neon-nexus-active #jarvis-wake-word-tog
 #neon-nexus .nn-orbit-c{width:49%;height:95%;transform:translate(-50%,-50%) rotateY(67deg) rotateZ(18deg);border-color:#ff8cf066;animation:nnOrbitC 22s linear infinite reverse}
 #neon-nexus .nn-core-shadow{position:absolute;width:44%;height:14%;left:50%;top:66%;transform:translate(-50%,-50%);border-radius:50%;background:#f51fc42c;filter:blur(24px)}
 #neon-nexus .nn-core{position:relative;width:clamp(125px,18vw,210px);height:clamp(125px,18vw,210px);border-radius:50%;border:1px solid #ffa0f1;background:radial-gradient(circle at 30% 23%,#fff 0%,#ffd5fa 3%,#ff82eb 9%,#f71dcd 20%,#9d00ac 43%,#350744 68%,#080610 100%);box-shadow:inset -30px -22px 44px #000b,inset 9px 7px 30px #ffadf877,0 0 28px #ff31d7cc,0 0 85px #ff31d777,0 0 150px #bd21ff22;overflow:hidden;z-index:2;transform:translateZ(60px);animation:nnFloat 5s ease-in-out infinite}
+/* Remove the browser's blue rectangular focus ring around the central core; preserve its styling and click behavior. */
+#neon-nexus #nn-core:focus,#neon-nexus #nn-core:focus-visible{outline:none!important;outline-offset:0!important}
 #neon-nexus .nn-core-inner{position:absolute;inset:-18%;border-radius:50%;background:repeating-linear-gradient(90deg,transparent 0 14px,#ffd6fa22 15px,transparent 16px);animation:nnGlobe 11s linear infinite}
 #neon-nexus .nn-core-latitude{position:absolute;inset:12%;border:1px solid #ffd4f888;border-radius:50%;box-shadow:0 0 17px #ff6ce866,inset 0 0 18px #ff6ce844;transform:rotateX(65deg);animation:nnLatitude 7s linear infinite}
 #neon-nexus .nn-core-glint{position:absolute;inset:3%;border:1px solid #ffcef777;border-radius:50%;transform:rotateY(63deg);animation:nnLatitude 9s linear infinite reverse}
