@@ -34,6 +34,9 @@
   function action(kind){if(kind==='main'){close();return}if(kind==='time'){showToast(new Date().toLocaleString());speak('The time is '+new Date().toLocaleTimeString());return}if(kind==='status'){showToast('JARVIS CORE, NEON NEXUS, VELVE and TERRANEXUS are installed and ready.');return}if(kind==='tasks'){render();$('#nn-tasks')?.scrollTo({top:0,behavior:'smooth'});showToast('Task stream refreshed.');return}if(kind==='memory'){renderMemory('memory');$('#nn-memory')?.scrollTo({top:0,behavior:'smooth'});showToast('Saved memory panel ready.');return}if(kind==='services'){renderMemory('services');$('#nn-services')?.scrollTo({top:0,behavior:'smooth'});showToast('Services directory ready.');return}if(kind==='fullscreen'){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.();return}}
   function submitCommand(e){e.preventDefault();const input=$('#nn-input'),q=(input.value||'').trim();if(!q)return;input.value='';if(/^(search|google|look up|web search)\b/i.test(q)){const query=q.replace(/^(search(?: the web)?(?: for)?|google|look up|web search(?: for)?)\s*/i,'').trim();if(query){window.open('https://www.google.com/search?q='+encodeURIComponent(query),'_blank','noopener');showToast('Opening web search for '+query);logTask('Web search: '+query)}return}logTask('Command: '+q);try{if(typeof window.sendCommand==='function'){window.sendCommand(q);showToast('Command sent to JARVIS core.')}else{showToast('Main JARVIS command engine is not ready.');speak('The JARVIS command engine is not ready yet.')}}catch(_){showToast('Could not send command to JARVIS.')}}
   function voice(){
+    const pauseWake=window.__jarvisPauseWakeWordForEnvironment;
+    const resumeWake=window.__jarvisResumeWakeWordAfterEnvironment;
+    const releaseWake=()=>{if(voice.wakeReleaseTimer)clearTimeout(voice.wakeReleaseTimer);voice.wakeReleaseTimer=setTimeout(()=>{try{resumeWake?.()}catch(_){}},450)};
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR){
       showToast('Voice recognition is not supported in this browser. Use your keyboard microphone or type a command.');
@@ -43,6 +46,7 @@
     if(voice.listening&&recognition){
       voice.cancelRequested=true;
       try{recognition.stop()}catch(_){}
+      releaseWake();
       showToast('Voice input stopped.');
       return;
     }
@@ -50,6 +54,7 @@
       try{recognition.onresult=recognition.onerror=recognition.onend=null;recognition.abort()}catch(_){}
       recognition=null;
     }
+    try{pauseWake?.()}catch(_){}
     const generation=(voice.generation||0)+1;
     voice.generation=generation;
     voice.listening=true;
@@ -73,6 +78,7 @@
         $('#nn-voice')?.classList.remove('listening');
         if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';
         recognition=null;
+        releaseWake();
       };
       const finish=(text)=>{
         if(generation!==voice.generation||voice.finished)return;
@@ -139,6 +145,7 @@
       $('#nn-voice')?.classList.remove('listening');
       if($('#nn-core-state'))$('#nn-core-state').textContent='CORE STANDBY';
       recognition=null;
+      releaseWake();
       const name=String(err&&err.name||'').toLowerCase();
       showToast(name==='notallowederror'||name==='securityerror'?'Microphone permission is blocked. Allow access in browser settings.':'Could not start the microphone. Tap to retry or type your command.');
     }
@@ -151,7 +158,7 @@
     close();window.VELVE?.exit?.();window.TERRANEXUS?.close?.();document.body.classList.remove('velve-active','velve-open','terranexus-active','neon-nexus-active');showToast('Returned to the main JARVIS HUD.');
   }
   function open(){build();root.classList.add('open');document.body.classList.add('neon-nexus-active');syncLauncher();render();updateClock();showToast('NEON NEXUS online. All command panels connected.');speak('Neon Nexus online. JARVIS command environment ready.')}
-  function close(){if(root)root.classList.remove('open');document.body.classList.remove('neon-nexus-active');if(recognition){try{recognition.abort()}catch(_){}recognition=null}syncLauncher()}
+  function close(){if(root)root.classList.remove('open');document.body.classList.remove('neon-nexus-active');if(recognition){try{recognition.onresult=recognition.onerror=recognition.onend=null;recognition.abort()}catch(_){}recognition=null}voice.listening=false;voice.cancelRequested=true;$('#nn-voice')?.classList.remove('listening');try{window.__jarvisResumeWakeWordAfterEnvironment?.()}catch(_){}syncLauncher()}
   function startNetwork(){const c=$('#nn-network');if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;let w=0,h=0,pts=[],raf=0;const resize=()=>{w=c.width=window.innerWidth*devicePixelRatio;h=c.height=window.innerHeight*devicePixelRatio;c.style.width='100%';c.style.height='100%';pts=Array.from({length:58},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.24*devicePixelRatio,vy:(Math.random()-.5)*.24*devicePixelRatio,r:Math.random()*1.8+.6}))};resize();window.addEventListener('resize',resize);const draw=()=>{ctx.clearRect(0,0,w,h);for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;for(const q of pts){const dx=p.x-q.x,dy=p.y-q.y,d=Math.hypot(dx,dy);if(d<145*devicePixelRatio){ctx.strokeStyle='rgba(255,36,214,'+(.13*(1-d/(145*devicePixelRatio)))+')';ctx.lineWidth=devicePixelRatio;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}ctx.fillStyle='rgba(255,96,231,.8)';ctx.beginPath();ctx.arc(p.x,p.y,p.r*devicePixelRatio,0,Math.PI*2);ctx.fill()}raf=requestAnimationFrame(draw)};draw();const stop=()=>cancelAnimationFrame(raf);window.addEventListener('pagehide',stop,{once:true})}
   const hideLegacy=()=>{const legacy=$('#jarvis-superpowers');if(legacy)legacy.style.setProperty('display','none','important')};hideLegacy();new MutationObserver(hideLegacy).observe(document.documentElement,{childList:true,subtree:true});
   // Keep the NEXUS launcher on the main HUD only. VELVE uses body.velve-active;
