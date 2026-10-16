@@ -694,9 +694,9 @@
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: "You are JARVIS, a helpful, clear, concise personal AI assistant. Answer the user's question directly. Do not claim to control the phone or access live information unless a tool actually provides it." }] },
+        systemInstruction: { parts: [{ text: "You are JARVIS, a helpful, clear, concise personal AI assistant. Answer the user's question directly. Interpret ambiguous requests in a reasonable, benign, lawful, educational way; do not label ordinary safe tasks as unsafe. If a request genuinely raises a safety concern, briefly explain the concern and offer a safe alternative. Do not bypass safety rules. Do not claim to control the phone or access live information unless a tool actually provides it." }] },
         contents: [{ role: "user", parts: [{ text: command }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 700 }
+        generationConfig: { temperature: 0.5, maxOutputTokens: 700 }
       })
     });
     const data = await response.json().catch(() => ({}));
