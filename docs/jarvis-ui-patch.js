@@ -471,6 +471,7 @@
     }
 
     function startCommandCapture() {
+      setStatus("LISTENING");
       commandInProgress = true;
       clearTimeout(restartTimer);
       clearInterval(taskMonitorTimer);
@@ -579,76 +580,72 @@
     function startWakeRecognition() {
       if (!wakeEnabled || commandInProgress) return;
       clearTimeout(restartTimer);
+      try { wakeRecognition?.abort(); } catch (_) {}
 
-      // Use the original JARVIS wake listener lifecycle; do not patch the
-      // browser's SpeechRecognition prototype or create a second microphone engine.
-      const previous = wakeRecognition;
-      wakeRecognition = null;
-      if (previous) {
-        try { previous.abort(); } catch (_) {}
-      }
+      // Keep the original listener lifecycle: one wake recognizer, restarted
+      // by its own onend/error handlers. No shared prototype overrides.
+      wakeRecognition = new Recognition();
+      wakeRecognition.lang = "en-US";
+      wakeRecognition.continuous = true;
+      wakeRecognition.interimResults = true;
+      wakeRecognition.maxAlternatives = 1;
 
-      const current = new Recognition();
-      wakeRecognition = current;
-      current.lang = "en-US";
-      current.continuous = true;
-      current.interimResults = true;
-      current.maxAlternatives = 1;
-
-      current.onstart = () => {
-        if (wakeRecognition === current && wakeEnabled) setStatus("WAKE WORD: ON");
+      wakeRecognition.onstart = () => {
+        if (wakeEnabled && !commandInProgress) setStatus("LISTENING FOR WAKE WORD");
       };
 
-      current.onresult = event => {
-        if (wakeRecognition !== current || !wakeEnabled || commandInProgress) return;
+      wakeRecognition.onresult = event => {
+        if (!wakeEnabled || commandInProgress) return;
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
-          const alternatives = [];
+          let phrase = "";
           for (let a = 0; a < (result.length || 1); a++) {
-            const transcript = String(result[a]?.transcript || "")
+            const candidate = String(result[a]?.transcript || "")
               .toLowerCase()
               .replace(/[^a-z ]/g, " ")
               .replace(/\s+/g, " ")
               .trim();
-            if (transcript) alternatives.push(transcript);
+            if (candidate.includes("jarvis")) {
+              phrase = candidate;
+              break;
+            }
           }
-          if (alternatives.some(phrase =>
-            /\b(?:hey|hello|hi)\s+jarvis\b/.test(phrase) ||
-            /\bjarvis\b/.test(phrase)
-          )) {
-            startCommandCapture();
-            return;
-          }
+          if (!phrase) continue;
+
+          // Make recognition visible immediately, even before command capture starts.
+          setStatus("LISTENING");
+          startCommandCapture();
+          return;
         }
       };
 
-      current.onerror = event => {
-        if (wakeRecognition !== current) return;
-        const code = event && event.error;
-        if (code === "not-allowed" || code === "service-not-allowed" || code === "audio-capture") {
+      wakeRecognition.onerror = event => {
+        const code = event && event.error ? String(event.error) : "unknown";
+        console.warn("[JARVIS wake microphone] recognition error:", code);
+        if (code === "not-allowed" || code === "service-not-allowed") {
           wakeEnabled = false;
-          setStatus(code === "audio-capture" ? "MICROPHONE UNAVAILABLE" : "MIC PERMISSION NEEDED");
+          setStatus("MIC PERMISSION NEEDED");
+        } else if (code === "audio-capture") {
+          setStatus("MICROPHONE UNAVAILABLE");
         } else if (wakeEnabled && !commandInProgress && code !== "aborted") {
-          scheduleWakeRestart(code === "no-speech" ? 500 : 900);
+          setStatus("MIC RETRY: " + code.toUpperCase());
+          scheduleWakeRestart(code === "no-speech" ? 700 : 1200);
         }
       };
 
-      current.onend = () => {
-        if (wakeRecognition === current && wakeEnabled && !commandInProgress) {
-          scheduleWakeRestart(500);
-        }
+      wakeRecognition.onend = () => {
+        if (wakeEnabled && !commandInProgress) scheduleWakeRestart(500);
       };
 
       try {
-        current.start();
-        // Some browsers fire onstart asynchronously; show the enabled state
-        // immediately, then let onstart confirm the session.
-        setStatus("WAKE WORD: ON");
+        wakeRecognition.start();
+        setStatus("LISTENING FOR WAKE WORD");
       } catch (error) {
-        if (wakeRecognition === current && wakeEnabled) {
-          setStatus(error && error.name === "NotAllowedError" ? "MIC PERMISSION NEEDED" : "TAP TO RETRY WAKE WORD");
-          scheduleWakeRestart(900);
-        }
+        console.warn("[JARVIS wake microphone] start failed:", error);
+        setStatus(error && error.name === "NotAllowedError"
+          ? "MIC PERMISSION NEEDED"
+          : "TAP TO RETRY WAKE WORD");
+        if (wakeEnabled) scheduleWakeRestart(1000);
       }
     }
 
