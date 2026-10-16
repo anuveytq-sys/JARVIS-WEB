@@ -608,13 +608,13 @@
             const transcript = String(result[a]?.transcript || "")
               .toLowerCase()
               .replace(/[^a-z ]/g, " ")
-              .replace(/\\s+/g, " ")
+              .replace(/\s+/g, " ")
               .trim();
             if (transcript) alternatives.push(transcript);
           }
           if (alternatives.some(phrase =>
-            /\\b(?:hey|hello|hi)\\s+jarvis\\b/.test(phrase) ||
-            /\\bjarvis\\b/.test(phrase)
+            /\b(?:hey|hello|hi)\s+jarvis\b/.test(phrase) ||
+            /\bjarvis\b/.test(phrase)
           )) {
             startCommandCapture();
             return;
