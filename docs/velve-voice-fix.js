@@ -1,7 +1,7 @@
 /* VELVE voice fix: start speech recognition directly from the user gesture for mobile Safari/browser compatibility. */
 (() => {
   'use strict';
-  const VERSION = 'velve-voice-fix-20261016b';
+  const VERSION = 'velve-voice-fix-20261016c';
   const state = window.__VELVE_VOICE_FIX || (window.__VELVE_VOICE_FIX = {
     installed: false, recognition: null, listening: false, cancelRequested: false,
     finished: false, heard: '', generation: 0
@@ -55,6 +55,12 @@
 
   function startVoice() {
     if (state.listening) { stopByUser(); return; }
+    // Release any previous mobile-browser session before creating the next one.
+    const previous = state.recognition;
+    if (previous) {
+      try { previous.onresult = previous.onerror = previous.onend = null; previous.abort(); } catch (_) {}
+      state.recognition = null;
+    }
 
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
@@ -82,7 +88,7 @@
 
     try {
       recognition.lang = /^(hi|en)(-|$)/i.test(navigator.language || '') ? navigator.language : 'en-IN';
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
@@ -139,6 +145,9 @@
           state.listening = false; state.recognition = null; setButton(false);
           setStatus('VOICE ERROR: ' + (error || 'UNKNOWN') + ' — TAP TO RETRY');
         }
+      };
+      recognition.onspeechstart = () => {
+        if (generation === state.generation) setStatus('SPEECH DETECTED — LISTENING');
       };
       recognition.onend = () => {
         if (generation !== state.generation) return;
