@@ -43,6 +43,7 @@ jobs:
           node --check docs/jarvis-neon-nexus-command-fix.js
           node --check docs/jarvis-core-3d.js
           node --check docs/jarvis-vision-intelligence.js
+          node --check docs/jarvis-vision-intelligence-enhancement.js
 
       - name: Verify VELVE satellite interaction upgrade
         run: |
@@ -120,8 +121,12 @@ jobs:
           cp docs/jarvis-neon-nexus-command-fix.js _site/jarvis-neon-nexus-command-fix.js
           cp docs/jarvis-core-3d.js _site/jarvis-core-3d.js
           cp docs/jarvis-core-3d.css _site/jarvis-core-3d.css
+          cp docs/jarvis-vision-intelligence-enhancement.css _site/jarvis-vision-intelligence-enhancement.css
           cp docs/jarvis-vision-intelligence.js _site/jarvis-vision-intelligence.js
-          cp docs/jarvis-vision-intelligence.css _site/jarvis-vision-intelligence.css
+          cp docs/jarvis-vision-intelligence-enhancement.js _site/jarvis-vision-intelligence-enhancement.js
+          # Restore the last known-good complete VI base stylesheet. The current
+          # source CSS is retained separately while Pages uses this verified base.
+          curl -fsSL https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/5b76480bc0b155fef1e25d57b755e9efa00e3838/docs/jarvis-vision-intelligence.css -o _site/jarvis-vision-intelligence.css
           python3 - <<'PY'
           from pathlib import Path
           import os
@@ -130,13 +135,13 @@ jobs:
           s = p.read_text(encoding='utf-8')
           version = os.environ['SITE_VERSION'][:12]
           head_marker = '</head>'
-          style = f'<link rel="stylesheet" href="./jarvis-command-center.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-velve.css?v=pages-{version}">\n<link rel="stylesheet" href="./terranexus.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-core-3d.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-vision-intelligence.css?v=pages-{version}">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{{display:none!important}}</style>\n'
-          for name in ['jarvis-command-center','jarvis-velve','terranexus','jarvis-core-3d','jarvis-vision-intelligence']:
+          style = f'<link rel="stylesheet" href="./jarvis-command-center.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-velve.css?v=pages-{version}">\n<link rel="stylesheet" href="./terranexus.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-core-3d.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-vision-intelligence.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-vision-intelligence-enhancement.css?v=pages-{version}">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{{display:none!important}}</style>\n'
+          for name in ['jarvis-command-center','jarvis-velve','terranexus','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement']:
               s = re.sub(rf'<link[^>]+{re.escape(name)}\.css\?v=[^\"]+[^>]*>\s*', '', s)
           s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./velve-static-satellite-feed.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence.js?v=pages-{version}"></script>\n'
-          for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-static-satellite-feed','velve-satellite-upgrade','terranexus','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence']:
+          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./velve-static-satellite-feed.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence-enhancement.js?v=pages-{version}"></script>\n'
+          for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-static-satellite-feed','velve-satellite-upgrade','terranexus','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement']:
               s = re.sub(rf'<script[^>]+{re.escape(name)}\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
@@ -146,7 +151,8 @@ jobs:
           grep -q 'function loadStaticCatalog' _site/jarvis-velve.js
           grep -q "jarvis-vision-intelligence.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-vision-intelligence.css?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "velve-static-satellite-feed.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q "jarvis-vision-intelligence-enhancement.css?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q "jarvis-vision-intelligence-enhancement.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
