@@ -495,7 +495,7 @@
         if (core) core.textContent = "LISTENING";
         if (status) status.textContent = "LISTENING";
         if (system) system.textContent = "VOICE ACTIVE";
-        setStatus("LISTENING FOR COMMAND");
+        setStatus("LISTENING");
       };
 
       commandRecognition.onresult = event => {
@@ -593,7 +593,7 @@
       wakeRecognition = current;
       current.__jarvisWakeActive = true;
       current.lang = "en-US";
-      current.continuous = true;
+      current.continuous = false;
       current.interimResults = true;
       current.maxAlternatives = 3;
 
@@ -603,7 +603,7 @@
       };
       current.onresult = event => {
         if (wakeRecognition !== current || !wakeEnabled || commandInProgress) return;
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        for (let i = 0; i < event.results.length; i++) {
           const result = event.results[i];
           // Check every recognition alternative: on phones the first guess can
           // be wrong even when another alternative correctly hears "Jarvis".
