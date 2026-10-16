@@ -33,7 +33,63 @@ function capture(){const v=$("jvi-video");if(!stream||!v.videoWidth){toast("Acti
 async function fileImage(f){if(!f||!/^image\//.test(f.type)){toast("Choose an image file.");return}try{const b=await createImageBitmap(f),c=$("jvi-canvas"),s=Math.min(1,1280/b.width);c.width=Math.round(b.width*s);c.height=Math.round(b.height*s);c.getContext("2d").drawImage(b,0,0,c.width,c.height);b.close();setImg(c.toDataURL("image/jpeg",.82),"Imported image")}catch(e){toast("Could not read that image.")}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function parse(s){s=String(s).trim();try{return JSON.parse(s)}catch(e){const a=s.indexOf("{"),b=s.lastIndexOf("}");if(a>=0&&b>a)try{return JSON.parse(s.slice(a,b+1))}catch(_){}return{primary:"AI response",confidence:0,category:"Text response",summary:s,visible_details:[],technical_analysis:s,context:s,targets:[],suggested_questions:[],location:"unknown",visualization:"Ask for a relevant educational visualization."}}}
-async function request(q,withImage){const k=key(),m=model();if(!k){$("jvi-settings").hidden=false;$("jvi-settings-status").textContent="No shared OpenRouter key found. Add it below.";throw Error("OpenRouter key required.")}const prompt='You are JARVIS Vision Intelligence. Only infer what is reasonably supported by the image and conversation. Do not claim hidden internals, exact identity, location or measurements without evidence. State uncertainty. Return valid JSON only: {"primary":"short identification","confidence":0-100,"category":"category","summary":"2-4 sentences","visible_details":["..."],"technical_analysis":"...","context":"...","targets":[{"name":"...","detail":"..."}],"suggested_questions":["..."],"location":"unknown or cautious possible place","visualization":"educational visualization suggestion"}. If uncertain, lower confidence. User request: '+(q||"Identify the main visible object, describe visible details and useful context.")+(last?"\nPrevious analysis: "+JSON.stringify(last).slice(0,4000):"");const content=[{type:"text",text:prompt}];if(withImage&&img)content.push({type:"image_url",image_url:{url:img}});const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),45000);status("AI ANALYZING");$("jvi-command-state").textContent="PROCESSING";$("jvi-holo-message").textContent="NEURAL INFERENCE IN PROGRESS";try{const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":"Bearer "+k,"Content-Type":"application/json","HTTP-Referer":location.origin,"X-OpenRouter-Title":"JARVIS Vision Intelligence"},body:JSON.stringify({model:m,messages:[{role:"user",content}],temperature:.25,max_tokens:1300}),signal:ctrl.signal});const d=await res.json().catch(()=>({}));if(!res.ok)throw Error(d.error&&d.error.message||"OpenRouter HTTP "+res.status);const raw=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;if(!raw)throw Error("No response. Check model availability and image-input support.");return parse(Array.isArray(raw)?raw.map(x=>x.text||"").join("\n"):raw)}catch(e){const m=e.name==="AbortError"?"OpenRouter timed out. Try another model.":e.message;status("ANALYSIS ERROR");log("ERROR",m);toast(m);throw e}finally{clearTimeout(timer);$("jvi-command-state").textContent="READY"}}
+let jviVisionModelsCache={at:0,ids:[]};
+async function discoverFreeVisionModels(k){
+ const now=Date.now();if(now-jviVisionModelsCache.at<600000&&jviVisionModelsCache.ids.length)return jviVisionModelsCache.ids;
+ try{
+  const r=await fetch("https://openrouter.ai/api/v1/models",{headers:{"Authorization":"Bearer "+k}});
+  if(!r.ok)throw Error("Model catalogue unavailable");
+  const d=await r.json();
+  const rows=Array.isArray(d.data)?d.data:[];
+  const ids=rows.filter(x=>{
+   const input=x.architecture&&x.architecture.input_modalities;
+   const image=Array.isArray(input)&&input.some(v=>String(v).toLowerCase()==="image");
+   const p=x.pricing||{};
+   const free=String(x.id||"").endsWith(":free")||(Number(p.prompt)===0&&Number(p.completion)===0);
+   return image&&free&&x.id&&x.id!=="openrouter/free";
+  }).sort((a,b)=>(Number(a.context_length)||0)-(Number(b.context_length)||0)).reverse().map(x=>x.id);
+  jviVisionModelsCache={at:now,ids:[...new Set(ids)]};
+  return jviVisionModelsCache.ids;
+ }catch(e){return []}
+}
+async function request(q,withImage){
+ const k=key(),preferred=model();
+ if(!k){$("jvi-settings").hidden=false;$("jvi-settings-status").textContent="No shared OpenRouter key found. Add it below.";throw Error("OpenRouter key required.")}
+ const prompt='You are JARVIS Vision Intelligence. Follow the user request specifically and answer only from visible evidence plus clearly labelled general knowledge. Do not claim hidden internals, exact identity, location or measurements without evidence. State uncertainty and distinguish observation from inference. Return valid JSON only: {"primary":"short identification","confidence":0-100,"category":"category","summary":"2-4 sentences answering the request","visible_details":["..."],"technical_analysis":"...","context":"...","targets":[{"name":"...","detail":"..."}],"suggested_questions":["..."],"location":"unknown or cautious possible place","visualization":"educational visualization suggestion"}. For inspection, describe visible components and their apparent functions; for uncertainty, explicitly list unknowns and the best additional view; for key facts, provide relevant facts and avoid invented specifics; for how-it-works, explain the likely mechanism at the requested level. If uncertain, lower confidence. User request: '+(q||"Identify the main visible object, describe visible details and useful context.")+(last?"\nPrevious analysis: "+JSON.stringify(last).slice(0,4000):"");
+ const parts=[{type:"text",text:prompt}];if(withImage&&img)parts.push({type:"image_url",image_url:{url:img}});
+ status("AI ANALYZING");$("jvi-command-state").textContent="PROCESSING";$("jvi-holo-message").textContent="NEURAL INFERENCE IN PROGRESS";
+ const headers={"Authorization":"Bearer "+k,"Content-Type":"application/json","HTTP-Referer":location.origin,"X-OpenRouter-Title":"JARVIS Vision Intelligence"};
+ const candidates=[preferred];
+ if(withImage&&img){
+  const discovered=await discoverFreeVisionModels(k);
+  for(const id of discovered){if(!candidates.includes(id))candidates.push(id);if(candidates.length>=4)break;}
+ }
+ let lastError=null;
+ try{
+  for(let i=0;i<candidates.length;i++){
+   const chosen=candidates[i],ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),45000);
+   try{
+    const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers,body:JSON.stringify({model:chosen,messages:[{role:"user",content:parts}],temperature:.25,max_tokens:1300}),signal:ctrl.signal});
+    const d=await res.json().catch(()=>({}));
+    const raw=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+    if(!res.ok)throw Object.assign(Error(d.error&&d.error.message||"OpenRouter HTTP "+res.status),{httpStatus:res.status});
+    if(!raw||!(Array.isArray(raw)?raw.some(x=>x&&x.text):String(raw).trim()))throw Object.assign(Error("The selected model returned an empty response."),{retryable:true});
+    if(chosen!==preferred){log("AI","Fallback vision model used: "+chosen);$("jvi-model-label").textContent=chosen.split("/").pop().slice(0,18).toUpperCase();}
+    return parse(Array.isArray(raw)?raw.map(x=>x.text||"").join("\n"):raw);
+   }catch(e){
+    lastError=e;
+    const statusCode=e.httpStatus;
+    const canRetry=i<candidates.length-1&&(e.retryable||e.name==="AbortError"||!statusCode||statusCode===400||statusCode===404||statusCode===408||statusCode===413||statusCode===422||statusCode===429||statusCode>=500);
+    if(!canRetry)throw e;
+    log("AI","Model "+chosen+" unavailable for this request; trying another compatible free vision model.");
+   }finally{clearTimeout(timer)}
+  }
+  throw lastError||Error("No compatible vision model responded.");
+ }catch(e){
+  const msg=e.name==="AbortError"?"Vision model timed out. Try again; JARVIS will automatically try another compatible free vision model when available.":(e.httpStatus===401||e.httpStatus===403)?"OpenRouter rejected the API key or access. Check the key in Vision Settings.":(e.httpStatus===402)?"OpenRouter account credits or provider limits prevented the request. Check your OpenRouter account.":(e.httpStatus===429)?"Free vision models are temporarily rate-limited. Wait a moment and retry.":"Vision analysis failed: "+(e.message||"No compatible model returned a response.");
+  status("ANALYSIS ERROR");log("ERROR",msg);toast(msg);throw Error(msg);
+ }finally{$("jvi-command-state").textContent="READY"}
+}
 
 function showResultsPanel(html){
  let panel=$("jvi-results-overlay");
