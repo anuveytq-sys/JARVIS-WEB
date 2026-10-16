@@ -592,8 +592,8 @@
       const current = new Recognition();
       wakeRecognition = current;
       current.__jarvisWakeActive = true;
-      current.lang = /^en(-|$)/i.test(navigator.language || "") ? navigator.language : "en-IN";
-      current.continuous = true;
+      current.lang = "en-US";
+      current.continuous = false;
       current.interimResults = true;
       current.maxAlternatives = 3;
 
