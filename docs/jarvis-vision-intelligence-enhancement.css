@@ -25,3 +25,28 @@
 #jvi-root .jvi-panel-restore:not([hidden]){display:flex!important}
 #jvi-root .jvi-holo-core{cursor:pointer}
 #jvi-root .jvi-holo{cursor:default}
+
+
+/* Reality Intelligence Core: keep the header's footprint stable when scan text is long.
+   Scroll the text area instead of letting it push the central holographic core away. */
+#jvi-root .jvi-center-head{
+  height:clamp(92px,15vh,148px)!important;
+  min-height:92px!important;
+  max-height:148px!important;
+  flex:0 0 auto!important;
+  overflow:hidden!important;
+  align-items:stretch!important;
+}
+#jvi-root .jvi-center-head>div:first-child{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#286b8a #06101d;
+  padding-right:8px;
+}
+#jvi-root .jvi-center-head>div:first-child::-webkit-scrollbar{width:5px}
+#jvi-root .jvi-center-head>div:first-child::-webkit-scrollbar-thumb{background:#286b8a;border-radius:5px}
+#jvi-root .jvi-center-head .jvi-core-orb{flex:0 0 36px;align-self:center}
