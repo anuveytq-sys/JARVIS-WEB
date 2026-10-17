@@ -88,6 +88,10 @@
   }
 
   function pauseWakeForSpeech() {
+    // A cancel() immediately before speak() may have queued a wake-word restart.
+    // Cancel that restart before pausing the microphone, or iOS can duck TTS again.
+    clearTimeout(resumeTimer);
+    resumeTimer = 0;
     try {
       if (typeof window.__jarvisPauseWakeWordForEnvironment === "function") {
         window.__jarvisPauseWakeWordForEnvironment();
@@ -211,7 +215,8 @@
     // is safe here: cancel clears the native queue, while our queue remains intact.
     pauseWakeForSpeech();
     try { nativeResume?.(); } catch (_) {}
-    speakNext(myGeneration);
+    // Let mobile Safari release the microphone/audio-session ducking before TTS.
+    setTimeout(() => speakNext(myGeneration), 350);
   };
 
   synth.cancel = function() {
