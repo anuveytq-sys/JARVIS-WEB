@@ -82,7 +82,12 @@
       return voices.find(v => v.name === baseName) || voices[0];
     }
     if (preference && preference !== "auto-male") return voices.find(v => v.name === preference) || voices[0];
-    return voices.find(v => masculineVoiceHints.test(v.name)) || voices.find(v => /en[-_]?(US|GB|AU|IN)/i.test(v.lang)) || voices[0];
+    // Match the original HUD's voice choice: the previous auto-male heuristic
+    // could select a different iOS/Safari voice with noticeably lower perceived loudness.
+    // Keep native speech volume at 1 and leave all wake-word code untouched.
+    return voices.find(v => /daniel|david|mark|google us english|microsoft david|sam/i.test(v.name))
+      || voices.find(v => v.lang.startsWith("en"))
+      || voices[0];
   }
   function findJarvisVoice(preference = getVoiceName()) {
     return getBaseJarvisVoice(preference);
