@@ -1,48 +1,43 @@
-/* JARVIS clap/snap wake assist.
-   Isolated add-on: it does not replace the existing wake-word, voice, volume,
-   or speech-recognition implementation. It only reacts while WAKE WORD: ON.
-   A dedicated acoustic feature gate is used so ordinary speech/commands are
-   ignored; only short, sharp clap/snap-like events can trigger the greeting.
+/* JARVIS passive clap/snap greeting.
+   This add-on stays visually silent until a clap/snap-like impulse is detected.
+   It does not replace the existing wake-word, voice, volume, or command logic.
+   On the first detected clap/snap, it enables the existing wake-word button,
+   speaks the time-aware greeting through the existing JARVIS voice, then hands
+   microphone control back to the original wake-word recognizer.
 */
 (() => {
   "use strict";
   if (window.__JARVIS_CLAP_SNAP_WAKE__) return;
   window.__JARVIS_CLAP_SNAP_WAKE__ = true;
 
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const toggle = () => document.getElementById("jarvis-wake-word-toggle");
   let detectorStream = null;
   let audioContext = null;
   let analyser = null;
   let detectorSource = null;
   let detectorFrame = 0;
-  let baseline = 0.018;
-  let previousRms = 0.018;
+  let baseline = 0.015;
+  let previousRms = 0.015;
   let armed = false;
-  let busy = false;
-  let lastTrigger = 0;
-  let ignoreUntil = 0;
-  let commandRecognition = null;
-  let impulseFrames = 0;
+  let triggered = false;
   let lastImpulseAt = 0;
+  let impulseFrames = 0;
+  let calibrationUntil = 0;
 
+  const CALIBRATION_MS = 900;
+  const COOLDOWN_MS = 1200;
   const WAKE_ON_RE = /WAKE WORD:\s*ON/i;
-  const COOLDOWN_MS = 3000;
-  const REARM_SILENCE_MS = 1800;
-  const CALIBRATION_MS = 1000;
-  const FRAME_MS = 1000 * 1024 / 44100;
 
   function wakeIsOn() {
     const button = toggle();
     return !!button && WAKE_ON_RE.test(button.textContent || "");
   }
 
-  function setWakeStatus(text) {
+  function wakeAppearsEnabled() {
     const button = toggle();
-    if (button) {
-      button.textContent = text;
-      button.setAttribute("aria-label", text);
-    }
+    if (!button) return false;
+    const label = String(button.textContent || "");
+    return WAKE_ON_RE.test(label) || /STARTING MICROPHONE|WAKE WORD RETRYING|LISTENING FOR COMMAND/i.test(label);
   }
 
   function greetingForNow() {
@@ -69,124 +64,73 @@
       audioContext = null;
     }
     armed = false;
-    impulseFrames = 0;
-    lastImpulseAt = 0;
   }
 
-  function finishCommandCapture() {
-    busy = false;
-    // Never immediately re-arm against the tail of the user's command or
-    // JARVIS audio. Give the microphone a clean quiet window first.
-    ignoreUntil = Date.now() + REARM_SILENCE_MS;
-    previousRms = 0.018;
-    impulseFrames = 0;
-    try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {}
-    if (wakeIsOn()) setTimeout(() => {
-      if (wakeIsOn() && !busy) startDetector();
-    }, REARM_SILENCE_MS);
-  }
-
-  function submitTranscript(transcript) {
-    const text = String(transcript || "").trim();
-    if (!text) return false;
-    const input = document.getElementById("commandInput");
-    const form = document.getElementById("commandForm");
-    if (!input || !form) return false;
-    input.value = text;
-    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    return true;
-  }
-
-  function listenForMainCommand() {
-    if (!Recognition || !wakeIsOn()) {
-      finishCommandCapture();
-      return;
-    }
-    setWakeStatus("LISTENING FOR COMMAND");
-    document.body.classList.add("listening");
-    const core = document.getElementById("coreState");
-    const status = document.getElementById("voiceStatus");
-    const system = document.getElementById("systemStatus");
-    if (core) core.textContent = "LISTENING";
-    if (status) status.textContent = "LISTENING";
-    if (system) system.textContent = "VOICE ACTIVE";
-
-    commandRecognition = new Recognition();
-    commandRecognition.lang = "en-IN";
-    commandRecognition.continuous = false;
-    commandRecognition.interimResults = false;
-    commandRecognition.maxAlternatives = 1;
-
-    let gotResult = false;
-    commandRecognition.onresult = event => {
-      if (gotResult) return;
-      gotResult = true;
-      const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
-      if (transcript) submitTranscript(transcript);
-    };
-    commandRecognition.onerror = () => finishCommandCapture();
-    commandRecognition.onend = () => finishCommandCapture();
-    try {
-      commandRecognition.start();
-    } catch (_) {
-      finishCommandCapture();
-    }
-  }
-
-  function speakGreetingThenListen() {
+  function speakGreetingThenResumeWake() {
     const greeting = greetingForNow();
-    setWakeStatus("JARVIS ONLINE");
-    document.body.classList.remove("jarvis-voice-stopped");
-    try { window.__jarvisVoiceStop = false; } catch (_) {}
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      // This resumes the existing recognizer only; no custom command capture
+      // or replacement wake-word behavior is installed by this add-on.
+      try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {}
+    };
 
-    // Use the existing JARVIS speech entry point when available so the user's
-    // selected voice/rate/pitch/volume remain untouched.
-    if (typeof window.speak === "function") {
-      let completed = false;
-      const continueListening = () => {
-        if (completed) return;
-        completed = true;
-        listenForMainCommand();
-      };
-      try {
-        window.speak(greeting);
-        const startedAt = Date.now();
-        const wait = () => {
-          if (completed) return;
-          if (!window.speechSynthesis?.speaking && Date.now() - startedAt > 500) return continueListening();
-          if (Date.now() - startedAt > 9000) return continueListening();
-          setTimeout(wait, 120);
-        };
-        setTimeout(wait, 250);
+    try { window.__jarvisPauseWakeWordForEnvironment?.(); } catch (_) {}
+
+    const waitForSpeech = (startedAt) => {
+      if (finished) return;
+      if (!window.speechSynthesis?.speaking && Date.now() - startedAt > 600) {
+        finish();
         return;
-      } catch (_) {}
-    }
+      }
+      if (Date.now() - startedAt > 10000) {
+        finish();
+        return;
+      }
+      setTimeout(() => waitForSpeech(startedAt), 120);
+    };
 
-    if ("speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined") {
-      const utterance = new SpeechSynthesisUtterance(greeting);
-      utterance.onend = listenForMainCommand;
-      utterance.onerror = listenForMainCommand;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    } else {
-      listenForMainCommand();
+    try {
+      if (typeof window.speak === "function") {
+        window.speak(greeting);
+        setTimeout(() => waitForSpeech(Date.now()), 250);
+        return;
+      }
+      if ("speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined") {
+        const utterance = new SpeechSynthesisUtterance(greeting);
+        utterance.onend = finish;
+        utterance.onerror = finish;
+        window.speechSynthesis.speak(utterance);
+        setTimeout(() => waitForSpeech(Date.now()), 250);
+        return;
+      }
+    } catch (error) {
+      console.warn("[JARVIS clap/snap greeting] speech could not start:", error);
     }
+    finish();
   }
 
   function trigger() {
-    if (busy || !wakeIsOn() || Date.now() < ignoreUntil) return;
-    const now = Date.now();
-    if (now - lastTrigger < COOLDOWN_MS) return;
-    lastTrigger = now;
-    busy = true;
+    if (triggered || !armed) return;
+    triggered = true;
     stopDetector();
-    try { window.__jarvisPauseWakeWordForEnvironment?.(); } catch (_) {}
-    speakGreetingThenListen();
+
+    // Use the actual existing toggle click handler to enable wake-word listening.
+    // Never edit the button label directly or substitute a new wake recognizer.
+    const button = toggle();
+    if (button && !wakeAppearsEnabled()) {
+      try { button.click(); } catch (_) {}
+    }
+
+    // Give the existing click handler a moment to start, then pause it only while
+    // the greeting plays. The original wake-word listener is resumed afterwards.
+    setTimeout(speakGreetingThenResumeWake, 100);
   }
 
   function detectLoop() {
-    if (!analyser || !armed || !wakeIsOn() || busy) return;
-
+    if (!analyser || !armed || triggered) return;
     const timeData = new Uint8Array(analyser.fftSize);
     const freqData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteTimeDomainData(timeData);
@@ -198,9 +142,9 @@
     let previous = timeData[0] - 128;
     for (let i = 0; i < timeData.length; i++) {
       const centered = timeData[i] - 128;
-      const v = Math.abs(centered / 128);
-      sum += v * v;
-      if (v > peak) peak = v;
+      const value = Math.abs(centered / 128);
+      sum += value * value;
+      if (value > peak) peak = value;
       if ((centered >= 0) !== (previous >= 0)) crossings++;
       previous = centered;
     }
@@ -217,7 +161,8 @@
     const spectralCentroid = totalEnergy ? weightedEnergy / totalEnergy / freqData.length : 0;
     const now = Date.now();
 
-    if (now < ignoreUntil) {
+    if (now < calibrationUntil) {
+      baseline = baseline * 0.92 + rms * 0.08;
       previousRms = rms;
       detectorFrame = requestAnimationFrame(detectLoop);
       return;
@@ -227,26 +172,23 @@
     const onsetRatio = rms / Math.max(previousRms, 0.012);
     const baselineRatio = rms / Math.max(baseline, 0.012);
 
-    // A clap/snap is treated as a short impulsive event: fast onset, high peak,
-    // broadband/high-frequency content and only a very short run of frames.
-    // Ordinary speech is sustained and voiced, so it must not satisfy this gate.
+    // Short impulsive, broadband sound gate. Sustained/ordinary speech is
+    // rejected by the combined attack, peak, spectral and zero-crossing tests.
     const sharpOnset = onsetRatio > 1.8 && baselineRatio > 5.0;
     const loudTransient = rms > 0.105 && peak > 0.55;
     const broadbandTransient = zeroCrossRate > 0.105 && spectralCentroid > 0.18 && peak > 0.58;
     const impulse = sharpOnset && loudTransient && broadbandTransient;
 
     if (impulse) {
-      if (now - lastImpulseAt <= FRAME_MS * 3.2) impulseFrames++;
+      if (now - lastImpulseAt <= COOLDOWN_MS) impulseFrames++;
       else impulseFrames = 1;
       lastImpulseAt = now;
-    } else if (now - lastImpulseAt > FRAME_MS * 4.5) {
+    } else if (now - lastImpulseAt > 180) {
       impulseFrames = 0;
     }
 
-    // Require a compact impulse sequence rather than one noisy microphone frame.
-    // This makes normal spoken words much less likely to activate the greeting.
-    if (impulseFrames >= 2 && now >= ignoreUntil) {
-      impulseFrames = 0;
+    // Require repeated adjacent transient frames to reduce false triggers.
+    if (impulseFrames >= 2) {
       trigger();
       return;
     }
@@ -256,49 +198,50 @@
   }
 
   async function startDetector() {
-    if (armed || busy || !wakeIsOn() || Date.now() < ignoreUntil) return;
-    if (!navigator.mediaDevices?.getUserMedia || (!window.AudioContext && !window.webkitAudioContext)) return;
+    if (armed || triggered) return;
+    if (!navigator.mediaDevices?.getUserMedia || (!window.AudioContext && !window.webkitAudioContext)) {
+      console.warn("[JARVIS clap/snap greeting] microphone audio detection is not supported in this browser.");
+      return;
+    }
     try {
-      detectorStream = await navigator.mediaDevices.getUserMedia({ audio: {
-        echoCancellation: true,
-        noiseSuppression: false,
-        autoGainControl: false
-      }, video: false });
-      if (!wakeIsOn() || busy) { stopDetector(); return; }
+      detectorStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false },
+        video: false
+      });
+      if (triggered) { stopDetector(); return; }
       const Ctx = window.AudioContext || window.webkitAudioContext;
       audioContext = new Ctx();
       detectorSource = audioContext.createMediaStreamSource(detectorStream);
       analyser = audioContext.createAnalyser();
       analyser.fftSize = 1024;
-      analyser.smoothingTimeConstant = 0.04;
+      analyser.smoothingTimeConstant = 0.03;
       detectorSource.connect(analyser);
-      baseline = 0.018;
-      previousRms = 0.018;
+      baseline = 0.015;
+      previousRms = 0.015;
       impulseFrames = 0;
       lastImpulseAt = 0;
+      calibrationUntil = Date.now() + CALIBRATION_MS;
       armed = true;
       detectorFrame = requestAnimationFrame(detectLoop);
     } catch (error) {
-      console.warn("[JARVIS clap/snap wake] microphone detector unavailable:", error);
       stopDetector();
+      console.warn("[JARVIS clap/snap greeting] microphone permission/detector unavailable:", error);
     }
   }
 
-  function monitorWakeToggle() {
-    const on = wakeIsOn();
-    if (on && !armed && !busy && Date.now() >= ignoreUntil) startDetector();
-    if (!on && (armed || busy)) {
-      try { commandRecognition?.abort(); } catch (_) {}
-      commandRecognition = null;
-      busy = false;
-      stopDetector();
+  function boot() {
+    // Wait for the existing UI patch to create the real wake-word button.
+    // The screen and all JARVIS controls remain unchanged while listening.
+    if (!toggle()) {
+      setTimeout(boot, 250);
+      return;
     }
-    setTimeout(monitorWakeToggle, 300);
+    startDetector();
   }
 
-  const boot = () => {
-    if (toggle()) monitorWakeToggle();
-    else setTimeout(boot, 250);
-  };
-  boot();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+  }
 })();
