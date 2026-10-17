@@ -1,13 +1,11 @@
 /* JARVIS GitHub command access.
-   Isolated browser-side navigation/search layer.
-   Does not alter wake-word, microphone, speech recognition, or voice settings.
-   Authenticated/private results depend on the user's existing GitHub sign-in. */
+   Universal public GitHub search/navigation. Does not alter microphone or wake-word code.
+   Private repository access/actions still require explicit GitHub authentication and permissions. */
 (() => {
   "use strict";
   if (window.__JARVIS_GITHUB_ACCESS_V1__) return;
   window.__JARVIS_GITHUB_ACCESS_V1__ = true;
 
-  const USERNAME = "anuveytq-sys";
   const input = () => document.getElementById("commandInput");
 
   function clean(value) {
@@ -26,64 +24,107 @@
     return "https://github.com/search?" + params.toString();
   }
 
+  function directUrl(kind, value) {
+    const safe = String(value || "").trim().replace(/^@/, "");
+    if (!safe) return null;
+    if (kind === "repository") {
+      if (/^[a-z0-9-]+\/[a-z0-9._-]+$/i.test(safe)) return "https://github.com/" + safe;
+      return searchUrl(safe, "repositories");
+    }
+    if (kind === "user" || kind === "account" || kind === "profile") {
+      if (/^[a-z0-9-]+$/i.test(safe)) return "https://github.com/" + safe;
+      return searchUrl(safe, "users");
+    }
+    return null;
+  }
+
   function parseCommand(raw) {
     const text = clean(raw);
     if (!text) return null;
     let m;
 
-    // Direct repository path: "open repository owner/name".
+    // Explicit owner/repository paths.
     m = text.match(/^(?:please\s+)?(?:open|go to|visit)\s+(?:the\s+)?(?:github\s+)?(?:repository|repo)\s+([a-z0-9-]+\/[a-z0-9._-]+)$/i);
     if (m) return { url: "https://github.com/" + m[1], label: "repository " + m[1] };
 
-    // Natural example: "open userscanner repository".
-    // Search GitHub's Repositories tab, prioritizing the user's own account.
-    m = text.match(/^(?:please\s+)?(?:open|find|show|look up|go to)\s+(?:the\s+)?(.+?)\s+(?:github\s+)?(?:repository|repo)$/i);
+    // Repository search is global unless the user explicitly supplies a qualifier.
+    m = text.match(/^(?:please\s+)?(?:open|find|show|look up|go to|search)\s+(?:the\s+)?(.+?)\s+(?:github\s+)?(?:repository|repo|repositories|repos)$/i);
     if (m) {
-      const name = m[1].replace(/^github\s+/i, "").trim();
-      if (!name || /^(?:my|a|the)$/i.test(name)) return null;
-      const query = /\buser:[a-z0-9-]+\b/i.test(name) ? name : name + " user:" + USERNAME;
-      return { url: searchUrl(query, "repositories"), label: "GitHub repository search for " + name };
+      const term = m[1].trim();
+      const value = directUrl("repository", term);
+      if (value && /^[a-z0-9-]+\/[a-z0-9._-]+$/i.test(term)) return { url: value, label: "repository " + term };
+      return { url: searchUrl(term, "repositories"), label: "global GitHub repository search for " + term };
     }
-
-    // "open GitHub repository userscanner" / "search repositories for userscanner".
     m = text.match(/^(?:please\s+)?(?:open|search|find|look up)\s+(?:github\s+)?(?:repositories|repos)\s+(?:for|named|called)\s+(.+)$/i);
-    if (m) return { url: searchUrl(m[1], "repositories"), label: "GitHub repository search for " + m[1] };
+    if (m) return { url: searchUrl(m[1], "repositories"), label: "global GitHub repository search for " + m[1] };
 
-    m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+(.+?)\s+(?:in|on)\s+github\s+repositories$/i);
-    if (m) return { url: searchUrl(m[1], "repositories"), label: "GitHub repository search for " + m[1] };
-
-    // "search GitHub user anuveytq-sys" or "search anuveytq-sys username on GitHub".
-    m = text.match(/^(?:please\s+)?(?:open|search|find|look up)\s+(?:the\s+)?(?:github\s+)?(?:user|username|profile)\s+([a-z0-9-]+)$/i);
-    if (!m) m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+([a-z0-9-]+)\s+(?:github\s+)?(?:user|username|profile)(?:\s+on\s+github)?$/i);
+    // Users, accounts, profiles: search all GitHub users unless explicitly asking for a known handle.
+    m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+(?:github\s+)?(?:users|accounts|profiles)\s+(?:for|named|called)\s+(.+)$/i);
+    if (m) return { url: searchUrl(m[1], "users"), label: "GitHub user search for " + m[1] };
+    m = text.match(/^(?:please\s+)?(?:open|go to|visit)\s+(?:the\s+)?github\s+(?:user|account|profile)\s+([a-z0-9-]+)$/i);
     if (m) return { url: "https://github.com/" + m[1], label: "GitHub profile " + m[1] };
+    m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+([a-z0-9-]+)\s+(?:github\s+)?(?:user|username|account|profile)(?:\s+on\s+github)?$/i);
+    if (m) return { url: searchUrl(m[1], "users"), label: "GitHub user search for " + m[1] };
+    m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+(?:github\s+)?(?:user|username|account|profile)\s+(.+)$/i);
+    if (m) return { url: searchUrl(m[1], "users"), label: "GitHub user search for " + m[1] };
 
-    m = text.match(/^(?:please\s+)?(?:open|go to|visit)\s+(?:the\s+)?github\s+(?:profile|user)\s+([a-z0-9-]+)$/i);
-    if (m) return { url: "https://github.com/" + m[1], label: "GitHub profile " + m[1] };
-
-    // Search GitHub code, issues, or pull requests.
-    m = text.match(/^(?:please\s+)?(?:search|find)\s+github\s+(code|issues?|pull requests?|prs)\s+(?:for|about)\s+(.+)$/i);
+    // Search any supported GitHub category. Pull requests are issues with is:pr.
+    m = text.match(/^(?:please\s+)?(?:search|find|look up|open)\s+(?:github\s+)?(code|issues?|pull requests?|prs|commits?|discussions?|packages?|wikis|topics|users|repositories|repos)\s+(?:for|about|named|called)\s+(.+)$/i);
     if (m) {
-      const kind = /^code$/i.test(m[1]) ? "code" : /^issues?$/i.test(m[1]) ? "issues" : "pullrequests";
-      return { url: searchUrl(m[2], kind), label: "GitHub " + kind + " search for " + m[2] };
+      const rawKind = m[1].toLowerCase();
+      const query = m[2].trim();
+      let type = "repositories";
+      let finalQuery = query;
+      let labelKind = rawKind;
+      if (rawKind === "code") type = "code";
+      else if (rawKind === "issue" || rawKind === "issues") type = "issues";
+      else if (/^(pull requests?|prs)$/.test(rawKind)) { type = "issues"; finalQuery = "is:pr " + query; labelKind = "pull requests"; }
+      else if (/^commits?$/.test(rawKind)) type = "commits";
+      else if (/^discussions?$/.test(rawKind)) type = "discussions";
+      else if (/^packages?$/.test(rawKind)) type = "packages";
+      else if (rawKind === "wikis") type = "wikis";
+      else if (rawKind === "topics") { type = "repositories"; finalQuery = "topic:" + query; }
+      else if (/^(users)$/.test(rawKind)) type = "users";
+      return { url: searchUrl(finalQuery, type), label: "global GitHub " + labelKind + " search for " + query };
     }
 
-    // General GitHub search.
-    m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+github\s+(?:for\s+)?(.+)$/i);
-    if (m) return { url: searchUrl(m[1], ""), label: "GitHub search for " + m[1] };
+    // Flexible phrasing: "find <term> in GitHub issues", "search GitHub for <term> in code".
+    m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+(.+?)\s+(?:in|on)\s+github\s+(repositories|repos|code|issues?|pull requests?|prs|users|accounts|commits?|discussions?|packages?|wikis)$/i);
+    if (m) {
+      const term = m[1].trim(), kind = m[2].toLowerCase();
+      const type = /^(repositories|repos)$/.test(kind) ? "repositories"
+        : kind === "code" ? "code"
+        : /^(users|accounts)$/.test(kind) ? "users"
+        : /^commits?$/.test(kind) ? "commits"
+        : /^discussions?$/.test(kind) ? "discussions"
+        : /^packages?$/.test(kind) ? "packages"
+        : /^wikis$/.test(kind) ? "wikis" : "issues";
+      const query = /^(pull requests?|prs)$/.test(kind) ? "is:pr " + term : term;
+      return { url: searchUrl(query, type), label: "global GitHub " + kind + " search for " + term };
+    }
 
-    if (/^(?:open|launch|go to)\s+github$/i.test(text)) {
-      return { url: "https://github.com/", label: "GitHub" };
+    // Generic global search, preserving the user's terms and GitHub qualifiers.
+    m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+(?:on\s+)?github\s+(?:for\s+)?(.+)$/i);
+    if (m) return { url: searchUrl(m[1], ""), label: "global GitHub search for " + m[1] };
+
+    // Common direct navigation requests.
+    m = text.match(/^(?:please\s+)?(?:open|go to|visit)\s+(?:the\s+)?(?:github\s+)?(?:user|account|profile)\s+([a-z0-9-]+)$/i);
+    if (m) return { url: "https://github.com/" + m[1], label: "GitHub profile " + m[1] };
+    m = text.match(/^(?:please\s+)?(?:open|launch|go to|visit)\s+github$/i);
+    if (m) return { url: "https://github.com/", label: "GitHub" };
+
+    // Broad natural-language fallback only when GitHub is explicitly named.
+    if (/\bgithub\b/i.test(text) && /\b(search|find|look up|open)\b/i.test(text)) {
+      const term = text.replace(/\b(?:please|github|search|find|look up|open)\b/gi, "").trim();
+      if (term) return { url: searchUrl(term, ""), label: "global GitHub search for " + term };
     }
     return null;
   }
 
   function showReply(message, error = false) {
     try {
-      if (typeof window.showReply === "function") {
-        window.showReply(message, error ? "error" : "reply");
-      } else if (typeof window.speak === "function") {
-        window.speak(message);
-      }
+      if (typeof window.showReply === "function") window.showReply(message, error ? "error" : "reply");
+      else if (typeof window.speak === "function") window.speak(message);
     } catch (_) {}
   }
 
@@ -94,7 +135,6 @@
       showReply("Opening " + item.label + " on GitHub.");
       return;
     }
-    // Speech-triggered popups may be blocked by the browser; show a safe tap-to-open link.
     let box = document.getElementById("jarvis-github-access-fallback");
     if (!box) {
       box = document.createElement("div");
@@ -140,8 +180,6 @@
     return true;
   }
 
-  // Catch text submissions before other command handlers. The original voice
-  // recognition and wake-word pipeline are left untouched.
   document.addEventListener("submit", event => {
     if (event.target?.id !== "commandForm") return;
     const field = input();
@@ -160,8 +198,7 @@
     field.value = "";
   }, true);
 
-  // Voice commands already flow through sendCommand(). Intercept only the
-  // GitHub-specific phrases and pass every other command to the original.
+  // Intercept only GitHub-specific phrases; every other voice command follows the original path.
   const wrapSendCommand = () => {
     if (typeof window.sendCommand !== "function" || window.sendCommand.__jarvisGithubWrapped) return false;
     const original = window.sendCommand.bind(window);
