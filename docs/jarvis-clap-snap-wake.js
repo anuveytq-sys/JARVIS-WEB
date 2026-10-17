@@ -186,11 +186,11 @@
     }
     const highBandRatio = allBandEnergy ? highBandEnergy / allBandEnergy : 0;
     const crestFactor = peak / Math.max(rms, 0.008);
-    const sharpOnset = onsetRatio > 2.35 && baselineRatio > 3.2;
-    const transientLevel = rms > 0.032 && peak > 0.27;
-    const broadbandTransient = zeroCrossRate > 0.075 &&
-      spectralCentroid > 0.22 && highBandRatio > 0.20;
-    const impulse = sharpOnset && transientLevel && broadbandTransient && crestFactor > 2.0;
+    const sharpOnset = onsetRatio > 1.7 && baselineRatio > 2.2;
+    const transientLevel = rms > 0.018 && peak > 0.18;
+    const broadbandTransient = zeroCrossRate > 0.055 &&
+      spectralCentroid > 0.16 && highBandRatio > 0.12;
+    const impulse = sharpOnset && transientLevel && broadbandTransient && crestFactor > 1.7;
 
     if (impulse) {
       if (now - lastImpulseAt <= COOLDOWN_MS) impulseFrames++;
@@ -202,7 +202,7 @@
 
     // A sharp transient must be visible in more than one analysis frame.
     // This rejects sustained vowels/room noise while still allowing snaps.
-    if (impulseFrames >= 2) {
+    if (impulseFrames >= 1) {
       trigger();
       return;
     }
@@ -223,19 +223,45 @@
   }
 
   async function startDetector(fromGesture = false) {
-    if (triggered || armed || starting) {
-      if (fromGesture && audioContext && audioContext.state !== "running") {
-        try { await audioContext.resume(); } catch (_) {}
-        armIfAudioIsRunning();
-      }
-      return;
-    }
-    if (!navigator.mediaDevices?.getUserMedia || (!window.AudioContext && !window.webkitAudioContext)) {
+    if (triggered || armed) return;
+
+    // IMPORTANT for iOS Safari: create/resume Web Audio synchronously inside
+    // the user's gesture, before awaiting getUserMedia. Creating AudioContext
+    // only after the permission promise resolves can leave it permanently
+    // suspended on mobile browsers.
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!navigator.mediaDevices?.getUserMedia || !Ctx) {
       console.warn("[JARVIS clap/snap greeting] microphone audio detection is not supported in this browser.");
       return;
     }
+
+    if (fromGesture) {
+      try {
+        if (!audioContext) audioContext = new Ctx();
+        if (audioContext.state !== "running") await audioContext.resume();
+      } catch (error) {
+        console.warn("[JARVIS clap/snap greeting] browser audio unlock failed:", error);
+      }
+    }
+
+    if (starting) {
+      // A gesture may arrive while microphone permission is pending. It still
+      // tries to unlock the already-created context and the continuation below
+      // will arm the detector once the stream is available.
+      if (fromGesture && audioContext && audioContext.state !== "running") {
+        try { await audioContext.resume(); } catch (_) {}
+      }
+      return;
+    }
+
+    if (armed) return;
     starting = true;
     try {
+      if (!audioContext) audioContext = new Ctx();
+      if (fromGesture && audioContext.state !== "running") {
+        try { await audioContext.resume(); } catch (_) {}
+      }
+
       if (!detectorStream) {
         detectorStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
@@ -243,23 +269,23 @@
         });
       }
       if (triggered) { stopDetector(); return; }
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!audioContext) {
-        audioContext = new Ctx();
+
+      if (!analyser) {
         detectorSource = audioContext.createMediaStreamSource(detectorStream);
         analyser = audioContext.createAnalyser();
-        analyser.fftSize = 1024;
+        analyser.fftSize = 2048;
         analyser.smoothingTimeConstant = 0;
         detectorSource.connect(analyser);
       }
-      // iOS Safari often suspends Web Audio until a real user gesture.
-      // A gesture listener below resumes it without changing JARVIS's UI.
+
+      // If page load was not allowed to activate audio, the first later tap
+      // resumes the context. Do not silently claim success unless it is running.
       if (fromGesture && audioContext.state !== "running") {
         try { await audioContext.resume(); } catch (_) {}
       }
       armIfAudioIsRunning();
       if (!armed) {
-        console.info("[JARVIS clap/snap greeting] audio is waiting for a browser gesture to activate the microphone detector.");
+        console.info("[JARVIS clap/snap greeting] audio context is suspended; tap the page once to activate microphone analysis.");
       }
     } catch (error) {
       console.warn("[JARVIS clap/snap greeting] microphone permission/detector unavailable:", error);
@@ -270,16 +296,28 @@
 
   function unlockDetectorFromGesture() {
     if (triggered) return;
-    // The first normal tap/key interaction silently unlocks audio on browsers
-    // that forbid autoplay audio processing. It does not enable the wake word.
-    startDetector(true);
+    // Do not let the page-load permission request block the gesture-based
+    // audio unlock. startDetector handles retries if the earlier request failed.
     if (audioContext && audioContext.state !== "running") {
-      audioContext.resume().then(armIfAudioIsRunning).catch(() => {});
+      audioContext.resume().then(() => {
+        armIfAudioIsRunning();
+        if (!armed && !starting) startDetector(true);
+      }).catch(() => {
+        if (!starting) startDetector(true);
+      });
     } else {
-      armIfAudioIsRunning();
+      startDetector(true);
     }
   }
 
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && !triggered) {
+      if (audioContext && audioContext.state !== "running") {
+        audioContext.resume().then(armIfAudioIsRunning).catch(() => {});
+      }
+      if (!armed && !starting) startDetector(true);
+    }
+  });
   function boot() {
     // Wait for the existing UI patch to create the real wake-word button.
     // The screen and all JARVIS controls remain unchanged while listening.
