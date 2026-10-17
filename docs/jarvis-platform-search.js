@@ -38,9 +38,9 @@
   function clean(value) {
     return String(value || "")
       .toLowerCase()
-      .replace(/^(?:(?:hey|hello|hi|ok|okay)\\s+)?jarvis\\b[,: ]*/i, "")
+      .replace(/^(?:(?:hey|hello|hi|ok|okay)\s+)?jarvis\b[,: ]*/i, "")
       .replace(/[.!?]+$/g, "")
-      .replace(/\\s+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
   }
 
@@ -103,9 +103,9 @@
     if (!text) return null;
 
     // Also accept: "open ChatGPT, search NASA".
-    text = text.replace(/^open\\s+(.+?)\\s*[,;:]\\s*(?:then\\s+)?/, "search $1 about ");
+    text = text.replace(/^open\s+(.+?)\s*[,;:]\s*(?:then\s+)?/, "search $1 about ");
 
-    const intent = /^(?:please\\s+)?(?:search|look up|find|ask|query)\\b/i.exec(text);
+    const intent = /^(?:please\s+)?(?:search|look up|find|ask|query)\b/i.exec(text);
     if (!intent) return null;
 
     const platform = findPlatform(text);
@@ -131,7 +131,7 @@
           const before = text.slice(0, platformIndex).trim();
           const after = text.slice(platformIndex + platform.match.length).trim();
           if (/^(?:please\\s+)?(?:search|look up|find|ask|query)$/.test(before)) {
-            query = after.replace(/^(?:about|for|regarding|to explain|to search|to find)\\s+/i, "");
+            query = after.replace(/^(?:about|for|regarding|to explain|to search|to find)\s+/i, "");
           } else {
             return null;
           }
@@ -140,8 +140,8 @@
     }
 
     query = query
-      .replace(/^(?:about|for|regarding|to explain|to search|to find)\\s+/i, "")
-      .replace(/\\b(?:on|in|using|with)\\s+$/i, "")
+      .replace(/^(?:about|for|regarding|to explain|to search|to find)\s+/i, "")
+      .replace(/\b(?:on|in|using|with)\s+$/i, "")
       .replace(/[.!?]+$/g, "")
       .replace(/\\s+/g, " ")
       .trim();
