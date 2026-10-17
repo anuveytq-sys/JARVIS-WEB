@@ -97,6 +97,39 @@
   }
   let lastSpokenText = "";
   let lastSpokenAt = 0;
+  let speechRun = 0;
+  let speechStartTimer = 0;
+  let speechWatchdogTimer = 0;
+  let wakeResumeTimer = 0;
+  let wakePausedByTts = false;
+
+  // Mobile Safari can lower TTS loudness while the always-on microphone is active.
+  // Reuse the existing mic hand-off hooks only while JARVIS is speaking; do not
+  // change the wake phrase, recognition settings, or wake-word UI/state.
+  function pauseWakeForTts() {
+    clearTimeout(wakeResumeTimer);
+    wakeResumeTimer = 0;
+    if (wakePausedByTts) return;
+    try {
+      if (typeof window.__jarvisPauseWakeWordForEnvironment === "function") {
+        window.__jarvisPauseWakeWordForEnvironment();
+        wakePausedByTts = true;
+      }
+    } catch (_) {}
+  }
+  function resumeWakeAfterTts(run) {
+    if (run !== speechRun || !wakePausedByTts) return;
+    clearTimeout(speechWatchdogTimer);
+    speechWatchdogTimer = 0;
+    clearTimeout(wakeResumeTimer);
+    wakeResumeTimer = setTimeout(() => {
+      if (run !== speechRun || !wakePausedByTts) return;
+      try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {}
+      wakePausedByTts = false;
+      wakeResumeTimer = 0;
+    }, 450);
+  }
+
   function applyJarvisVoice(text) {
     if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
     const spokenText = String(text || "").trim();
@@ -108,6 +141,12 @@
     lastSpokenText = spokenText;
     lastSpokenAt = now;
     if (window.__jarvisVoiceStop) return false;
+
+    const run = ++speechRun;
+    clearTimeout(speechStartTimer);
+    clearTimeout(speechWatchdogTimer);
+    pauseWakeForTts();
+
     const utterance = new SpeechSynthesisUtterance(spokenText);
     const voice = findJarvisVoice();
     if (voice) { utterance.voice = voice; utterance.lang = voice.lang || "en-US"; }
@@ -116,17 +155,41 @@
     utterance.rate = Math.min(1.15, Math.max(0.65, profile ? profile.rate : getVoiceRate()));
     utterance.pitch = Math.min(1.2, Math.max(0.5, profile ? profile.pitch : getVoicePitch()));
     utterance.volume = 1;
+
+    const finishSpeech = () => resumeWakeAfterTts(run);
+    utterance.onend = finishSpeech;
+    utterance.onerror = finishSpeech;
+
+    const startSpeech = () => {
+      if (run !== speechRun) return;
+      if (window.__jarvisVoiceStop) { resumeWakeAfterTts(run); return; }
+      // Allow iOS Safari to release microphone audio ducking before TTS starts.
+      speechStartTimer = setTimeout(() => {
+        if (run !== speechRun || window.__jarvisVoiceStop) {
+          resumeWakeAfterTts(run);
+          return;
+        }
+        try {
+          window.speechSynthesis.speak(utterance);
+          // Fallback in case this browser fails to fire onend/onerror.
+          speechWatchdogTimer = setTimeout(() => resumeWakeAfterTts(run),
+            Math.max(7000, spokenText.length * 180 + 2500));
+        } catch (_) {
+          resumeWakeAfterTts(run);
+        }
+      }, 350);
+    };
+
     // Retry once voices finish loading; some mobile browsers initially return none.
+    window.speechSynthesis.cancel();
     if (!voice && window.speechSynthesis.getVoices().length === 0) {
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.onvoiceschanged = null;
-        if (!window.__jarvisVoiceStop) window.speechSynthesis.speak(utterance);
+        startSpeech();
       };
-      window.speechSynthesis.cancel();
       return true;
     }
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    startSpeech();
     return true;
   }
   // The original HUD's sendCommand() calls speak(reply). Replace its browser
