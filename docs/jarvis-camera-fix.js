@@ -164,6 +164,25 @@
     setSettingsVisible(true);
   }
 
+  // Open the camera from a JARVIS command, wait until video frames are ready,
+  // and take one photo automatically. The browser still requires a user tap to save.
+  async function openAndCapturePhoto() {
+    await startCamera();
+    if (!stream) return false;
+    for (let attempt = 0; attempt < 40 && stream && !video?.videoWidth; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (!stream || !video?.videoWidth) {
+      if (status) status.textContent = "Camera opened, but the image is not ready yet. Tap CLICK PHOTO to try again.";
+      return false;
+    }
+    return capturePhoto();
+  }
+
+  // Allow the main JARVIS command bridge to use this same camera UI/controller.
+  window.jarvisOpenCameraAndCapturePhoto = openAndCapturePhoto;
+  window.jarvisCloseCamera = closeCamera;
+
   function startCameraWakeRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
@@ -279,7 +298,7 @@
     if (isPhotoCommand(command)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (!modal || modal.style.display !== "flex") startCamera();
+      if (!modal || modal.style.display !== "flex" || !stream) openAndCapturePhoto();
       else capturePhoto();
       return;
     }
