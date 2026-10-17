@@ -27,6 +27,7 @@ jobs:
       - name: Validate browser JavaScript
         run: |
           node --check docs/jarvis-web.js
+          node --check docs/jarvis-universal-service-router.js
           node --check docs/jarvis-github-access.js
           node --check docs/jarvis-platform-search.js
           node --check docs/jarvis-ui-patch.js
@@ -105,6 +106,7 @@ jobs:
           PY
 
           cp public/index.html _site/index.html
+          cp docs/jarvis-universal-service-router.js _site/jarvis-universal-service-router.js
           cp docs/jarvis-github-access.js _site/jarvis-github-access.js
           cp docs/jarvis-platform-search.js _site/jarvis-platform-search.js
           cp docs/jarvis-web.js _site/jarvis-web.js
