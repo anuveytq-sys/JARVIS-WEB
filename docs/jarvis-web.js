@@ -908,12 +908,14 @@
     }
     const photoIntent = /\b(?:click|take|capture|snap)\b.*\b(?:photo|picture|pic|image)\b/i.test(text)
       || /\b(?:photo|picture|pic|image)\b.*\b(?:click|take|capture|snap)\b/i.test(text);
-    if (photoIntent || isAny(text, ["open camera", "camera", "take a photo"])) return camera();
     if (/\b(?:close|exit|stop|hide)\b.*\bcamera\b/i.test(text)
       || /\bcamera\b.*\b(?:close|exit|stop|hide)\b/i.test(text)) {
       if (typeof window.jarvisCloseCamera === "function") window.jarvisCloseCamera();
       return say("Camera closed.");
     }
+    if (photoIntent || /^(?:(?:hey|hello|ok|okay)\s+)?jarvis[, ]*\s*(?:(?:open|launch|start|show|turn on)(?: the)?\s+)?camera[.! ]*$/i.test(text)
+      || /\b(?:open|launch|start|show|turn on)(?: the)?\s+camera\b/i.test(text)
+      || /^camera$/i.test(text.trim())) return camera();
     return null;
   }
 
