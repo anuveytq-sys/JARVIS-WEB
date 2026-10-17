@@ -47,9 +47,25 @@
   const VOICE_NAME_SLOT = "jarvisVoiceName";
   const VOICE_RATE_SLOT = "jarvisVoiceRate";
   const VOICE_PITCH_SLOT = "jarvisVoicePitch";
+  // Match the original main HUD voice defaults (rate/pitch 0.95). Older bridge
+  // defaults (0.88/0.72) made replies sound slower and less present.
+  // Migrate only those legacy defaults; leave other user-selected settings alone.
+  try {
+    if (sessionStorage.getItem("jarvisVoiceDefaultsVersion") !== "main-hud-095") {
+      if (!sessionStorage.getItem(VOICE_RATE_SLOT) || sessionStorage.getItem(VOICE_RATE_SLOT) === "0.88") {
+        sessionStorage.setItem(VOICE_RATE_SLOT, "0.95");
+      }
+      if (!sessionStorage.getItem(VOICE_PITCH_SLOT) || sessionStorage.getItem(VOICE_PITCH_SLOT) === "0.72") {
+        sessionStorage.setItem(VOICE_PITCH_SLOT, "0.95");
+      }
+      const savedVoice = sessionStorage.getItem(VOICE_NAME_SLOT) || "";
+      if (/\|0\.60\|0\.84$/.test(savedVoice)) sessionStorage.setItem(VOICE_NAME_SLOT, "auto-male");
+      sessionStorage.setItem("jarvisVoiceDefaultsVersion", "main-hud-095");
+    }
+  } catch (_) {}
   const getVoiceName = () => { try { return sessionStorage.getItem(VOICE_NAME_SLOT) || "auto-male"; } catch (_) { return "auto-male"; } };
-  const getVoiceRate = () => { try { return Number(sessionStorage.getItem(VOICE_RATE_SLOT) || 0.88); } catch (_) { return 0.88; } };
-  const getVoicePitch = () => { try { return Number(sessionStorage.getItem(VOICE_PITCH_SLOT) || 0.72); } catch (_) { return 0.72; } };
+  const getVoiceRate = () => { try { return Number(sessionStorage.getItem(VOICE_RATE_SLOT) || 0.95); } catch (_) { return 0.95; } };
+  const getVoicePitch = () => { try { return Number(sessionStorage.getItem(VOICE_PITCH_SLOT) || 0.95); } catch (_) { return 0.95; } };
   const feminineVoiceHints = /female|woman|samantha|victoria|karen|susan|zira|hazel|sara(h)?|aria|jenny|libby|natasha|moira|tessa|fiona|ava|allison|joanna|kendra|kimberly|salli|ivy|emma|olivia|serena|monica|luciana|kate|amelie|helena|linda|mary|lisa|nicole|catherine|veena|priya|lekha/i;
   const masculineVoiceHints = /david|daniel|mark|guy|eric|roger|alex|fred|tom|male|microsoft.*(david|guy|mark|ryan)|google.*(uk english male|us english)|aaron|arthur|bruce|george|james|lee|liam|matthew|michael|oliver|paul|rishi|ryan|thomas/i;
   function getEnglishVoices() {
