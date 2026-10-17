@@ -20,8 +20,6 @@ function theme(){return ({main:'#00aaff',velve:'#ff303b',terra:'#ffad42',command
 function ensureUI(){
  if($('#jarvis-hand-gesture-toggle'))return;
  const style=document.createElement('style');style.id='jarvis-hand-gesture-style';style.textContent=`
- .core-stage.jarvis-core-enhanced::before{transform:translate(-50%,-50%) scale(var(--jg-main-glow-zoom,1))!important}
- .core-stage.jarvis-core-enhanced::after{transform:translate(-50%,-50%) rotateX(68deg) scale(var(--jg-main-glow-zoom,1))!important}
  #jarvis-hand-gesture-toggle{position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:2147483646;width:38px;height:38px;border:1px solid var(--jg-color,#00aaff);border-radius:50%;background:rgba(0,9,22,.86);color:var(--jg-color,#00aaff);box-shadow:0 0 10px color-mix(in srgb,var(--jg-color,#00aaff) 40%,transparent),inset 0 0 10px rgba(255,255,255,.035);display:grid;place-items:center;font:700 18px/1 system-ui;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:box-shadow .18s,background .18s;touch-action:manipulation;padding:0}
  #jarvis-hand-gesture-toggle:active{filter:brightness(1.25)}
  #jarvis-hand-gesture-toggle[aria-pressed=true]{background:color-mix(in srgb,var(--jg-color,#00aaff) 18%,rgba(0,9,22,.94));box-shadow:0 0 9px var(--jg-color),0 0 22px color-mix(in srgb,var(--jg-color) 38%,transparent)}
@@ -66,8 +64,6 @@ function applyVisualZoom(value){
    // reactor, clickable core and pseudo-element effects around the same 50%/50% point.
    const stage=$('.core-stage');
    if(stage){
-     stage.style.setProperty('--jg-main-zoom',String(value));
-     stage.style.setProperty('--jg-main-glow-zoom',String(value));
      const reactor=stage.querySelector('.jarvis-core-3d');
      if(reactor){reactor.style.transformOrigin='50% 50%';reactor.style.transform='translate(-50%,-50%) scale('+value+')';}
      const hit=stage.querySelector('.jarvis-core-voice-hit');
@@ -119,7 +115,7 @@ function cleanup(resetZoom=true){
  try{if(hands)hands.close();}catch(_){}hands=null;
  if(video){try{video.pause();video.srcObject=null;video.remove();}catch(_){}video=null;}
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
- if(resetZoom){targetZoom=currentZoom=anchorZoom=lastAppliedZoom=1;document.documentElement.style.removeProperty('--jg-core-zoom');document.querySelectorAll('.core-stage').forEach(el=>{el.style.removeProperty('--jg-main-zoom');el.style.removeProperty('--jg-main-glow-zoom');const reactor=el.querySelector('.jarvis-core-3d');if(reactor){reactor.style.removeProperty('transform');reactor.style.removeProperty('transform-origin')}const hit=el.querySelector('.jarvis-core-voice-hit');if(hit){hit.style.removeProperty('transform');hit.style.removeProperty('transform-origin')}});document.querySelectorAll('#nn-core,.nn-core-area,.jvi-core-orb,.jvi-holo,.jvi-neural-network,#velve-globe canvas,#terranexus-overlay canvas').forEach(el=>{el.style.removeProperty('scale');if(el.style.transition==='none')el.style.removeProperty('transition');if(el.style.transformOrigin==='center center')el.style.removeProperty('transform-origin');});}
+ if(resetZoom){targetZoom=currentZoom=anchorZoom=lastAppliedZoom=1;document.documentElement.style.removeProperty('--jg-core-zoom');document.querySelectorAll('.core-stage').forEach(el=>{const reactor=el.querySelector('.jarvis-core-3d');if(reactor){reactor.style.removeProperty('transform');reactor.style.removeProperty('transform-origin')}const hit=el.querySelector('.jarvis-core-voice-hit');if(hit){hit.style.removeProperty('transform');hit.style.removeProperty('transform-origin')}});document.querySelectorAll('#nn-core,.nn-core-area,.jvi-core-orb,.jvi-holo,.jvi-neural-network,#velve-globe canvas,#terranexus-overlay canvas').forEach(el=>{el.style.removeProperty('scale');if(el.style.transition==='none')el.style.removeProperty('transition');if(el.style.transformOrigin==='center center')el.style.removeProperty('transform-origin');});}
 }
 function stop(message='Hand gesture control off'){cleanup(true);setButton(false);showStatus(message);}
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)stop('Gesture camera paused while page is hidden. Tap to enable again.');});
