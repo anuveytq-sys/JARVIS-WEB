@@ -1,9 +1,8 @@
 /* JARVIS clap/snap wake assist.
    Isolated add-on: it does not replace the existing wake-word, voice, volume,
    or speech-recognition implementation. It only reacts while WAKE WORD: ON.
-   On a detected clap/snap it pauses the existing recognizer, speaks the
-   time-aware greeting through the existing JARVIS voice entry point, then
-   captures one main command and returns control to the original wake system.
+   A dedicated acoustic feature gate is used so ordinary speech/commands are
+   ignored; only short, sharp clap/snap-like events can trigger the greeting.
 */
 (() => {
   "use strict";
@@ -19,17 +18,19 @@
   let detectorFrame = 0;
   let baseline = 0.018;
   let previousRms = 0.018;
-  let calibrationUntil = 0;
   let armed = false;
   let busy = false;
   let lastTrigger = 0;
   let ignoreUntil = 0;
   let commandRecognition = null;
+  let impulseFrames = 0;
+  let lastImpulseAt = 0;
 
   const WAKE_ON_RE = /WAKE WORD:\s*ON/i;
-  const COOLDOWN_MS = 2600;
-  const REARM_SILENCE_MS = 1400;
-  const CALIBRATION_MS = 900;
+  const COOLDOWN_MS = 3000;
+  const REARM_SILENCE_MS = 1800;
+  const CALIBRATION_MS = 1000;
+  const FRAME_MS = 1000 * 1024 / 44100;
 
   function wakeIsOn() {
     const button = toggle();
@@ -68,14 +69,21 @@
       audioContext = null;
     }
     armed = false;
+    impulseFrames = 0;
+    lastImpulseAt = 0;
   }
 
   function finishCommandCapture() {
     busy = false;
+    // Never immediately re-arm against the tail of the user's command or
+    // JARVIS audio. Give the microphone a clean quiet window first.
     ignoreUntil = Date.now() + REARM_SILENCE_MS;
     previousRms = 0.018;
+    impulseFrames = 0;
     try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {}
-    if (wakeIsOn()) startDetector();
+    if (wakeIsOn()) setTimeout(() => {
+      if (wakeIsOn() && !busy) startDetector();
+    }, REARM_SILENCE_MS);
   }
 
   function submitTranscript(transcript) {
@@ -178,8 +186,12 @@
 
   function detectLoop() {
     if (!analyser || !armed || !wakeIsOn() || busy) return;
+
     const timeData = new Uint8Array(analyser.fftSize);
+    const freqData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteTimeDomainData(timeData);
+    analyser.getByteFrequencyData(freqData);
+
     let sum = 0;
     let peak = 0;
     let crossings = 0;
@@ -192,14 +204,20 @@
       if ((centered >= 0) !== (previous >= 0)) crossings++;
       previous = centered;
     }
+
     const rms = Math.sqrt(sum / timeData.length);
     const zeroCrossRate = crossings / timeData.length;
+    let weightedEnergy = 0;
+    let totalEnergy = 0;
+    for (let i = 0; i < freqData.length; i++) {
+      const energy = freqData[i] / 255;
+      totalEnergy += energy;
+      weightedEnergy += i * energy;
+    }
+    const spectralCentroid = totalEnergy ? weightedEnergy / totalEnergy / freqData.length : 0;
     const now = Date.now();
 
-    // Calibrate against the room before accepting any trigger. This prevents
-    // the detector from treating ordinary voice/mic gain as a clap baseline.
-    if (now < calibrationUntil) {
-      baseline = baseline * 0.92 + rms * 0.08;
+    if (now < ignoreUntil) {
       previousRms = rms;
       detectorFrame = requestAnimationFrame(detectLoop);
       return;
@@ -209,28 +227,44 @@
     const onsetRatio = rms / Math.max(previousRms, 0.012);
     const baselineRatio = rms / Math.max(baseline, 0.012);
 
-    // Deliberately require a short, sharp acoustic onset with high-frequency
-    // content. Sustained speech has a much slower onset and is rejected.
-    const sharpOnset = onsetRatio > 1.65 && baselineRatio > 4.8;
-    const loudTransient = rms > 0.12 && peak > 0.58;
-    const broadbandTransient = zeroCrossRate > 0.12 && peak > 0.62;
-    const eligible = now >= ignoreUntil && sharpOnset && loudTransient && broadbandTransient;
+    // A clap/snap is treated as a short impulsive event: fast onset, high peak,
+    // broadband/high-frequency content and only a very short run of frames.
+    // Ordinary speech is sustained and voiced, so it must not satisfy this gate.
+    const sharpOnset = onsetRatio > 1.8 && baselineRatio > 5.0;
+    const loudTransient = rms > 0.105 && peak > 0.55;
+    const broadbandTransient = zeroCrossRate > 0.105 && spectralCentroid > 0.18 && peak > 0.58;
+    const impulse = sharpOnset && loudTransient && broadbandTransient;
 
-    if (eligible) trigger();
+    if (impulse) {
+      if (now - lastImpulseAt <= FRAME_MS * 3.2) impulseFrames++;
+      else impulseFrames = 1;
+      lastImpulseAt = now;
+    } else if (now - lastImpulseAt > FRAME_MS * 4.5) {
+      impulseFrames = 0;
+    }
+
+    // Require a compact impulse sequence rather than one noisy microphone frame.
+    // This makes normal spoken words much less likely to activate the greeting.
+    if (impulseFrames >= 2 && now >= ignoreUntil) {
+      impulseFrames = 0;
+      trigger();
+      return;
+    }
+
     previousRms = rms;
     detectorFrame = requestAnimationFrame(detectLoop);
   }
 
   async function startDetector() {
-    if (armed || busy || !wakeIsOn()) return;
-    if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext && !window.webkitAudioContext) return;
+    if (armed || busy || !wakeIsOn() || Date.now() < ignoreUntil) return;
+    if (!navigator.mediaDevices?.getUserMedia || (!window.AudioContext && !window.webkitAudioContext)) return;
     try {
       detectorStream = await navigator.mediaDevices.getUserMedia({ audio: {
         echoCancellation: true,
         noiseSuppression: false,
         autoGainControl: false
       }, video: false });
-      if (!wakeIsOn()) { stopDetector(); return; }
+      if (!wakeIsOn() || busy) { stopDetector(); return; }
       const Ctx = window.AudioContext || window.webkitAudioContext;
       audioContext = new Ctx();
       detectorSource = audioContext.createMediaStreamSource(detectorStream);
@@ -240,7 +274,8 @@
       detectorSource.connect(analyser);
       baseline = 0.018;
       previousRms = 0.018;
-      calibrationUntil = Date.now() + CALIBRATION_MS;
+      impulseFrames = 0;
+      lastImpulseAt = 0;
       armed = true;
       detectorFrame = requestAnimationFrame(detectLoop);
     } catch (error) {
@@ -251,7 +286,7 @@
 
   function monitorWakeToggle() {
     const on = wakeIsOn();
-    if (on && !armed && !busy) startDetector();
+    if (on && !armed && !busy && Date.now() >= ignoreUntil) startDetector();
     if (!on && (armed || busy)) {
       try { commandRecognition?.abort(); } catch (_) {}
       commandRecognition = null;
