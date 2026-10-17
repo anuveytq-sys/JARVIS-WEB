@@ -209,7 +209,7 @@ body.neon-nexus-active #nn-launcher,body.neon-nexus-active #jarvis-wake-word-tog
 #neon-nexus .nn-panel-system .nn-system-metric b{max-width:58%;white-space:normal;text-align:right;overflow-wrap:anywhere;font-size:7px;}
 #neon-nexus .nn-panel-system .nn-system-note{padding:10px 2px;font-size:7px;line-height:1.55;color:#b88ab2;}
 @media(max-width:740px){
-  #neon-nexus .nn-panel-system{top:calc(67px + 42vh + 10px);bottom:76px;height:auto;max-height:none;}
+  #neon-nexus .nn-panel-system{top:calc(67px + 42vh + 10px);bottom:auto;height:21vh;min-height:0;max-height:none;}
   #neon-nexus .nn-panel-system .nn-system-metric{font-size:5px;gap:3px;padding:6px 1px;}
   #neon-nexus .nn-panel-system .nn-system-metric b{font-size:5px;}
   #neon-nexus .nn-monitor-stamp{font-size:4.7px;letter-spacing:0;}
