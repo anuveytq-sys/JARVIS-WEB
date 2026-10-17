@@ -906,11 +906,11 @@
       const input = document.createElement("input"); input.type = "file"; input.multiple = true; input.click();
       return say("Opening the browser file picker. A website cannot access your device's full file manager without permission.");
     }
-    const photoIntent = /\\b(?:click|take|capture|snap)\\b.*\\b(?:photo|picture|pic|image)\\b/i.test(text)
-      || /\\b(?:photo|picture|pic|image)\\b.*\\b(?:click|take|capture|snap)\\b/i.test(text);
+    const photoIntent = /\b(?:click|take|capture|snap)\b.*\b(?:photo|picture|pic|image)\b/i.test(text)
+      || /\b(?:photo|picture|pic|image)\b.*\b(?:click|take|capture|snap)\b/i.test(text);
     if (photoIntent || isAny(text, ["open camera", "camera", "take a photo"])) return camera();
-    if (/\\b(?:close|exit|stop|hide)\\b.*\\bcamera\\b/i.test(text)
-      || /\\bcamera\\b.*\\b(?:close|exit|stop|hide)\\b/i.test(text)) {
+    if (/\b(?:close|exit|stop|hide)\b.*\bcamera\b/i.test(text)
+      || /\bcamera\b.*\b(?:close|exit|stop|hide)\b/i.test(text)) {
       if (typeof window.jarvisCloseCamera === "function") window.jarvisCloseCamera();
       return say("Camera closed.");
     }
