@@ -8,9 +8,9 @@
 
   const clean = value => String(value || "")
     .trim()
-    .replace(/^(?:(?:hey|hello|hi|ok|okay)\\s+)?jarvis\\b[,: ]*/i, "")
+    .replace(/^(?:(?:hey|hello|hi|ok|okay)\s+)?jarvis\b[,: ]*/i, "")
     .replace(/[.!?]+$/g, "")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   // Well-known public web services. Opening a site does not imply account sign-in or API access.
@@ -112,33 +112,32 @@
   };
 
   function githubIntent(text) {
-    const normalized = text.replace(/\\b(?:on|in)\\s+(?:git\\s*hub|github)\\b/gi, "")
-      .replace(/\\b(?:please|for me|now|could you|can you|would you)\\b/gi, "").trim();
+    const normalized = text.replace(/\b(?:on|in)\s+(?:git\s*hub|github)\b/gi, "")
+      .replace(/\b(?:please|for me|now|could you|can you|would you)\b/gi, "").trim();
     const api = window.JARVISGitHubAccess;
     if (api && typeof api.parseCommand === "function") {
       const parsed = api.parseCommand(normalized);
       if (parsed) return parsed;
     }
-    let m = normalized.match(/^(?:(?:please )?(?:open|find|search|show|look up|go to|visit|launch)\\s+)?(?:the\\s+)?(.+?)\\s+(?:repository|repositories|repo|repos)$/i);
+    let m = normalized.match(/^(?:(?:please )?(?:open|find|search|show|look up|go to|visit|launch)\s+)?(?:the\s+)?(.+?)\s+(?:repository|repositories|repo|repos)$/i);
     if (m) return { url: "https://github.com/search?q=" + encodeURIComponent(m[1].trim()) + "&type=repositories", label: "GitHub repository search for " + m[1].trim() };
-    m = normalized.match(/^(?:search|find|look up)\\s+(.+)$/i);
+    m = normalized.match(/^(?:search|find|look up)\s+(.+)$/i);
     if (m) return { url: "https://github.com/search?q=" + encodeURIComponent(m[1].trim()), label: "GitHub search for " + m[1].trim() };
     return null;
   }
 
-  const escapeRegex = s => s.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
   const allNames = [...new Set([...Object.keys(sites), ...Object.keys(aliases)])].sort((a,b)=>b.length-a.length);
 
   function classify(raw) {
     const text = clean(raw);
     if (!text) return null;
     const lower = text.toLowerCase();
-    const githubRelated = /\\bgithub\\b|\\b(?:repositories|repository|repos|repo|pull requests|issues|commits|discussions|username|user account)\\b/i.test(text);
+    const githubRelated = /\bgithub\b|\b(?:repositories|repository|repos|repo|pull requests|issues|commits|discussions|username|user account)\b/i.test(text);
     if (githubRelated) {
       const gh = githubIntent(text);
       if (gh) return gh;
-      if (/\\b(?:repository|repositories|repo|repos)\\b/i.test(text)) {
-        const term = text.replace(/\\b(?:please|can you|could you|would you|search|find|show|open|look up|on github|in github|the|repository|repositories|repo|repos)\\b/gi, "").trim();
+      if (/\b(?:repository|repositories|repo|repos)\b/i.test(text)) {
+        const term = text.replace(/\b(?:please|can you|could you|would you|search|find|show|open|look up|on github|in github|the|repository|repositories|repo|repos)\b/gi, "").trim();
         if (term) return { url: "https://github.com/search?q=" + encodeURIComponent(term) + "&type=repositories", label: "GitHub repository search for " + term };
       }
     }
@@ -146,8 +145,7 @@
     // Resolve aliases and common names; longest names first to avoid partial matches.
     let found = null;
     for (const name of allNames) {
-      const re = new RegExp("(^|\\\\b)" + escapeRegex(name) + "($|\\\\b)", "i");
-      if (re.test(lower)) { found = name; break; }
+      if (lower.includes(name)) { found = name; break; }
     }
     if (!found) return null;
     const target = aliases[found] || found;
@@ -156,15 +154,15 @@
 
     const normalized = lower
       .replace(/^(?:jarvis[,: ]*)?/i, "")
-      .replace(/\\b(?:please|for me|right now|now|thanks|thank you|could you|can you|would you|will you|hey|open up|open|launch|start|visit|load|go to|take me to|show me|bring up|navigate to|access|enter|website|web site|site|app|application|platform|service|homepage|home page|the|my)\\b/gi, " ")
-      .replace(/\\s+/g, " ").trim();
+      .replace(/\b(?:please|for me|right now|now|thanks|thank you|could you|can you|would you|will you|hey|open up|open|launch|start|visit|load|go to|take me to|show me|bring up|navigate to|access|enter|website|web site|site|app|application|platform|service|homepage|home page|the|my)\b/gi, " ")
+      .replace(/\s+/g, " ").trim();
     const bare = normalized === found || normalized === target || normalized === (target === "maps" ? "google maps" : target);
-    const action = /\\b(open|launch|start|visit|load|go to|take me to|show me|bring up|navigate to|access|enter|head to|switch to)\\b/i.test(lower);
-    const serviceMention = new RegExp("(^|\\\\b)" + escapeRegex(found) + "($|\\\\b)", "i").test(lower);
+    const action = /\b(open|launch|start|visit|load|go to|take me to|show me|bring up|navigate to|access|enter|head to|switch to)\b/i.test(lower);
+    const serviceMention = lower.includes(found);
     if (bare || (serviceMention && action)) return { url, label: target };
 
     // Search requests are sent to the selected service when that service supports a public search URL.
-    const m = text.match(/^(?:(?:hey )?jarvis[, ]*)?(?:please )?(?:(?:can|could|would) you )?(?:search|find|look up|search for|look for)\\s+(.+?)\\s+(?:on|in|using)\\s+(.+?)$/i);
+    const m = text.match(/^(?:(?:hey )?jarvis[, ]*)?(?:please )?(?:(?:can|could|would) you )?(?:search|find|look up|search for|look for)\s+(.+?)\s+(?:on|in|using)\s+(.+?)$/i);
     if (m) {
       const term = m[1].trim();
       const serviceName = m[2].trim().toLowerCase();
