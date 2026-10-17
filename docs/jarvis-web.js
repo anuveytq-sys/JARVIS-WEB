@@ -47,23 +47,25 @@
   const VOICE_NAME_SLOT = "jarvisVoiceName";
   const VOICE_RATE_SLOT = "jarvisVoiceRate";
   const VOICE_PITCH_SLOT = "jarvisVoicePitch";
-  // Use one consistent native browser voice profile for JARVIS replies. The previous
-  // named-voice preference can sound noticeably quieter than the browser default on iOS.
-  // Update only the bridge defaults; leave explicitly selected custom voice profiles alone.
+  // Match the original main HUD voice defaults (rate/pitch 0.95). Older bridge
+  // defaults (0.88/0.72) made replies sound slower and less present.
+  // Migrate only those legacy defaults; leave other user-selected settings alone.
   try {
-    if (sessionStorage.getItem("jarvisVoiceDefaultsVersion") !== "main-hud-default-100") {
-      const oldRate = sessionStorage.getItem(VOICE_RATE_SLOT);
-      const oldPitch = sessionStorage.getItem(VOICE_PITCH_SLOT);
-      if (!oldRate || ["0.88", "0.95"].includes(oldRate)) sessionStorage.setItem(VOICE_RATE_SLOT, "1");
-      if (!oldPitch || ["0.72", "0.95"].includes(oldPitch)) sessionStorage.setItem(VOICE_PITCH_SLOT, "1");
+    if (sessionStorage.getItem("jarvisVoiceDefaultsVersion") !== "main-hud-095") {
+      if (!sessionStorage.getItem(VOICE_RATE_SLOT) || sessionStorage.getItem(VOICE_RATE_SLOT) === "0.88") {
+        sessionStorage.setItem(VOICE_RATE_SLOT, "0.95");
+      }
+      if (!sessionStorage.getItem(VOICE_PITCH_SLOT) || sessionStorage.getItem(VOICE_PITCH_SLOT) === "0.72") {
+        sessionStorage.setItem(VOICE_PITCH_SLOT, "0.95");
+      }
       const savedVoice = sessionStorage.getItem(VOICE_NAME_SLOT) || "";
       if (/\|0\.60\|0\.84$/.test(savedVoice)) sessionStorage.setItem(VOICE_NAME_SLOT, "auto-male");
-      sessionStorage.setItem("jarvisVoiceDefaultsVersion", "main-hud-default-100");
+      sessionStorage.setItem("jarvisVoiceDefaultsVersion", "main-hud-095");
     }
   } catch (_) {}
   const getVoiceName = () => { try { return sessionStorage.getItem(VOICE_NAME_SLOT) || "auto-male"; } catch (_) { return "auto-male"; } };
-  const getVoiceRate = () => { try { return Number(sessionStorage.getItem(VOICE_RATE_SLOT) || 1); } catch (_) { return 1; } };
-  const getVoicePitch = () => { try { return Number(sessionStorage.getItem(VOICE_PITCH_SLOT) || 1); } catch (_) { return 1; } };
+  const getVoiceRate = () => { try { return Number(sessionStorage.getItem(VOICE_RATE_SLOT) || 0.95); } catch (_) { return 0.95; } };
+  const getVoicePitch = () => { try { return Number(sessionStorage.getItem(VOICE_PITCH_SLOT) || 0.95); } catch (_) { return 0.95; } };
   const feminineVoiceHints = /female|woman|samantha|victoria|karen|susan|zira|hazel|sara(h)?|aria|jenny|libby|natasha|moira|tessa|fiona|ava|allison|joanna|kendra|kimberly|salli|ivy|emma|olivia|serena|monica|luciana|kate|amelie|helena|linda|mary|lisa|nicole|catherine|veena|priya|lekha/i;
   const masculineVoiceHints = /david|daniel|mark|guy|eric|roger|alex|fred|tom|male|microsoft.*(david|guy|mark|ryan)|google.*(uk english male|us english)|aaron|arthur|bruce|george|james|lee|liam|matthew|michael|oliver|paul|rishi|ryan|thomas/i;
   function getEnglishVoices() {
@@ -80,11 +82,7 @@
       return voices.find(v => v.name === baseName) || voices[0];
     }
     if (preference && preference !== "auto-male") return voices.find(v => v.name === preference) || voices[0];
-    // Match the browser-default English voice used by native environment speech.
-    // This keeps main HUD replies consistent with VELVE/God's Eye on mobile Safari.
-    return voices.find(v => v.default && /^en([_-]|$)/i.test(v.lang))
-      || voices.find(v => v.lang.startsWith("en"))
-      || voices[0];
+    return voices.find(v => masculineVoiceHints.test(v.name)) || voices.find(v => /en[-_]?(US|GB|AU|IN)/i.test(v.lang)) || voices[0];
   }
   function findJarvisVoice(preference = getVoiceName()) {
     return getBaseJarvisVoice(preference);
@@ -97,47 +95,18 @@
   }
   let lastSpokenText = "";
   let lastSpokenAt = 0;
-  let speechRun = 0;
-  let speechStartTimer = 0;
-  let speechWatchdogTimer = 0;
-  let wakeResumeTimer = 0;
-  let wakePausedByTts = false;
-  let speechActive = false;
-  let speechHandoffReady = false;
-  const speechQueue = [];
-
-  // Keep speech smooth: serialize replies instead of cancelling the current utterance
-  // whenever another HUD/environment event asks JARVIS to speak.
-  function pauseWakeForTts() {
-    clearTimeout(wakeResumeTimer);
-    wakeResumeTimer = 0;
-    if (wakePausedByTts) return;
-    try {
-      if (typeof window.__jarvisPauseWakeWordForEnvironment === "function") {
-        window.__jarvisPauseWakeWordForEnvironment();
-        wakePausedByTts = true;
-      }
-    } catch (_) {}
-  }
-  function resumeWakeAfterTts(run) {
-    if (run !== speechRun || speechActive || speechQueue.length || !wakePausedByTts) return;
-    clearTimeout(speechWatchdogTimer);
-    speechWatchdogTimer = 0;
-    clearTimeout(wakeResumeTimer);
-    wakeResumeTimer = setTimeout(() => {
-      if (run !== speechRun || speechActive || speechQueue.length || !wakePausedByTts) return;
-      try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {}
-      wakePausedByTts = false;
-      wakeResumeTimer = 0;
-      speechHandoffReady = false;
-    }, 450);
-  }
-
-  function drainSpeechQueue() {
-    if (speechActive || !speechQueue.length || !("speechSynthesis" in window)) return;
-    const item = speechQueue.shift();
-    const run = ++speechRun;
-    const utterance = new SpeechSynthesisUtterance(item.text);
+  function applyJarvisVoice(text) {
+    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
+    const spokenText = String(text || "").trim();
+    if (!spokenText) return false;
+    // The original HUD also calls speak() after receiving the same response.
+    // Deduplicate that second call so iOS does not cancel speech just as it starts.
+    const now = Date.now();
+    if (spokenText === lastSpokenText && now - lastSpokenAt < 2500) return true;
+    lastSpokenText = spokenText;
+    lastSpokenAt = now;
+    if (window.__jarvisVoiceStop) return false;
+    const utterance = new SpeechSynthesisUtterance(spokenText);
     const voice = findJarvisVoice();
     if (voice) { utterance.voice = voice; utterance.lang = voice.lang || "en-US"; }
     else utterance.lang = "en-US";
@@ -145,61 +114,17 @@
     utterance.rate = Math.min(1.15, Math.max(0.65, profile ? profile.rate : getVoiceRate()));
     utterance.pitch = Math.min(1.2, Math.max(0.5, profile ? profile.pitch : getVoicePitch()));
     utterance.volume = 1;
-
-    speechActive = true;
-    const finishSpeech = () => {
-      if (run !== speechRun) return;
-      clearTimeout(speechWatchdogTimer);
-      speechWatchdogTimer = 0;
-      speechActive = false;
-      if (speechQueue.length) {
-        drainSpeechQueue();
-      } else {
-        resumeWakeAfterTts(run);
-      }
-    };
-    utterance.onend = finishSpeech;
-    utterance.onerror = finishSpeech;
-
-    const speakNow = () => {
-      if (run !== speechRun) return;
-      try {
-        window.speechSynthesis.speak(utterance);
-        speechWatchdogTimer = setTimeout(() => {
-          if (run !== speechRun) return;
-          speechActive = false;
-          if (speechQueue.length) drainSpeechQueue();
-          else resumeWakeAfterTts(run);
-        }, Math.max(7000, item.text.length * 180 + 2500));
-      } catch (_) {
-        speechActive = false;
-        if (speechQueue.length) drainSpeechQueue();
-        else resumeWakeAfterTts(run);
-      }
-    };
-
-    if (!speechHandoffReady) {
-      speechHandoffReady = true;
-      speechStartTimer = setTimeout(speakNow, 350);
-    } else {
-      speakNow();
+    // Retry once voices finish loading; some mobile browsers initially return none.
+    if (!voice && window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        if (!window.__jarvisVoiceStop) window.speechSynthesis.speak(utterance);
+      };
+      window.speechSynthesis.cancel();
+      return true;
     }
-  }
-
-  function applyJarvisVoice(text) {
-    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
-    const spokenText = String(text || "").trim();
-    if (!spokenText) return false;
-    // Ignore duplicate HUD/environment callbacks without interrupting active speech.
-    const now = Date.now();
-    if (spokenText === lastSpokenText && now - lastSpokenAt < 2500) return true;
-    lastSpokenText = spokenText;
-    lastSpokenAt = now;
-    if (window.__jarvisVoiceStop) return false;
-
-    pauseWakeForTts();
-    speechQueue.push({ text: spokenText });
-    drainSpeechQueue();
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
     return true;
   }
   // The original HUD's sendCommand() calls speak(reply). Replace its browser
