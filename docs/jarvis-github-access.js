@@ -78,7 +78,7 @@
     m = text.match(/^(?:please\s+)?(?:search|find|look up|open)\s+(?:github\s+)?(code|issues?|pull requests?|prs|commits?|discussions?|packages?|wikis|topics|users|repositories|repos)\s+(?:for|about|named|called)\s+(.+)$/i);
     if (m) {
       const rawKind = m[1].toLowerCase();
-      const query = m[2].trim();
+      const query = m[2].trim().replace(/\\s+(?:on|in)\\s+github$/i, "").trim();
       let type = "repositories";
       let finalQuery = query;
       let labelKind = rawKind;
