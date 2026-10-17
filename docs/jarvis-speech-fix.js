@@ -1,7 +1,6 @@
 /* JARVIS speech stability layer.
    Prevents long browser TTS utterances from being cut off/going silent on mobile Safari/iOS
-   and prevents the always-on wake recognizer from competing with speech playback.
-   This layer wraps the native SpeechSynthesis API without changing the JARVIS UI. */
+   and prevents the always-on wake recognizer from competing with speech playback. */
 (() => {
   "use strict";
   if (window.__JARVIS_SPEECH_STABILITY__) return;
@@ -13,7 +12,6 @@
 
   const nativeSpeak = synth.speak.bind(synth);
   const nativeCancel = synth.cancel.bind(synth);
-  const nativePause = synth.pause ? synth.pause.bind(synth) : null;
   const nativeResume = synth.resume ? synth.resume.bind(synth) : null;
 
   let queue = [];
@@ -23,12 +21,13 @@
   let resumeTimer = 0;
   let watchdogTimer = 0;
   let generation = 0;
+  let startTimer = 0;
 
   const compact = value => String(value || "").replace(/\s+/g, " ").trim();
 
-  // Mobile browsers are much more reliable with short utterances than with one
-  // large paragraph. Keep chunks comfortably below the common mobile TTS limit.
-  function splitSpeech(text, maxChars = 180) {
+  // Keep mobile utterances long enough to sound natural, while remaining well
+  // below the range where iOS speech synthesis commonly becomes unreliable.
+  function splitSpeech(text, maxChars = 420) {
     const clean = compact(text);
     if (!clean) return [];
     if (clean.length <= maxChars) return [clean];
@@ -36,11 +35,7 @@
     const sentences = clean.match(/[^.!?;:]+[.!?;:]*(?:\s+|$)/g) || [clean];
     const chunks = [];
     let current = "";
-
-    const push = value => {
-      const part = compact(value);
-      if (part) chunks.push(part);
-    };
+    const push = value => { const part = compact(value); if (part) chunks.push(part); };
 
     for (const sentence of sentences) {
       const s = compact(sentence);
@@ -48,16 +43,11 @@
       if (!current) {
         if (s.length <= maxChars) current = s;
         else {
-          const words = s.split(" ");
           let piece = "";
-          for (const word of words) {
+          for (const word of s.split(" ")) {
             const next = piece ? piece + " " + word : word;
-            if (next.length > maxChars && piece) {
-              push(piece);
-              piece = word;
-            } else {
-              piece = next;
-            }
+            if (next.length > maxChars && piece) { push(piece); piece = word; }
+            else piece = next;
           }
           push(piece);
         }
@@ -67,17 +57,11 @@
         push(current);
         current = s;
         if (current.length > maxChars) {
-          const words = current.split(" ");
-          current = "";
           let piece = "";
-          for (const word of words) {
+          for (const word of current.split(" ")) {
             const next = piece ? piece + " " + word : word;
-            if (next.length > maxChars && piece) {
-              push(piece);
-              piece = word;
-            } else {
-              piece = next;
-            }
+            if (next.length > maxChars && piece) { push(piece); piece = word; }
+            else piece = next;
           }
           current = piece;
         }
@@ -88,6 +72,12 @@
   }
 
   function pauseWakeForSpeech() {
+    // IMPORTANT: cancel() may have scheduled wake-word restart. A new speech
+    // request immediately after cancel must cancel that restart, otherwise the
+    // microphone turns back on while JARVIS is speaking and iOS can duck the
+    // speech volume dramatically. This is the main mobile-volume fix.
+    clearTimeout(resumeTimer);
+    resumeTimer = 0;
     try {
       if (typeof window.__jarvisPauseWakeWordForEnvironment === "function") {
         window.__jarvisPauseWakeWordForEnvironment();
@@ -106,7 +96,8 @@
         }
       } catch (_) {}
       wakePausedByTts = false;
-    }, 450);
+      resumeTimer = 0;
+    }, 650);
   }
 
   function clearWatchdog() {
@@ -117,6 +108,7 @@
   function finishSpeech(myGeneration) {
     if (myGeneration !== generation) return;
     clearWatchdog();
+    clearTimeout(startTimer);
     active = false;
     queue = [];
     resumeWakeAfterSpeech();
@@ -125,10 +117,7 @@
   function speakNext(myGeneration) {
     if (myGeneration !== generation || stopped) return;
     const item = queue.shift();
-    if (!item) {
-      finishSpeech(myGeneration);
-      return;
-    }
+    if (!item) { finishSpeech(myGeneration); return; }
 
     active = true;
     const u = new NativeUtterance(item.text);
@@ -136,7 +125,9 @@
     u.lang = item.lang || "en-US";
     u.rate = Number.isFinite(item.rate) ? item.rate : 0.88;
     u.pitch = Number.isFinite(item.pitch) ? item.pitch : 0.72;
-    u.volume = Number.isFinite(item.volume) ? item.volume : 1;
+    // Web Speech volume is normalized to 0..1; 1 is the maximum. Keep it
+    // explicitly at max for every chunk instead of inheriting a quiet value.
+    u.volume = 1;
 
     let settled = false;
     const settle = () => {
@@ -144,20 +135,15 @@
       settled = true;
       clearWatchdog();
       if (myGeneration !== generation || stopped) return;
-      // A tiny handoff between chunks avoids the iOS speech engine occasionally
-      // dropping the first word of the next utterance.
-      setTimeout(() => speakNext(myGeneration), 35);
+      setTimeout(() => speakNext(myGeneration), 55);
     };
     u.onend = settle;
     u.onerror = event => {
-      // "interrupted"/"canceled" are expected when the user stops JARVIS.
       if (stopped || myGeneration !== generation || event?.error === "canceled" || event?.error === "interrupted") return;
       settle();
     };
     u.onpause = () => {
       if (stopped || myGeneration !== generation) return;
-      // Some mobile Safari builds spontaneously pause long TTS. Resume it
-      // shortly after an unexpected pause so speech does not silently stop.
       setTimeout(() => {
         if (!stopped && myGeneration === generation && synth.paused && active) {
           try { nativeResume?.(); } catch (_) {}
@@ -165,32 +151,21 @@
       }, 80);
     };
 
-    // Watchdog: if an utterance has been silently stuck, resume it rather than
-    // leaving JARVIS muted forever. It is deliberately generous to avoid cutting speech.
-    const estimatedMs = Math.max(7000, item.text.length * 145);
+    const estimatedMs = Math.max(10000, item.text.length * 145);
     watchdogTimer = setTimeout(() => {
       if (myGeneration !== generation || stopped || settled) return;
-      try {
-        if (synth.paused) nativeResume?.();
-      } catch (_) {}
+      try { if (synth.paused) nativeResume?.(); } catch (_) {}
       setTimeout(() => {
         if (myGeneration !== generation || stopped || settled) return;
         settle();
       }, 5000);
     }, estimatedMs);
 
-    try {
-      nativeSpeak(u);
-    } catch (_) {
-      settle();
-    }
+    try { nativeSpeak(u); } catch (_) { settle(); }
   }
 
   synth.speak = function(stableUtterance) {
-    if (!(stableUtterance instanceof NativeUtterance)) {
-      return nativeSpeak(stableUtterance);
-    }
-
+    if (!(stableUtterance instanceof NativeUtterance)) return nativeSpeak(stableUtterance);
     const text = compact(stableUtterance.text);
     if (!text) return;
 
@@ -198,20 +173,26 @@
     generation += 1;
     const myGeneration = generation;
     clearWatchdog();
-    queue = splitSpeech(text).map(chunk => ({
+    clearTimeout(startTimer);
+    queue = splitSpeech(text, 420).map(chunk => ({
       text: chunk,
       voice: stableUtterance.voice || null,
       lang: stableUtterance.lang || "en-US",
-      rate: Number.isFinite(stableUtterance.rate) ? stableUtterance.rate : 0.88,
-      pitch: Number.isFinite(stableUtterance.pitch) ? stableUtterance.pitch : 0.72,
-      volume: Number.isFinite(stableUtterance.volume) ? stableUtterance.volume : 1
+      rate: Number.isFinite(stableUtterance.rate) ? Math.min(1.1, Math.max(0.65, stableUtterance.rate)) : 0.88,
+      pitch: Number.isFinite(stableUtterance.pitch) ? Math.min(1.2, Math.max(0.5, stableUtterance.pitch)) : 0.72
     }));
 
-    // The old implementation calls cancel() immediately before speak(). That
-    // is safe here: cancel clears the native queue, while our queue remains intact.
     pauseWakeForSpeech();
     try { nativeResume?.(); } catch (_) {}
-    speakNext(myGeneration);
+
+    // Give iOS a short moment to release the microphone/audio-session ducking
+    // before starting TTS. The settings voice test does not have the wake mic
+    // active, which is why it can sound normal while command replies are quiet.
+    startTimer = setTimeout(() => {
+      if (myGeneration !== generation || stopped) return;
+      try { nativeResume?.(); } catch (_) {}
+      speakNext(myGeneration);
+    }, 300);
   };
 
   synth.cancel = function() {
@@ -220,17 +201,19 @@
     queue = [];
     active = false;
     clearWatchdog();
+    clearTimeout(startTimer);
     clearTimeout(resumeTimer);
     try { nativeCancel(); } catch (_) {}
     resumeWakeAfterSpeech();
   };
 
-  // Expose a small diagnostic flag for environments without changing their UI.
   window.__jarvisSpeechStatus = () => ({
     supported: true,
     active,
     queuedChunks: queue.length,
     stopped,
-    wakePausedByTts
+    wakePausedByTts,
+    chunkTargetCharacters: 420,
+    volume: 1
   });
 })();
