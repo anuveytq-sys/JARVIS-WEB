@@ -175,15 +175,25 @@
     analyser.getByteTimeDomainData(timeData);
     let sum = 0;
     let peak = 0;
+    let crossings = 0;
+    let previous = timeData[0] - 128;
     for (let i = 0; i < timeData.length; i++) {
-      const v = Math.abs((timeData[i] - 128) / 128);
+      const centered = timeData[i] - 128;
+      const v = Math.abs(centered / 128);
       sum += v * v;
       if (v > peak) peak = v;
+      if ((centered >= 0) !== (previous >= 0)) crossings++;
+      previous = centered;
     }
     const rms = Math.sqrt(sum / timeData.length);
+    const zeroCrossRate = crossings / timeData.length;
     baseline = baseline * 0.985 + rms * 0.015;
-    const transient = rms > Math.max(0.075, baseline * 3.2) && peak > Math.max(0.30, baseline * 8);
-    if (transient) trigger();
+
+    // Require a strong, sharp, broadband transient. This deliberately raises
+    // the trigger threshold so ordinary speech does not activate the greeting.
+    const loudTransient = rms > Math.max(0.11, baseline * 4.5) && peak > 0.52;
+    const broadbandTransient = zeroCrossRate > 0.10 && peak > 0.58;
+    if (loudTransient && broadbandTransient) trigger();
     detectorFrame = requestAnimationFrame(detectLoop);
   }
 
