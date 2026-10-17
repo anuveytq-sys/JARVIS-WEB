@@ -41,10 +41,10 @@
 
   function greetingForNow() {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Good morning, sir. JARVIS systems are online. How may I assist you?";
-    if (hour >= 12 && hour < 17) return "Good afternoon, sir. JARVIS systems are online. How may I assist you?";
-    if (hour >= 17 && hour < 22) return "Good evening, sir. JARVIS systems are online. How may I assist you?";
-    return "Good night, sir. JARVIS systems are online. How may I assist you?";
+    if (hour >= 5 && hour < 12) return "Good morning sir, JARVIS systems are online. How may I assist you?";
+    if (hour >= 12 && hour < 17) return "Good afternoon sir, JARVIS systems are online. How may I assist you?";
+    if (hour >= 17 && hour < 22) return "Good evening sir, JARVIS systems are online. How may I assist you?";
+    return "Good night sir, JARVIS systems are online. How may I assist you?";
   }
 
   function stopDetector() {
@@ -138,8 +138,6 @@
         const startedAt = Date.now();
         const wait = () => {
           if (completed) return;
-          // The existing speak() does not expose its utterance, so wait until
-          // speech synthesis is no longer speaking, with a safe fallback.
           if (!window.speechSynthesis?.speaking && Date.now() - startedAt > 500) return continueListening();
           if (Date.now() - startedAt > 9000) return continueListening();
           setTimeout(wait, 120);
@@ -149,7 +147,6 @@
       } catch (_) {}
     }
 
-    // Fallback only if the existing JARVIS speech entry point is unavailable.
     if ("speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined") {
       const utterance = new SpeechSynthesisUtterance(greeting);
       utterance.onend = listenForMainCommand;
@@ -168,9 +165,6 @@
     lastTrigger = now;
     busy = true;
     stopDetector();
-
-    // Temporarily hand microphone ownership to this one command capture.
-    // The original wake-word implementation resumes afterward unchanged.
     try { window.__jarvisPauseWakeWordForEnvironment?.(); } catch (_) {}
     speakGreetingThenListen();
   }
@@ -188,10 +182,6 @@
     }
     const rms = Math.sqrt(sum / timeData.length);
     baseline = baseline * 0.985 + rms * 0.015;
-
-    // A clap/snap is a short acoustic transient: a high peak and a rapid rise
-    // above the local ambient baseline. Speech and steady room noise are less
-    // likely to satisfy both conditions at once.
     const transient = rms > Math.max(0.075, baseline * 3.2) && peak > Math.max(0.30, baseline * 8);
     if (transient) trigger();
     detectorFrame = requestAnimationFrame(detectLoop);
@@ -235,8 +225,6 @@
     setTimeout(monitorWakeToggle, 300);
   }
 
-  // Wait for the existing wake-word UI to be created, then remain completely
-  // passive until the user explicitly turns WAKE WORD ON.
   const boot = () => {
     if (toggle()) monitorWakeToggle();
     else setTimeout(boot, 250);
