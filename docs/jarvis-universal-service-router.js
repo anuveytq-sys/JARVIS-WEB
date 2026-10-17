@@ -51,12 +51,13 @@
   };
 
   function githubIntent(text) {
+    const normalized = text.replace(/\b(?:on|in)\s+(?:git\s*hub|github)\b/gi, "").replace(/\bplease\b/gi, "").trim();
     const api = window.JARVISGitHubAccess;
     if (api && typeof api.parseCommand === "function") {
-      const parsed = api.parseCommand(text);
+      const parsed = api.parseCommand(normalized);
       if (parsed) return parsed;
     }
-    const t = text.replace(/\b(?:please|on github|in github|on git hub|in git hub)\b/gi, "").trim();
+    const t = normalized;
     let m = t.match(/^(?:open|find|search|show|look up|go to|visit)?\s*(?:the\s+)?(.+?)\s+(?:repository|repositories|repo|repos)$/i);
     if (m) return { url: "https://github.com/search?q=" + encodeURIComponent(m[1].trim()) + "&type=repositories", label: "GitHub repository search for " + m[1].trim() };
     m = t.match(/^(?:search|find|look up)\s+(.+)$/i);
