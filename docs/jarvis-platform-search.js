@@ -103,7 +103,7 @@
     if (!text) return null;
 
     // Also accept: "open ChatGPT, search NASA".
-    text = text.replace(/^open\\s+(.+?)\\s*[,;:]\\s*(?:then\\s+)?(?:search|ask|look up|find)\\s+(.+)$/i, "search $1 about $2");
+    text = text.replace(/^open\s+(.+?)\s*[,;:]\s*(?:then\s+)?(?:search|ask|look up|find)\s+(.+)$/i, "search $1 about $2");
 
     const intent = /^(?:please\s+)?(?:search|look up|find|ask|query)\b/i.exec(text);
     if (!intent) return null;
