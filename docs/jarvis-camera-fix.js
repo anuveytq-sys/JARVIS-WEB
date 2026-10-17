@@ -209,6 +209,17 @@
         }
         for (const transcript of alternatives) {
           if (hasWakeWord(transcript)) {
+            // Support natural one-shot commands such as “OK Jarvis, close the camera”
+            // as well as the two-step wake-word-then-command flow.
+            const inlineCommand = cleanCommand(transcript);
+            if (isCloseCommand(inlineCommand)) {
+              closeCamera();
+              return;
+            }
+            if (isPhotoCommand(inlineCommand)) {
+              capturePhoto();
+              return;
+            }
             startCameraCommandCapture();
             return;
           }
