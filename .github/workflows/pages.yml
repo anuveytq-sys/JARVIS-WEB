@@ -26,7 +26,6 @@ jobs:
 
       - name: Validate browser JavaScript
         run: |
-          node --check docs/jarvis-speech-fix.js
           node --check docs/jarvis-web.js
           node --check docs/jarvis-ui-patch.js
           node --check docs/jarvis-camera-fix.js
@@ -103,7 +102,6 @@ jobs:
           PY
 
           cp public/index.html _site/index.html
-          cp docs/jarvis-speech-fix.js _site/jarvis-speech-fix.js
           cp docs/jarvis-web.js _site/jarvis-web.js
           cp docs/jarvis-ui-patch.js _site/jarvis-ui-patch.js
           cp docs/jarvis-camera-fix.js _site/jarvis-camera-fix.js
@@ -145,14 +143,13 @@ jobs:
               s = re.sub(rf'<link[^>]+{re.escape(name)}\.css\?v=[^\"]+[^>]*>\s*', '', s)
           s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
-          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-speech-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./velve-static-satellite-feed.js?v=pages-{version}"></script>\n<script src="./velve-countries.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./velve-satellite-upgrade.js?v=pages-{version}"></script>\n<script src="./velve-voice-fix.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./terranexus-ui-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence-enhancement.js?v=pages-{version}"></script>\n'
-          for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-speech-fix','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-static-satellite-feed','velve-countries','velve-satellite-upgrade','velve-voice-fix','terranexus','terranexus-ui-fix','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement']:
+          injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./velve-static-satellite-feed.js?v=pages-{version}"></script>\n<script src="./velve-countries.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./velve-satellite-upgrade.js?v=pages-{version}"></script>\n<script src="./velve-voice-fix.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./terranexus-ui-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence-enhancement.js?v=pages-{version}"></script>\n'
+          for name in ['jarvis-popup-fix','jarvis-camera-fix','jarvis-ui-patch','jarvis-web','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-static-satellite-feed','velve-countries','velve-satellite-upgrade','velve-voice-fix','terranexus','terranexus-ui-fix','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement']:
               s = re.sub(rf'<script[^>]+{re.escape(name)}\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
           PY
           touch _site/.nojekyll
-          grep -q "jarvis-speech-fix.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "velve-static-satellite-feed.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "velve-countries.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q 'window.__VELVE_COUNTRIES' _site/velve-countries.js
