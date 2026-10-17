@@ -5,7 +5,7 @@
 if(window.__JARVIS_HAND_GESTURES__)return;window.__JARVIS_HAND_GESTURES__=true;
 const VERSION='hand-gesture-zoom-20261017b',MODEL_BASE='https://cdn.jsdelivr.net/npm/@mediapipe/hands/';
 let active=false,starting=false,stream=null,video=null,hands=null,raf=0,frameBusy=false;
-let anchorDistance=0,anchorZoom=1,targetZoom=1,currentZoom=1,lastSeen=0,lastEnv='';
+let anchorDistance=0,anchorZoom=1,targetZoom=1,currentZoom=1,lastAppliedZoom=1,lastSeen=0,lastEnv='';
 const MIN_ZOOM=.72,MAX_ZOOM=2.05;
 const $=(s,r=document)=>r.querySelector(s);
 const visible=el=>{if(!el)return false;const cs=getComputedStyle(el);return cs.display!=='none'&&cs.visibility!=='hidden'&&Number(cs.opacity||1)>.01&&el.getClientRects().length>0;};
@@ -45,8 +45,8 @@ function applyVisualZoom(value){
  if(e==='velve'){
    const viewer=window.__VELVE_VIEWER;
    if(viewer&&viewer.camera){
-     const delta=value/currentZoom;
-     if(Math.abs(delta-1)>.00015){const height=viewer.camera.positionCartographic.height;const amount=Math.max(.2,height*Math.abs(delta-1)*.075);if(delta>1)viewer.camera.zoomOut(amount);else viewer.camera.zoomIn(amount);}
+     const delta=value/lastAppliedZoom;
+     if(Math.abs(delta-1)>.00015){const height=viewer.camera.positionCartographic.height;const amount=Math.max(.2,height*Math.abs(delta-1)*.075);if(delta>1)viewer.camera.zoomIn(amount);else viewer.camera.zoomOut(amount);}
    }else{const globe=$('#velve-globe canvas');if(globe)scaleElement(globe,value);}
  }else if(e==='terra'){
    const bridge=window.__TERRANEXUS_HAND_ZOOM;
@@ -62,6 +62,7 @@ function applyVisualZoom(value){
  }else{
    const core=$('.core-stage')||$('.jarvis-core-3d');if(core)scaleElement(core,value);
  }
+ lastAppliedZoom=value;
 }
 function animate(){
  if(!active)return;
@@ -93,7 +94,7 @@ async function start(){
    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
    video=document.createElement('video');video.id='jarvis-hand-gesture-video';video.autoplay=true;video.muted=true;video.playsInline=true;video.setAttribute('playsinline','');video.srcObject=stream;document.body.appendChild(video);await video.play();
    hands=new window.Hands({locateFile:file=>MODEL_BASE+file});hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.58,minTrackingConfidence:.52});hands.onResults(onResults);
-   active=true;anchorDistance=0;anchorZoom=targetZoom=currentZoom=1;lastSeen=Date.now();lastEnv=environment();setButton(true);showStatus('HAND TRACKING ONLINE · spread fingers to zoom in',true);
+   active=true;anchorDistance=0;anchorZoom=targetZoom=currentZoom=lastAppliedZoom=1;lastSeen=Date.now();lastEnv=environment();setButton(true);showStatus('HAND TRACKING ONLINE · spread fingers to zoom in',true);
    animate.last=performance.now();raf=requestAnimationFrame(animate);
    const loop=async()=>{if(!active||!video)return;if(!frameBusy&&video.readyState>=2){frameBusy=true;try{await hands.send({image:video});}catch(e){console.warn('[JARVIS gestures]',e);}finally{frameBusy=false;}}if(active)window.__JARVIS_HANDS_INFERENCE_RAF=requestAnimationFrame(loop);};window.__JARVIS_HANDS_INFERENCE_RAF=requestAnimationFrame(loop);
  }catch(e){console.warn('[JARVIS gestures]',e);cleanup(false);setButton(false);showStatus(e&&e.message?e.message:'Camera or hand tracking unavailable.');}
@@ -104,11 +105,11 @@ function cleanup(resetZoom=true){
  try{if(hands)hands.close();}catch(_){}hands=null;
  if(video){try{video.pause();video.srcObject=null;video.remove();}catch(_){}video=null;}
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
- if(resetZoom){targetZoom=currentZoom=anchorZoom=1;document.documentElement.style.removeProperty('--jg-core-zoom');document.querySelectorAll('.core-stage,#nn-core,.nn-core-area,.jvi-core-orb,.jvi-holo,.jvi-neural-network,#velve-globe canvas,#terranexus-overlay canvas').forEach(el=>{el.style.removeProperty('scale');if(el.style.transition==='none')el.style.removeProperty('transition');if(el.style.transformOrigin==='center center')el.style.removeProperty('transform-origin');});}
+ if(resetZoom){targetZoom=currentZoom=anchorZoom=lastAppliedZoom=1;document.documentElement.style.removeProperty('--jg-core-zoom');document.querySelectorAll('.core-stage,#nn-core,.nn-core-area,.jvi-core-orb,.jvi-holo,.jvi-neural-network,#velve-globe canvas,#terranexus-overlay canvas').forEach(el=>{el.style.removeProperty('scale');if(el.style.transition==='none')el.style.removeProperty('transition');if(el.style.transformOrigin==='center center')el.style.removeProperty('transform-origin');});}
 }
 function stop(message='Hand gesture control off'){cleanup(true);setButton(false);showStatus(message);}
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)stop('Gesture camera paused while page is hidden. Tap to enable again.');});
-const observe=new MutationObserver(()=>{setTheme();const e=environment();if(e!==lastEnv){lastEnv=e;anchorDistance=0;anchorZoom=targetZoom=currentZoom;}});observe.observe(document.documentElement,{attributes:true,attributeFilter:['class']});observe.observe(document.body,{attributes:true,attributeFilter:['class']});
+const observe=new MutationObserver(()=>{setTheme();const e=environment();if(e!==lastEnv){lastEnv=e;anchorDistance=0;anchorZoom=targetZoom=currentZoom;lastAppliedZoom=currentZoom;}});observe.observe(document.documentElement,{attributes:true,attributeFilter:['class']});observe.observe(document.body,{attributes:true,attributeFilter:['class']});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{ensureUI();setTheme();},{once:true});else{ensureUI();setTheme();}
 setInterval(()=>{if($('#jarvis-hand-gesture-toggle'))setTheme();},700);
 window.JARVISHandGestures={start,stop,get active(){return active;},get zoom(){return currentZoom;},version:VERSION};
