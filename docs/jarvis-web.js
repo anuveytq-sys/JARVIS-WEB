@@ -750,57 +750,20 @@
   }
 
   async function camera() {
-    if (!navigator.mediaDevices?.getUserMedia) return say("Camera access is not supported in this browser. Try opening JARVIS in Safari over HTTPS.");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-      const overlay = document.createElement("div");
-      overlay.id = "jarvis-camera-overlay";
-      Object.assign(overlay.style, {
-        position: "fixed", inset: "0", zIndex: "2147483646",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        gap: "14px", padding: "18px", boxSizing: "border-box",
-        background: "rgba(0,0,0,.94)"
-      });
-      const video = document.createElement("video");
-      video.autoplay = true;
-      video.playsInline = true;
-      video.muted = true;
-      video.srcObject = stream;
-      Object.assign(video.style, {
-        display: "block", width: "min(94vw, 900px)", maxHeight: "72vh",
-        objectFit: "contain", background: "#000", border: "2px solid #00eaff",
-        borderRadius: "12px"
-      });
-      const close = document.createElement("button");
-      close.type = "button";
-      close.textContent = "✕  CLOSE CAMERA";
-      close.setAttribute("aria-label", "Close camera and stop camera stream");
-      Object.assign(close.style, {
-        position: "relative", zIndex: "2147483647", display: "block",
-        padding: "15px 24px", minHeight: "52px", borderRadius: "10px",
-        background: "#b91c1c", color: "#fff", border: "2px solid #fff",
-        font: "bold 16px system-ui, sans-serif", cursor: "pointer",
-        boxShadow: "0 0 18px rgba(255,0,0,.45)"
-      });
-      const hint = document.createElement("div");
-      hint.textContent = "Your camera is active. Press CLOSE CAMERA to turn it off.";
-      Object.assign(hint.style, { color: "#fff", font: "14px system-ui, sans-serif", textAlign: "center" });
-      const stop = () => {
-        stream.getTracks().forEach(track => track.stop());
-        video.srcObject = null;
-        overlay.remove();
-        document.removeEventListener("keydown", onKeyDown);
-      };
-      const onKeyDown = event => { if (event.key === "Escape") stop(); };
-      close.addEventListener("click", stop);
-      overlay.addEventListener("click", event => { if (event.target === overlay) stop(); });
-      document.addEventListener("keydown", onKeyDown);
-      overlay.append(video, close, hint);
-      document.body.appendChild(overlay);
-      return say("Camera opened. Use the red CLOSE CAMERA button to turn it off.");
-    } catch (_) {
-      return say("Camera permission was not granted or the camera is unavailable.");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return say("Camera access is not supported in this browser. Try opening JARVIS in Safari over HTTPS.");
     }
+    if (typeof window.jarvisOpenCameraAndCapturePhoto === "function") {
+      try {
+        const captured = await window.jarvisOpenCameraAndCapturePhoto();
+        return say(captured
+          ? "Photo captured. Tap SAVE PHOTO to save it to your device, or say “OK Jarvis, close the camera”."
+          : "I opened the camera, but the photo is not ready yet. You can tap CLICK PHOTO to try again.");
+      } catch (_) {
+        return say("I could not open the camera. Check camera permission and try again.");
+      }
+    }
+    return say("The JARVIS camera controller has not loaded yet. Please refresh the page and try again.");
   }
 
   async function handleLocal(command) {
@@ -943,7 +906,14 @@
       const input = document.createElement("input"); input.type = "file"; input.multiple = true; input.click();
       return say("Opening the browser file picker. A website cannot access your device's full file manager without permission.");
     }
-    if (isAny(text, ["open camera", "camera", "take a photo"])) return camera();
+    const photoIntent = /\\b(?:click|take|capture|snap)\\b.*\\b(?:photo|picture|pic|image)\\b/i.test(text)
+      || /\\b(?:photo|picture|pic|image)\\b.*\\b(?:click|take|capture|snap)\\b/i.test(text);
+    if (photoIntent || isAny(text, ["open camera", "camera", "take a photo"])) return camera();
+    if (/\\b(?:close|exit|stop|hide)\\b.*\\bcamera\\b/i.test(text)
+      || /\\bcamera\\b.*\\b(?:close|exit|stop|hide)\\b/i.test(text)) {
+      if (typeof window.jarvisCloseCamera === "function") window.jarvisCloseCamera();
+      return say("Camera closed.");
+    }
     return null;
   }
 
