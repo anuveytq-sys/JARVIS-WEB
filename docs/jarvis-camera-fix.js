@@ -6,6 +6,10 @@
   let preview = null;
   let status = null;
   let save = null;
+  let videoPreview = null;
+  let saveVideo = null;
+  let recordButton = null;
+  let stopRecordButton = null;
   let cameraListening = false;
   let recognition = null;
   let commandRecognition = null;
@@ -13,6 +17,10 @@
   let lastActionAt = 0;
   let settingsWasVisible = true;
   let cameraCommandBusy = false;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recording = false;
+  let recordingUrl = "";
 
   function setSettingsVisible(visible) {
     const button = document.getElementById("jarvis-settings-trigger");
@@ -38,11 +46,12 @@
     style.textContent = `
       #jarvis-camera-fix { position:fixed; inset:0; z-index:2147483647; display:none; align-items:center; justify-content:center; padding:14px; background:rgba(0,6,16,.96); color:#d8fbff; font-family:system-ui,sans-serif; }
       #jarvis-camera-fix-card { width:min(94vw,520px); max-height:94vh; overflow:auto; text-align:center; padding:14px; border:1px solid #00eaff; border-radius:14px; background:#031321; box-shadow:0 0 30px rgba(0,220,255,.35); }
-      #jarvis-camera-fix-video,#jarvis-camera-fix-preview { display:block; width:100%; max-height:62vh; object-fit:contain; background:#000; border-radius:10px; }
-      #jarvis-camera-fix-preview { display:none; margin-top:8px; }
+      #jarvis-camera-fix-video,#jarvis-camera-fix-preview,#jarvis-camera-fix-video-preview { display:block; width:100%; max-height:62vh; object-fit:contain; background:#000; border-radius:10px; }
+      #jarvis-camera-fix-preview,#jarvis-camera-fix-video-preview { display:none; margin-top:8px; }
       .jarvis-camera-fix-btn { display:inline-block; border:1px solid #00eaff; border-radius:9px; padding:11px 16px; margin:9px 4px 0; background:#06263c; color:#d8fbff; font-weight:800; font-size:13px; }
       #jarvis-camera-fix-shutter { min-width:150px; font-size:15px; }
       #jarvis-camera-fix-status { min-height:1.5em; margin-top:8px; font-size:12px; }
+      #jarvis-camera-fix-record.recording { border-color:#ff5d72; color:#ffd5dc; box-shadow:0 0 14px rgba(255,93,114,.35); }
     `;
     document.head.appendChild(style);
     modal = document.createElement("div");
@@ -52,19 +61,29 @@
         <h2 style="margin:3px 0 10px;letter-spacing:2px">JARVIS CAMERA</h2>
         <video id="jarvis-camera-fix-video" autoplay playsinline muted></video>
         <img id="jarvis-camera-fix-preview" alt="Captured photo preview">
+        <video id="jarvis-camera-fix-video-preview" controls playsinline></video>
         <div id="jarvis-camera-fix-status" role="status">Camera readying…</div>
         <button class="jarvis-camera-fix-btn" id="jarvis-camera-fix-start" type="button">START CAMERA</button>
         <button class="jarvis-camera-fix-btn" id="jarvis-camera-fix-shutter" type="button">📸 CLICK PHOTO</button>
-        <a class="jarvis-camera-fix-btn" id="jarvis-camera-fix-save" style="display:none;text-decoration:none" download="jarvis-photo.png">SAVE PHOTO</a>
+        <button class="jarvis-camera-fix-btn" id="jarvis-camera-fix-record" type="button">🎥 RECORD VIDEO</button>
+        <button class="jarvis-camera-fix-btn" id="jarvis-camera-fix-stop-record" type="button" style="display:none">⏹ STOP RECORDING</button>
+        <a class="jarvis-camera-fix-btn" id="jarvis-camera-fix-save" style="display:none;text-decoration:none" download="jarvis-photo.jpg">SAVE PHOTO</a>
+        <a class="jarvis-camera-fix-btn" id="jarvis-camera-fix-save-video" style="display:none;text-decoration:none" download="jarvis-video.webm">SAVE VIDEO</a>
         <button class="jarvis-camera-fix-btn" id="jarvis-camera-fix-close" type="button">CLOSE</button>
       </section>`;
     document.body.appendChild(modal);
     video = modal.querySelector("#jarvis-camera-fix-video");
     preview = modal.querySelector("#jarvis-camera-fix-preview");
+    videoPreview = modal.querySelector("#jarvis-camera-fix-video-preview");
     status = modal.querySelector("#jarvis-camera-fix-status");
     save = modal.querySelector("#jarvis-camera-fix-save");
+    saveVideo = modal.querySelector("#jarvis-camera-fix-save-video");
+    recordButton = modal.querySelector("#jarvis-camera-fix-record");
+    stopRecordButton = modal.querySelector("#jarvis-camera-fix-stop-record");
     modal.querySelector("#jarvis-camera-fix-start").addEventListener("click", startCamera);
     modal.querySelector("#jarvis-camera-fix-shutter").addEventListener("click", capturePhoto);
+    recordButton.addEventListener("click", startVideoRecording);
+    stopRecordButton.addEventListener("click", stopVideoRecording);
     modal.querySelector("#jarvis-camera-fix-close").addEventListener("click", closeCamera);
   }
 
@@ -76,11 +95,12 @@
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera access is not supported in this browser.");
       stopCameraRecognition();
+      if (recording) stopVideoRecording();
       if (stream) stream.getTracks().forEach(t => t.stop());
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
       video.srcObject = stream;
       await video.play().catch(() => {});
-      status.textContent = "Camera ready. Say “OK Jarvis, click a photo”, “OK Jarvis, take a picture”, or “OK Jarvis, close camera”.";
+      status.textContent = "Camera ready. Say “OK Jarvis, click a photo”, “OK Jarvis, record a video”, or “OK Jarvis, close camera”.";
       startCameraWakeRecognition();
     } catch (e) {
       status.textContent = "Camera permission is required. Tap START CAMERA and allow access.";
@@ -95,6 +115,7 @@
       status.textContent = "Camera is not ready. Tap START CAMERA first.";
       return false;
     }
+    if (recording) stopVideoRecording();
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -107,6 +128,98 @@
     save.style.display = "inline-block";
     status.textContent = "Photo captured. Camera is waiting for “OK Jarvis” before accepting another voice command.";
     return true;
+  }
+
+  function getRecordingMimeType() {
+    if (!window.MediaRecorder) return "";
+    const types = [
+      "video/mp4",
+      "video/mp4;codecs=h264,aac",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm"
+    ];
+    return types.find(type => typeof MediaRecorder.isTypeSupported === "function" && MediaRecorder.isTypeSupported(type)) || "";
+  }
+
+  async function startVideoRecording() {
+    buildCamera();
+    if (modal.style.display !== "flex" || !stream || !video?.videoWidth) {
+      await startCamera();
+      for (let attempt = 0; attempt < 40 && stream && !video?.videoWidth; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    if (!stream || !video?.videoWidth) {
+      status.textContent = "Camera is not ready. Tap START CAMERA first.";
+      return false;
+    }
+    if (!window.MediaRecorder) {
+      status.textContent = "Video recording is not supported in this browser.";
+      return false;
+    }
+    if (recording) return true;
+    const mimeType = getRecordingMimeType();
+    try {
+      mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      recordedChunks = [];
+      recording = true;
+      if (recordingUrl) { URL.revokeObjectURL(recordingUrl); recordingUrl = ""; }
+      if (videoPreview) { videoPreview.pause(); videoPreview.removeAttribute("src"); videoPreview.load(); videoPreview.style.display = "none"; }
+      saveVideo.style.display = "none";
+      recordButton.style.display = "none";
+      stopRecordButton.style.display = "inline-block";
+      stopRecordButton.classList.add("recording");
+      status.textContent = "Recording video… Tap STOP RECORDING or say “OK Jarvis, stop recording”.";
+      mediaRecorder.ondataavailable = event => { if (event.data && event.data.size) recordedChunks.push(event.data); };
+      mediaRecorder.onerror = () => { recording = false; status.textContent = "Video recording stopped because the browser reported an error."; resetRecordButtons(); };
+      mediaRecorder.onstop = finalizeVideoRecording;
+      mediaRecorder.start(250);
+      return true;
+    } catch (_) {
+      recording = false;
+      resetRecordButtons();
+      status.textContent = "This browser could not start video recording.";
+      return false;
+    }
+  }
+
+  function stopVideoRecording() {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+      recording = false;
+      resetRecordButtons();
+      return false;
+    }
+    status.textContent = "Finishing video…";
+    try { mediaRecorder.stop(); } catch (_) { finalizeVideoRecording(); }
+    return true;
+  }
+
+  function finalizeVideoRecording() {
+    const type = mediaRecorder?.mimeType || getRecordingMimeType() || "video/webm";
+    const blob = new Blob(recordedChunks, { type });
+    recording = false;
+    resetRecordButtons();
+    if (!blob.size) {
+      status.textContent = "No video data was captured. Please try recording again.";
+      return;
+    }
+    if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+    recordingUrl = URL.createObjectURL(blob);
+    videoPreview.src = recordingUrl;
+    videoPreview.style.display = "block";
+    const extension = /^video\/mp4/i.test(blob.type) ? "mp4" : "webm";
+    saveVideo.href = recordingUrl;
+    saveVideo.download = "jarvis-video-" + Date.now() + "." + extension;
+    saveVideo.style.display = "inline-block";
+    status.textContent = "Video recorded. Preview it or tap SAVE VIDEO. The camera stays open until you close it.";
+  }
+
+  function resetRecordButtons() {
+    if (!recordButton || !stopRecordButton) return;
+    recordButton.style.display = "inline-block";
+    stopRecordButton.style.display = "none";
+    stopRecordButton.classList.remove("recording");
   }
 
   function normalizeSpeech(value) {
@@ -137,6 +250,20 @@
       || /\b(?:take|click|capture|snap)\b.*\b(?:one|a|the)\b.*\b(?:photo|picture|pic|image)\b/i.test(text);
   }
 
+  function isVideoStartCommand(value) {
+    const text = cleanCommand(value);
+    if (!text) return false;
+    return /\b(?:record|start)\b.*\b(?:video|recording|clip)\b/i.test(text)
+      || /\b(?:video|recording|clip)\b.*\b(?:record|start|capture|take)\b/i.test(text)
+      || /\b(?:take|capture)\b.*\b(?:a|the|one)?\s*video\b/i.test(text);
+  }
+
+  function isVideoStopCommand(value) {
+    const text = cleanCommand(value);
+    return /\b(?:stop|finish|end)\b.*\b(?:video|recording|record)\b/i.test(text)
+      || /\b(?:stop|finish|end)\s+recording\b/i.test(text);
+  }
+
   function isCloseCommand(value) {
     const text = cleanCommand(value);
     return /\b(?:close|exit|stop|hide)\b.*\bcamera\b/i.test(text)
@@ -155,17 +282,19 @@
   }
 
   function closeCamera() {
+    if (recording) stopVideoRecording();
     stopCameraRecognition();
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = null;
     if (video) video.srcObject = null;
+    if (recordingUrl) { URL.revokeObjectURL(recordingUrl); recordingUrl = ""; }
+    if (videoPreview) { videoPreview.pause(); videoPreview.removeAttribute("src"); videoPreview.load(); videoPreview.style.display = "none"; }
     if (modal) modal.style.display = "none";
     if (status) status.textContent = "Camera closed.";
+    resetRecordButtons();
     setSettingsVisible(true);
   }
 
-  // Open the camera from a JARVIS command, wait until video frames are ready,
-  // and take one photo automatically. The browser still requires a user tap to save.
   async function openAndCapturePhoto() {
     await startCamera();
     if (!stream) return false;
@@ -179,14 +308,23 @@
     return capturePhoto();
   }
 
-  // Allow the main JARVIS command bridge to use this same camera UI/controller.
+  async function openAndRecordVideo() {
+    buildCamera();
+    modal.style.display = "flex";
+    await startVideoRecording();
+    return recording;
+  }
+
   window.jarvisOpenCameraAndCapturePhoto = openAndCapturePhoto;
+  window.jarvisOpenCameraAndRecordVideo = openAndRecordVideo;
+  window.jarvisStartVideoRecording = startVideoRecording;
+  window.jarvisStopVideoRecording = stopVideoRecording;
   window.jarvisCloseCamera = closeCamera;
 
   function startCameraWakeRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      status.textContent = "Camera ready. Voice control is not supported here — use 📸 CLICK PHOTO or CLOSE.";
+      status.textContent = "Camera ready. Voice control is not supported here — use the buttons.";
       return;
     }
     if (cameraListening) return;
@@ -209,17 +347,11 @@
         }
         for (const transcript of alternatives) {
           if (hasWakeWord(transcript)) {
-            // Support natural one-shot commands such as “OK Jarvis, close the camera”
-            // as well as the two-step wake-word-then-command flow.
             const inlineCommand = cleanCommand(transcript);
-            if (isCloseCommand(inlineCommand)) {
-              closeCamera();
-              return;
-            }
-            if (isPhotoCommand(inlineCommand)) {
-              capturePhoto();
-              return;
-            }
+            if (isCloseCommand(inlineCommand)) { closeCamera(); return; }
+            if (isVideoStopCommand(inlineCommand)) { stopVideoRecording(); return; }
+            if (isVideoStartCommand(inlineCommand)) { startVideoRecording(); return; }
+            if (isPhotoCommand(inlineCommand)) { capturePhoto(); return; }
             startCameraCommandCapture();
             return;
           }
@@ -230,7 +362,7 @@
     recognition.onerror = event => {
       if (!cameraListening) return;
       if (event?.error === "not-allowed" || event?.error === "service-not-allowed") {
-        status.textContent = "Microphone permission is needed for “OK Jarvis” camera voice control. You can still use 📸 CLICK PHOTO.";
+        status.textContent = "Microphone permission is needed for “OK Jarvis” camera voice control. You can still use the buttons.";
       }
       restartCameraWakeRecognition(600);
     };
@@ -261,15 +393,10 @@
         }
       }
       for (const transcript of transcripts) {
-        if (isPhotoCommand(transcript)) {
-          capturePhoto();
-          finishCameraCommand();
-          return;
-        }
-        if (isCloseCommand(transcript)) {
-          closeCamera();
-          return;
-        }
+        if (isVideoStopCommand(transcript)) { stopVideoRecording(); finishCameraCommand(); return; }
+        if (isVideoStartCommand(transcript)) { startVideoRecording(); finishCameraCommand(); return; }
+        if (isPhotoCommand(transcript)) { capturePhoto(); finishCameraCommand(); return; }
+        if (isCloseCommand(transcript)) { closeCamera(); return; }
       }
     };
     command.onerror = () => finishCameraCommand();
@@ -313,6 +440,18 @@
       else capturePhoto();
       return;
     }
+    if (isVideoStartCommand(command)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openAndRecordVideo();
+      return;
+    }
+    if (isVideoStopCommand(command)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      stopVideoRecording();
+      return;
+    }
     if (isCloseCommand(command)) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -322,6 +461,7 @@
 
   window.addEventListener("beforeunload", () => {
     stopCameraRecognition();
+    if (recording) { try { mediaRecorder?.stop(); } catch (_) {} }
     if (stream) stream.getTracks().forEach(t => t.stop());
   });
 })();
