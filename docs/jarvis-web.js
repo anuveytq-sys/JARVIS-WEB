@@ -440,13 +440,7 @@
       }
     });
     voiceStop.addEventListener("click", () => {
-      speechQueue.length = 0;
-      const run = ++speechRun;
-      speechActive = false;
-      clearTimeout(speechStartTimer);
-      clearTimeout(speechWatchdogTimer);
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-      resumeWakeAfterTts(run);
       voiceStatus.textContent = "Speech stopped.";
     });
     voiceButtonRow.append(voiceTest, voiceStop);
