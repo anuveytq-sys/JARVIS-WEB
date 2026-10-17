@@ -31,13 +31,13 @@ function ensureUI(){
  #jarvis-hand-gesture-video{position:fixed!important;left:-4px!important;top:-4px!important;width:2px!important;height:2px!important;opacity:.001!important;pointer-events:none!important;z-index:-1!important}
  @media(max-width:600px){#jarvis-hand-gesture-toggle{left:8px;top:calc(8px + env(safe-area-inset-top,0px));width:35px;height:35px}#jarvis-hand-gesture-status{left:49px;top:calc(12px + env(safe-area-inset-top,0px))}}
  `;document.head.appendChild(style);
- const b=document.createElement('button');b.id='jarvis-hand-gesture-toggle';b.type='button';b.setAttribute('aria-label','Enable hand gesture zoom');b.setAttribute('aria-pressed','false');b.title='Hand gesture zoom · no API key required';b.innerHTML='<span class="jg-icon" aria-hidden="true">✋</span><i class="jg-dot"></i>';
+ const b=document.createElement('button');b.id='jarvis-hand-gesture-toggle';b.type='button';b.setAttribute('aria-label','Enable hand gesture zoom');b.setAttribute('aria-pressed','false');b.title='Hand gesture zoom · no API key required';b.innerHTML='<svg class="jg-icon" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 11V5.7a1.6 1.6 0 0 1 3.2 0V10"/><path d="M10.7 10V4.9a1.6 1.6 0 0 1 3.2 0V10"/><path d="M13.9 10V6.3a1.6 1.6 0 0 1 3.2 0v7.1l1-1.4a1.7 1.7 0 0 1 2.8 1.9l-3.2 5a4.5 4.5 0 0 1-3.8 2.1h-2.2a4.8 4.8 0 0 1-3.8-1.9L4.6 15a1.7 1.7 0 0 1 2.7-2.1L9 15"/><path d="M10.7 10v3"/></svg><i class="jg-dot"></i>';
  const status=document.createElement('div');status.id='jarvis-hand-gesture-status';status.setAttribute('role','status');status.textContent='Tap to enable hand gestures';
  document.body.append(b,status);b.addEventListener('click',()=>active?stop('Hand gesture control off'):start());
 }
 function showStatus(message,sticky=false){const el=$('#jarvis-hand-gesture-status');if(!el)return;el.textContent=message;el.classList.add('show');if(!sticky){clearTimeout(showStatus.timer);showStatus.timer=setTimeout(()=>el.classList.remove('show'),2600);}}
 function setTheme(){const c=theme(),b=$('#jarvis-hand-gesture-toggle'),s=$('#jarvis-hand-gesture-status');if(b)b.style.setProperty('--jg-color',c);if(s)s.style.setProperty('--jg-color',c);}
-function setButton(on){const b=$('#jarvis-hand-gesture-toggle');if(!b)return;b.setAttribute('aria-pressed',String(on));b.setAttribute('aria-label',on?'Disable hand gesture zoom':'Enable hand gesture zoom');b.querySelector('.jg-icon').textContent=on?'🤏':'✋';setTheme();}
+function setButton(on){const b=$('#jarvis-hand-gesture-toggle');if(!b)return;b.setAttribute('aria-pressed',String(on));b.setAttribute('aria-label',on?'Disable hand gesture zoom':'Enable hand gesture zoom');b.querySelector('.jg-icon').style.color=theme();setTheme();}
 function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 function scaleElement(el,value){if(!el)return;el.style.transformOrigin='center center';el.style.transition='none';el.style.scale=String(value);}
 function applyVisualZoom(value){
