@@ -95,8 +95,6 @@
   }
   let lastSpokenText = "";
   let lastSpokenAt = 0;
-  let jarvisSpeechGeneration = 0;
-  let jarvisWakeResumeTimer = 0;
   function applyJarvisVoice(text) {
     if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
     const spokenText = String(text || "").trim();
@@ -115,54 +113,16 @@
     const profile = getSelectedVoiceProfile();
     utterance.rate = Math.min(1.15, Math.max(0.65, profile ? profile.rate : getVoiceRate()));
     utterance.pitch = Math.min(1.2, Math.max(0.5, profile ? profile.pitch : getVoicePitch()));
-    // Browser TTS volume is capped at 1.0. On mobile, an active wake-word mic can
-    // duck speech dramatically even at volume 1, so temporarily release the mic
-    // only while JARVIS is speaking. This leaves wake-word startup/recognition intact.
     utterance.volume = 1;
-    const speechGeneration = ++jarvisSpeechGeneration;
-    clearTimeout(jarvisWakeResumeTimer);
-    let wakePauseRequested = false;
-    const pauseWakeForSpeech = () => {
-      if (wakePauseRequested) return;
-      try {
-        if (typeof window.__jarvisPauseWakeWordForEnvironment === "function") {
-          window.__jarvisPauseWakeWordForEnvironment();
-          wakePauseRequested = true;
-        }
-      } catch (_) {}
-    };
-    const resumeWakeAfterSpeech = () => {
-      if (speechGeneration !== jarvisSpeechGeneration) return;
-      clearTimeout(jarvisWakeResumeTimer);
-      jarvisWakeResumeTimer = setTimeout(() => {
-        if (speechGeneration !== jarvisSpeechGeneration) return;
-        try {
-          if (wakePauseRequested && typeof window.__jarvisResumeWakeWordAfterEnvironment === "function") {
-            window.__jarvisResumeWakeWordAfterEnvironment();
-          }
-        } catch (_) {}
-      }, 450);
-    };
-    utterance.onend = resumeWakeAfterSpeech;
-    utterance.onerror = resumeWakeAfterSpeech;
-    // Safety fallback for browsers that fail to fire onend/onerror.
-    jarvisWakeResumeTimer = setTimeout(resumeWakeAfterSpeech, Math.max(12000, spokenText.length * 180));
     // Retry once voices finish loading; some mobile browsers initially return none.
     if (!voice && window.speechSynthesis.getVoices().length === 0) {
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.onvoiceschanged = null;
-        if (!window.__jarvisVoiceStop) {
-          pauseWakeForSpeech();
-          window.speechSynthesis.speak(utterance);
-        } else {
-          resumeWakeAfterSpeech();
-        }
+        if (!window.__jarvisVoiceStop) window.speechSynthesis.speak(utterance);
       };
-      pauseWakeForSpeech();
       window.speechSynthesis.cancel();
       return true;
     }
-    pauseWakeForSpeech();
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
     return true;
