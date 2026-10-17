@@ -95,6 +95,51 @@
   }
   let lastSpokenText = "";
   let lastSpokenAt = 0;
+  let jarvisSpeechGeneration = 0;
+  let jarvisSpeechStartTimer = 0;
+  let jarvisWakeResumeTimer = 0;
+  let jarvisSpeechSafetyTimer = 0;
+
+  // The wake-word microphone can make iOS/Safari duck speech audio even when
+  // the utterance volume is 1. Temporarily release mic ownership for playback,
+  // then resume the existing wake listener without changing its toggle/state.
+  function speakJarvisUtterance(utterance) {
+    const generation = ++jarvisSpeechGeneration;
+    clearTimeout(jarvisSpeechStartTimer);
+    clearTimeout(jarvisWakeResumeTimer);
+    clearTimeout(jarvisSpeechSafetyTimer);
+    try { window.__jarvisPauseWakeWordForEnvironment?.(); } catch (_) {}
+
+    const resumeWake = () => {
+      if (generation !== jarvisSpeechGeneration) return;
+      clearTimeout(jarvisSpeechSafetyTimer);
+      clearTimeout(jarvisWakeResumeTimer);
+      jarvisWakeResumeTimer = setTimeout(() => {
+        if (generation !== jarvisSpeechGeneration) return;
+        try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {}
+      }, 450);
+    };
+    utterance.onend = resumeWake;
+    utterance.onerror = resumeWake;
+
+    // If Safari doesn't fire an end/error event (e.g. after a native cancel),
+    // make sure the wake listener is not left paused indefinitely.
+    jarvisSpeechSafetyTimer = setTimeout(resumeWake, Math.max(12000, String(utterance.text || "").length * 220));
+    try { window.speechSynthesis.cancel(); } catch (_) {}
+    jarvisSpeechStartTimer = setTimeout(() => {
+      if (generation !== jarvisSpeechGeneration || window.__jarvisVoiceStop) {
+        resumeWake();
+        return;
+      }
+      try {
+        utterance.volume = 1;
+        window.speechSynthesis.speak(utterance);
+      } catch (_) {
+        resumeWake();
+      }
+    }, 350);
+  }
+
   function applyJarvisVoice(text) {
     if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
     const spokenText = String(text || "").trim();
@@ -118,13 +163,12 @@
     if (!voice && window.speechSynthesis.getVoices().length === 0) {
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.onvoiceschanged = null;
-        if (!window.__jarvisVoiceStop) window.speechSynthesis.speak(utterance);
+        if (!window.__jarvisVoiceStop) speakJarvisUtterance(utterance);
       };
       window.speechSynthesis.cancel();
       return true;
     }
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    speakJarvisUtterance(utterance);
     return true;
   }
   // The original HUD's sendCommand() calls speak(reply). Replace its browser
