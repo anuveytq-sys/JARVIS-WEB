@@ -768,6 +768,11 @@
 
   async function handleLocal(command) {
     const text = command.toLowerCase().trim();
+    // Isolated platform search handoff; leaves the existing wake-word and voice paths untouched.
+    if (typeof window.jarvisHandlePlatformSearch === "function") {
+      const platformSearch = window.jarvisHandlePlatformSearch(command);
+      if (platformSearch) return platformSearch;
+    }
     if (isAny(text, ["what time", "current time", "tell me the time", "time now", "time"])) {
       return say(`The current time is ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}.`);
     }
