@@ -88,8 +88,9 @@
   }
 
   function openResult(item) {
-    const tab = window.open(item.url, "_blank", "noopener,noreferrer");
+    const tab = window.open(item.url, "_blank");
     if (tab) {
+      try { tab.opener = null; } catch (_) {}
       showReply("Opening " + item.label + " on GitHub.");
       return;
     }
