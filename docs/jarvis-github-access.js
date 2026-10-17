@@ -68,6 +68,12 @@
     m = text.match(/^(?:please\s+)?(?:search|find|look up)\s+(?:github\s+)?(?:user|username|account|profile)\s+(.+)$/i);
     if (m) return { url: searchUrl(m[1], "users"), label: "GitHub user search for " + m[1] };
 
+    // "search GitHub user <handle>" and "search <term> user on GitHub" should use the global Users tab.
+    m = text.match(/^(?:please\\s+)?(?:search|find|look up)\\s+(?:on\\s+)?github\\s+(?:user|username|account|profile)\\s+(.+)$/i);
+    if (m) return { url: searchUrl(m[1].replace(/^@/, ""), "users"), label: "global GitHub user search for " + m[1] };
+    m = text.match(/^(?:please\\s+)?(?:search|find|look up)\\s+(.+?)\\s+(?:user|username|account|profile)\\s+on\\s+github$/i);
+    if (m) return { url: searchUrl(m[1].replace(/^@/, ""), "users"), label: "global GitHub user search for " + m[1] };
+
     // Search any supported GitHub category. Pull requests are issues with is:pr.
     m = text.match(/^(?:please\s+)?(?:search|find|look up|open)\s+(?:github\s+)?(code|issues?|pull requests?|prs|commits?|discussions?|packages?|wikis|topics|users|repositories|repos)\s+(?:for|about|named|called)\s+(.+)$/i);
     if (m) {
