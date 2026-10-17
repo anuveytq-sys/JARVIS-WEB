@@ -140,7 +140,8 @@
     u.lang = item.lang || "en-US";
     u.rate = Number.isFinite(item.rate) ? item.rate : 0.88;
     u.pitch = Number.isFinite(item.pitch) ? item.pitch : 0.72;
-    u.volume = Number.isFinite(item.volume) ? item.volume : 1;
+    // Keep every environment and command at the browser TTS maximum; never inherit a quiet per-command value.
+    u.volume = 1;
 
     let settled = false;
     const settle = () => {
@@ -208,7 +209,7 @@
       lang: stableUtterance.lang || "en-US",
       rate: Number.isFinite(stableUtterance.rate) ? stableUtterance.rate : 0.88,
       pitch: Number.isFinite(stableUtterance.pitch) ? stableUtterance.pitch : 0.72,
-      volume: Number.isFinite(stableUtterance.volume) ? stableUtterance.volume : 1
+      volume: 1
     }));
 
     // The old implementation calls cancel() immediately before speak(). That
