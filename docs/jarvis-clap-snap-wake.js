@@ -18,13 +18,18 @@
   let detectorSource = null;
   let detectorFrame = 0;
   let baseline = 0.018;
+  let previousRms = 0.018;
+  let calibrationUntil = 0;
   let armed = false;
   let busy = false;
   let lastTrigger = 0;
+  let ignoreUntil = 0;
   let commandRecognition = null;
 
   const WAKE_ON_RE = /WAKE WORD:\s*ON/i;
   const COOLDOWN_MS = 2600;
+  const REARM_SILENCE_MS = 1400;
+  const CALIBRATION_MS = 900;
 
   function wakeIsOn() {
     const button = toggle();
@@ -67,6 +72,8 @@
 
   function finishCommandCapture() {
     busy = false;
+    ignoreUntil = Date.now() + REARM_SILENCE_MS;
+    previousRms = 0.018;
     try { window.__jarvisResumeWakeWordAfterEnvironment?.(); } catch (_) {}
     if (wakeIsOn()) startDetector();
   }
@@ -159,7 +166,7 @@
   }
 
   function trigger() {
-    if (busy || !wakeIsOn()) return;
+    if (busy || !wakeIsOn() || Date.now() < ignoreUntil) return;
     const now = Date.now();
     if (now - lastTrigger < COOLDOWN_MS) return;
     lastTrigger = now;
@@ -187,13 +194,30 @@
     }
     const rms = Math.sqrt(sum / timeData.length);
     const zeroCrossRate = crossings / timeData.length;
-    baseline = baseline * 0.985 + rms * 0.015;
+    const now = Date.now();
 
-    // Require a strong, sharp, broadband transient. This deliberately raises
-    // the trigger threshold so ordinary speech does not activate the greeting.
-    const loudTransient = rms > Math.max(0.11, baseline * 4.5) && peak > 0.52;
-    const broadbandTransient = zeroCrossRate > 0.10 && peak > 0.58;
-    if (loudTransient && broadbandTransient) trigger();
+    // Calibrate against the room before accepting any trigger. This prevents
+    // the detector from treating ordinary voice/mic gain as a clap baseline.
+    if (now < calibrationUntil) {
+      baseline = baseline * 0.92 + rms * 0.08;
+      previousRms = rms;
+      detectorFrame = requestAnimationFrame(detectLoop);
+      return;
+    }
+
+    baseline = baseline * 0.985 + rms * 0.015;
+    const onsetRatio = rms / Math.max(previousRms, 0.012);
+    const baselineRatio = rms / Math.max(baseline, 0.012);
+
+    // Deliberately require a short, sharp acoustic onset with high-frequency
+    // content. Sustained speech has a much slower onset and is rejected.
+    const sharpOnset = onsetRatio > 1.65 && baselineRatio > 4.8;
+    const loudTransient = rms > 0.12 && peak > 0.58;
+    const broadbandTransient = zeroCrossRate > 0.12 && peak > 0.62;
+    const eligible = now >= ignoreUntil && sharpOnset && loudTransient && broadbandTransient;
+
+    if (eligible) trigger();
+    previousRms = rms;
     detectorFrame = requestAnimationFrame(detectLoop);
   }
 
@@ -215,6 +239,8 @@
       analyser.smoothingTimeConstant = 0.04;
       detectorSource.connect(analyser);
       baseline = 0.018;
+      previousRms = 0.018;
+      calibrationUntil = Date.now() + CALIBRATION_MS;
       armed = true;
       detectorFrame = requestAnimationFrame(detectLoop);
     } catch (error) {
