@@ -196,3 +196,22 @@ body.neon-nexus-active #nn-launcher,body.neon-nexus-active #jarvis-wake-word-tog
 .nn-env[role="button"]{cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease;}
 .nn-env[role="button"]:hover,.nn-env[role="button"]:focus-visible{border-color:rgba(255,65,224,.7);background:rgba(255,38,210,.09);transform:translateX(2px);outline:none;}
 .nn-env[role="button"]:focus-visible{box-shadow:0 0 0 2px rgba(255,65,224,.35);}
+
+
+/* Live Multi Monitor panel: same footprint and magenta glass treatment as the other NEXUS panels. */
+#neon-nexus .nn-panel-system{top:calc(92px + 50vh + 16px);bottom:auto;height:25vh;min-height:150px;max-height:255px;}
+#neon-nexus .nn-monitor-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#b52b9b #190c20;padding:2px 2px 8px;}
+#neon-nexus .nn-monitor-stamp{padding:8px 2px 6px;color:#ff8be9;font-size:6px;letter-spacing:.7px;line-height:1.5;border-bottom:1px solid #ff43df1a;}
+#neon-nexus .nn-monitor-value{color:#d9b4d4;}
+#neon-nexus .nn-monitor-value b{color:#c6ffe6;}
+#neon-nexus .nn-panel-system .nn-system-metric{align-items:flex-start;}
+#neon-nexus .nn-panel-system .nn-system-metric span{max-width:58%;line-height:1.45;}
+#neon-nexus .nn-panel-system .nn-system-metric b{max-width:58%;white-space:normal;text-align:right;overflow-wrap:anywhere;font-size:7px;}
+#neon-nexus .nn-panel-system .nn-system-note{padding:10px 2px;font-size:7px;line-height:1.55;color:#b88ab2;}
+@media(max-width:740px){
+  #neon-nexus .nn-panel-system{top:calc(67px + 42vh + 10px);bottom:76px;height:auto;max-height:none;}
+  #neon-nexus .nn-panel-system .nn-system-metric{font-size:5px;gap:3px;padding:6px 1px;}
+  #neon-nexus .nn-panel-system .nn-system-metric b{font-size:5px;}
+  #neon-nexus .nn-monitor-stamp{font-size:4.7px;letter-spacing:0;}
+  #neon-nexus .nn-panel-system .nn-system-note{font-size:5px;line-height:1.4;}
+}
