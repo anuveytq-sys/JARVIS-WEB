@@ -830,21 +830,41 @@
     let target;
 
     if (isAppleMobile) {
-      target = { name: "Apple App Store", url: "https://apps.apple.com/in/search?term=" + term };
+      target = {
+        name: "Apple App Store",
+        appUrl: "itms-apps://itunes.apple.com/in/search?term=" + term + "&entity=software",
+        url: "https://apps.apple.com/in/search?term=" + term
+      };
     } else if (/Android/i.test(ua)) {
-      target = { name: "Google Play Store", url: "https://play.google.com/store/search?q=" + term + "&c=apps" };
+      target = {
+        name: "Google Play Store",
+        appUrl: "market://search?q=" + term + "&c=apps",
+        url: "https://play.google.com/store/search?q=" + term + "&c=apps"
+      };
     } else if (/Windows NT|Windows/i.test(ua + " " + platform)) {
-      target = { name: "Microsoft Store", url: "https://apps.microsoft.com/search?query=" + term };
+      target = {
+        name: "Microsoft Store",
+        appUrl: "ms-windows-store://search/?query=" + term,
+        url: "https://apps.microsoft.com/search?query=" + term
+      };
     } else if (/Macintosh|Mac OS X|macOS/i.test(ua + " " + platform)) {
-      target = { name: "Apple App Store", url: "https://apps.apple.com/us/search?term=" + term };
+      target = {
+        name: "Apple App Store",
+        appUrl: "macappstore://itunes.apple.com/search?term=" + term,
+        url: "https://apps.apple.com/us/search?term=" + term
+      };
     } else {
       target = { name: "Flathub app catalog", url: "https://flathub.org/apps/search?q=" + term };
     }
 
-    // Browsers cannot silently install native apps or press a store's Install/Get
-    // button. Send the visitor directly to the official store's search results.
+    // Prefer the device's native store app, then fall back to its official web search
+    // if the browser cannot hand off to the native store. Installation confirmation
+    // must remain with the device owner; websites cannot safely auto-press Install/Get.
     try {
-      window.location.assign(target.url);
+      window.location.href = target.appUrl || target.url;
+      window.setTimeout(() => {
+        if (document.visibilityState !== "hidden") window.location.href = target.url;
+      }, 900);
     } catch (_) {
       return say("Open " + target.name + " and search for " + appName + " to install the correct app.");
     }
