@@ -25,7 +25,7 @@
 
 #neon-nexus .nn-core{transform-style:preserve-3d;transition:filter .25s ease,transform .25s ease;box-shadow:0 0 22px rgba(255,0,230,.25),0 0 70px rgba(80,0,255,.22),inset 0 0 35px rgba(0,230,255,.08);}
 #neon-nexus .nn-core::before{content:"";position:absolute;inset:-15%;border-radius:50%;border:1px solid rgba(255,50,230,.34);box-shadow:0 0 18px rgba(255,0,230,.24),inset 0 0 20px rgba(0,210,255,.12);animation:nnCoreGyro 9s linear infinite;pointer-events:none;}
-#neon-nexus .nn-core::after{content:"";position:absolute;inset:-29%;border-radius:50%;border:1px dashed rgba(0,220,255,.25);animation:nnCoreGyro 15s linear infinite reverse;pointer-events:none;}
+#neon-nexus .nn-core::after{content:none!important;display:none!important;} /* Remove the extra cyan-blue outer outline; keep the existing magenta gyro ring. */
 #neon-nexus .nn-core-inner{box-shadow:inset 0 0 24px rgba(0,255,255,.32),0 0 26px rgba(0,240,255,.35);}
 #neon-nexus .nn-core.listening,#neon-nexus .nn-core:focus-visible{filter:brightness(1.28) saturate(1.3);outline:none;}
 #neon-nexus .nn-core.listening .nn-core-inner{animation:nnCoreListening .8s ease-in-out infinite;}
