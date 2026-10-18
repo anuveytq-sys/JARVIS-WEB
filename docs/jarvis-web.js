@@ -806,16 +806,16 @@
     const raw = String(command || "").trim();
     // Accept natural spoken/typed variations while keeping the app name intact.
     const cleaned = raw
-      .replace(/^\\s*(?:(?:hey|hello|hi|ok|okay)\\s+)?(?:jarvis[, :]?\\s*)?(?:please\\s+)?/i, "")
+      .replace(/^\s*(?:(?:hey|hello|hi|ok|okay)\s+)?(?:jarvis[, :]?\s*)?(?:please\s+)?/i, "")
       .replace(/[.!?]+$/, "")
       .trim();
-    const match = cleaned.match(/^(?:find\\s+and\\s+install|search\\s+for\\s+and\\s+install|install|download|get)\\s+(?:(?:the|this|that)\\s+)?(?:(?:app|application)\\s+)?(.+?)$/i);
+    const match = cleaned.match(/^(?:find\s+and\s+install|search\s+for\s+and\s+install|install|download|get)\s+(?:(?:the|this|that)\s+)?(?:(?:app|application)\s+)?(.+?)$/i);
     if (!match) return null;
 
     const appName = match[1]
-      .replace(/\\s+(?:on|for)\\s+(?:my\\s+)?(?:mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|ipod|android|windows|mac(?:book)?)$/i, "")
-      .replace(/\\s+(?:application|app)$/i, "")
-      .replace(/^(?:named|called)\\s+/i, "")
+      .replace(/\s+(?:on|for)\s+(?:my\s+)?(?:mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|ipod|android|windows|mac(?:book)?)$/i, "")
+      .replace(/\s+(?:application|app)$/i, "")
+      .replace(/^(?:named|called)\s+/i, "")
       .trim();
 
     if (!appName || /^(?:app|application|this app|that app|it|the app|an app|any app)$/i.test(appName)) {
