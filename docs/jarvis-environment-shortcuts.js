@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'env-shortcuts-20261018c';
+  const VERSION = 'env-shortcuts-20261018d';
   const PANEL_ID = 'jarvis-environment-shortcuts';
 
   const environments = [
@@ -45,7 +45,7 @@
     Object.assign(panel.style, {
       left: '16px',
       bottom: '84px',
-      width: '185px',
+      width: '215px',
       height: '120px',
       padding: '8px',
       overflow: 'hidden',
@@ -117,8 +117,11 @@
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      @media (max-width: 800px) {
+        #${PANEL_ID} { width: 155px !important; }
+      }
       @media (max-width: 520px) {
-        #${PANEL_ID} { left: 12px !important; bottom: 72px !important; width: 185px !important; }
+        #${PANEL_ID} { left: 12px !important; bottom: 72px !important; width: 126px !important; }
       }
     `;
     document.head.appendChild(style);
