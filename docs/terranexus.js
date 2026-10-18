@@ -155,6 +155,11 @@ function listen(){
 }
 function open(){build();root.classList.add('open');document.body.classList.add('terranexus-active');$('tn-input').focus();say('TERRANEXUS holographic science workshop online.')}
 function close(){if(root)root.classList.remove('open');document.body.classList.remove('terranexus-active');say('Returning to JARVIS.')}
+// Hand-roll bridge targets only the active simulation group, never the canvas/workshop.
+window.__TERRANEXUS_HAND_ROTATE=function(delta){
+ if(!model||!Number.isFinite(delta))return;
+ rotY+=delta*.45;
+};
 window.TERRANEXUS={open:open,close:close,show:show,version:REALISM_VERSION};
 function launch(q){return /^(?:(?:hey\s+)?jarvis\s+)?(?:(?:please\s+)?(?:open|launch|start|activate|enter|show)\s+(?:the\s+)?)?(?:terranexus|terra\s+nexus|terra|tera|tn|science workshop|holographic workshop|science lab)(?:\s+environment)?[.! ]*$/i.test(String(q||'').trim())}
 function hook(){if(typeof window.sendCommand!=='function'||window.sendCommand.__terranexusHook)return false;let original=window.sendCommand;let wrap=async function(q){if(launch(q)){open();return}if(document.body.classList.contains('terranexus-active')){if(/^(?:close|exit|back to jarvis|return to jarvis)$/i.test(String(q||'').trim())){close();return}if(q){$('tn-input').value=q;command();return}}return original.apply(this,arguments)};wrap.__terranexusHook=true;window.sendCommand=wrap;return true}
