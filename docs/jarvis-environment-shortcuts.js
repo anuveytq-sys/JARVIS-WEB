@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'env-shortcuts-20261018d';
+  const VERSION = 'env-shortcuts-20261018e';
   const PANEL_ID = 'jarvis-environment-shortcuts';
 
   const environments = [
@@ -45,7 +45,7 @@
     Object.assign(panel.style, {
       left: '16px',
       bottom: '84px',
-      width: '215px',
+      width: '215px', /* same desktop width as the original .panel cards */
       height: '120px',
       padding: '8px',
       overflow: 'hidden',
@@ -135,15 +135,37 @@
       button.setAttribute('aria-label', `Open ${env.name}`);
       button.innerHTML = `<span><span class="jarvis-env-shortcut-name">${env.name}</span><br><span style="color:#477e96;font-size:4.5px;letter-spacing:.6px">${env.subtitle}</span></span><span class="jarvis-env-shortcut-arrow">›</span>`;
       button.addEventListener('click', async () => {
+        button.disabled = true;
         try {
-          if (typeof window.sendCommand === 'function') {
-            await window.sendCommand(env.command);
-          } else {
-            button.disabled = true;
-            setTimeout(() => { button.disabled = false; }, 700);
+          // Launch these environments locally. Passing their names through
+          // sendCommand() lets unrelated command wrappers (especially the
+          // broad "nexus" matcher) intercept the click and route it to AI/Neon.
+          // Direct calls avoid API usage and preserve the expected destination.
+          if (env.name === 'VELVE') {
+            window.NEON_NEXUS?.close?.();
+            window.TERRANEXUS?.close?.();
+            if (typeof window.VELVE?.open === 'function') {
+              await window.VELVE.open();
+            } else {
+              console.warn('[JARVIS Environment Shortcuts] VELVE is not ready yet.');
+            }
+          } else if (env.name === 'TERRA NEXUS') {
+            window.NEON_NEXUS?.close?.();
+            window.VELVE?.exit?.();
+            if (typeof window.TERRANEXUS?.open === 'function') {
+              await window.TERRANEXUS.open();
+            } else {
+              console.warn('[JARVIS Environment Shortcuts] Terra Nexus is not ready yet.');
+            }
+          } else if (env.name === 'VISION INTELLIGENCE' || env.name === 'NEON NEXUS') {
+            if (typeof window.sendCommand === 'function') {
+              await window.sendCommand(env.command);
+            }
           }
         } catch (error) {
           console.error('[JARVIS Environment Shortcuts]', env.name, error);
+        } finally {
+          setTimeout(() => { button.disabled = false; }, 700);
         }
       });
       list.appendChild(button);
