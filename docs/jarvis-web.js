@@ -784,8 +784,53 @@
     return say("The JARVIS camera controller has not loaded yet. Please refresh the page and try again.");
   }
 
+  function getInstallStoreTarget(appName) {
+    const ua = navigator.userAgent || "";
+    const term = encodeURIComponent(String(appName || "").trim());
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+      return { name: "Apple App Store", url: "https://apps.apple.com/in/search?term=" + term };
+    }
+    if (/Android/i.test(ua)) {
+      return { name: "Google Play Store", url: "https://play.google.com/store/search?q=" + term + "&c=apps" };
+    }
+    if (/Windows NT/i.test(ua)) {
+      return { name: "Microsoft Store", url: "https://apps.microsoft.com/search?query=" + term };
+    }
+    if (/Macintosh|Mac OS X/i.test(ua)) {
+      return { name: "Apple App Store", url: "https://apps.apple.com/mac/search?term=" + term };
+    }
+    return { name: "Flathub app catalog", url: "https://flathub.org/apps/search?q=" + term };
+  }
+
+  function handleInstallCommand(command) {
+    const raw = String(command || "").trim();
+    const match = raw.match(/^(?:(?:hey|hello|ok|okay)\\s+)?(?:jarvis[, :]?\\s*)?(?:please\\s+)?(?:find\\s+and\\s+install|search\\s+for\\s+and\\s+install|install|download|get)\\s+(?:(?:the|this|that)\\s+)?(?:(?:app|application)\\s+)?(.+?)\\s*[.!?]*$/i);
+    if (!match) return null;
+
+    let appName = match[1]
+      .replace(/\\s+(?:on|for)\\s+(?:my\\s+)?(?:mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|android|windows|mac(?:book)?)$/i, "")
+      .replace(/\\s+(?:application|app)$/i, "")
+      .replace(/^(?:named|called)\\s+/i, "")
+      .trim();
+
+    if (!appName || /^(?:app|application|this app|that app|it|the app|an app|any app)$/i.test(appName)) {
+      return say("Tell me the app name, for example: install Spotify on my iPhone.");
+    }
+
+    const target = getInstallStoreTarget(appName);
+    // A website cannot silently install software or press the store's Install/Get
+    // button. Navigate to the official store's matching search; the device owner
+    // reviews the app/publisher and confirms installation there.
+    try { window.location.assign(target.url); } catch (_) {
+      return say("Open " + target.name + " and search for " + appName + " to install the correct app.");
+    }
+    return say("Opening " + target.name + " search for " + appName + ". Check the app and publisher, then confirm installation in the store.");
+  }
+
   async function handleLocal(command) {
     const text = command.toLowerCase().trim();
+    const installResult = handleInstallCommand(command);
+    if (installResult) return installResult;
     // Isolated platform search handoff; leaves the existing wake-word and voice paths untouched.
     if (typeof window.jarvisHandlePlatformSearch === "function") {
       const platformSearch = window.jarvisHandlePlatformSearch(command);
