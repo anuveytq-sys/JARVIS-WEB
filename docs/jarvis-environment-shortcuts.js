@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'env-shortcuts-20261018a';
+  const VERSION = 'env-shortcuts-20261018b';
   const PANEL_ID = 'jarvis-environment-shortcuts';
 
   const environments = [
@@ -63,7 +63,7 @@
       left: '16px',
       bottom: '84px',
       width: '215px',
-      height: '198px',
+      height: '150px',
       padding: '12px',
       overflow: 'hidden',
       zIndex: '35'
@@ -82,13 +82,13 @@
         color: #477e96;
         font-size: 7px;
         letter-spacing: 1.4px;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
       #${PANEL_ID} .jarvis-env-shortcuts-list {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        max-height: 126px;
+        gap: 5px;
+        max-height: 76px;
         overflow-y: auto;
         overflow-x: hidden;
         padding-right: 3px;
@@ -105,7 +105,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 8px;
-        padding: 6px 8px;
+        padding: 5px 8px;
         border: 1px solid rgba(0,205,255,.22);
         border-radius: 5px;
         background: linear-gradient(100deg, rgba(0,115,190,.18), rgba(0,15,35,.35));
@@ -126,7 +126,7 @@
       #${PANEL_ID} .jarvis-env-shortcut-name { color: #d8fbff; }
       #${PANEL_ID} .jarvis-env-shortcut-arrow { color: #62f5ff; font-size: 11px; flex: 0 0 auto; }
       #${PANEL_ID} .jarvis-env-shortcuts-hint {
-        margin-top: 7px;
+        margin-top: 5px;
         color: #477b92;
         font-size: 6px;
         letter-spacing: 1px;
