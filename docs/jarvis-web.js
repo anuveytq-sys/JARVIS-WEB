@@ -292,20 +292,38 @@
       auto.textContent = "AUTO — lower-pitched English voice when available";
       voiceSelect.appendChild(auto);
       const baseVoices = getEnglishVoices();
-      const profiles = [
-        [0.50,0.78],[0.50,0.84],[0.50,0.90],[0.50,0.96],[0.55,0.78],
-        [0.55,0.84],[0.55,0.90],[0.55,0.96],[0.60,0.78],[0.60,0.84],
-        [0.60,0.90],[0.60,0.96],[0.65,0.78],[0.65,0.84],[0.65,0.90],
-        [0.65,0.96],[0.70,0.78],[0.70,0.84],[0.70,0.90],[0.70,0.96],
-        [0.75,0.78],[0.75,0.84],[0.75,0.90],[0.80,0.84],[0.80,0.90]
-      ];
       const base = baseVoices.find(v => masculineVoiceHints.test(v.name)) || baseVoices[0];
-      if (base) profiles.forEach(([pitch, rate], i) => {
-        const option = document.createElement("option");
-        option.value = "profile|" + base.name + "|" + pitch + "|" + rate;
-        option.textContent = "JARVIS Deep " + String(i + 1).padStart(2, "0") + " — " + base.name + " (depth " + pitch.toFixed(2) + ")";
-        voiceSelect.appendChild(option);
-      });
+      if (base) {
+        // Clearly named presets appear first, so the cinematic profile is easy
+        // to find rather than hidden among numbered pitch variations.
+        [
+          ["cinematic-deep", "CINEMATIC JARVIS — Deep Male Style", 0.58, 0.84],
+          ["calm-command", "JARVIS — Calm Command", 0.68, 0.90],
+          ["crisp-assistant", "JARVIS — Clear & Professional", 0.82, 0.96]
+        ].forEach(([id, label, pitch, rate]) => {
+          const option = document.createElement("option");
+          option.value = "profile|" + base.name + "|" + pitch + "|" + rate;
+          option.textContent = label + " (" + base.name + ")";
+          option.dataset.jarvisPreset = id;
+          voiceSelect.appendChild(option);
+        });
+        const profiles = [
+          [0.50,0.78],[0.50,0.84],[0.50,0.90],[0.50,0.96],[0.55,0.78],
+          [0.55,0.84],[0.55,0.90],[0.55,0.96],[0.60,0.78],[0.60,0.84],
+          [0.60,0.90],[0.60,0.96],[0.65,0.78],[0.65,0.84],[0.65,0.90],
+          [0.65,0.96],[0.70,0.78],[0.70,0.84],[0.70,0.90],[0.70,0.96],
+          [0.75,0.78],[0.75,0.84],[0.75,0.90],[0.80,0.84],[0.80,0.90]
+        ];
+        const group = document.createElement("optgroup");
+        group.label = "MORE JARVIS VOICE PROFILES";
+        profiles.forEach(([pitch, rate], i) => {
+          const option = document.createElement("option");
+          option.value = "profile|" + base.name + "|" + pitch + "|" + rate;
+          option.textContent = "JARVIS Deep " + String(i + 1).padStart(2, "0") + " — " + base.name + " (depth " + pitch.toFixed(2) + ")";
+          group.appendChild(option);
+        });
+        voiceSelect.appendChild(group);
+      }
       baseVoices.forEach(v => {
         const option = document.createElement("option");
         option.value = v.name;
