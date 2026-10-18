@@ -3319,6 +3319,45 @@ async function sendCommand(command) {
     .replace(/^\s*(?:(?:hey|hello|hi)\s+)?jarvis[, ]*/i, "")
     .replace(/[.!?]+$/, "").trim();
   const normalizedLocal = localCommand.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+
+  // INSTALL APP: use the official store for the visitor's device, not the
+  // operating system hosting any optional backend. Store confirmation remains
+  // with the user; a website cannot silently install native applications.
+  const installMatch = localCommand.match(/^(?:please\s+)?(?:find\s+and\s+install|search\s+for\s+and\s+install|install|download|get)\s+(?:the\s+)?(?:app\s+)?(.+?)\s*$/i);
+  if (installMatch) {
+    const appName = installMatch[1].trim()
+      .replace(/\s+(?:on|for)\s+(?:my\s+)?(?:mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|android|windows|mac(?:book)?)$/i, "")
+      .replace(/^(?:named|called)\s+/i, "")
+      .replace(/\s+(?:application|app)$/i, "")
+      .trim();
+
+    if (!appName || /^(?:this app|that app|it|the app)$/i.test(appName)) {
+      speak("Which app would you like me to find in your device's official app store?");
+      setState("idle");
+      return;
+    }
+
+    const ua = navigator.userAgent || "";
+    const platform = navigator.userAgentData?.platform || navigator.platform || "";
+    let storeUrl;
+    if (/iPhone|iPad|iPod/i.test(ua) || (/Mac/i.test(platform) && navigator.maxTouchPoints > 1)) {
+      storeUrl = "https://apps.apple.com/in/search?term=" + encodeURIComponent(appName);
+    } else if (/Android/i.test(ua)) {
+      storeUrl = "https://play.google.com/store/search?q=" + encodeURIComponent(appName) + "&c=apps";
+    } else if (/Windows/i.test(platform) || /Windows NT/i.test(ua)) {
+      storeUrl = "https://apps.microsoft.com/search?query=" + encodeURIComponent(appName);
+    } else if (/Mac/i.test(platform) || /Macintosh|Mac OS X/i.test(ua)) {
+      storeUrl = "https://apps.apple.com/us/search?term=" + encodeURIComponent(appName);
+    } else {
+      storeUrl = "https://flathub.org/apps/search?q=" + encodeURIComponent(appName);
+    }
+
+    speak("Searching the official app store for " + appName + ". Check the app name and publisher, then confirm installation in the store.");
+    setState("idle");
+    setTimeout(() => { window.location.assign(storeUrl); }, 250);
+    return;
+  }
+
   const localApps = [
     ["youtube", "https://www.youtube.com/", ["youtube", "yt"]],
     ["google", "https://www.google.com/", ["google", "google search"]],
