@@ -8,6 +8,7 @@ const VERSION='hand-gesture-zoom-20261018c',MODEL_BASE='https://cdn.jsdelivr.net
 let active=false,starting=false,stream=null,video=null,hands=null,raf=0,frameBusy=false;
 let anchorDistance=0,anchorZoom=1,targetZoom=1,currentZoom=1,lastAppliedZoom=1,lastSeen=0,lastEnv='';
 let handRollAngle=null,handRotation=0;
+let indexTapLastZ=null,indexTapLastAt=0,indexTapCooldownUntil=0;
 const MIN_ZOOM=.72,MAX_ZOOM=2.05,ROLL_DEAD=.010,ROLL_MAX=.16,ROLL_SPEED=1.75;
 const $=(s,r=document)=>r.querySelector(s);
 const visible=el=>{if(!el)return false;const cs=getComputedStyle(el);return cs.display!=='none'&&cs.visibility!=='hidden'&&Number(cs.opacity||1)>.01&&el.getClientRects().length>0;};
@@ -165,10 +166,64 @@ function animate(){
  if(Math.abs(currentZoom-before)>.00015)applyVisualZoom(currentZoom);
  raf=requestAnimationFrame(animate);
 }
+function hubTapTarget(){
+ const e=environment();
+ if(e==='main'){
+   const hit=$('.jarvis-core-voice-hit'),core=$('.jarvis-core-3d');
+   return visible(hit)?hit:visible(core)?core:null;
+ }
+ if(e==='command')return visible($('#nn-core'))?$('#nn-core'):null;
+ if(e==='vision')return visible($('.jvi-holo-core'))?$('.jvi-holo-core'):null;
+ return null;
+}
+function indexOnlyPose(lm){
+ const wrist=lm[0];
+ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ const indexExtended=dist(wrist,lm[8])>dist(wrist,lm[6])*1.16;
+ const curled=[[12,10],[16,14],[20,18]].every(([tip,pip])=>dist(wrist,lm[tip])<dist(wrist,lm[pip])*1.18);
+ return indexExtended&&curled;
+}
+function fingertipOverHub(lm,target){
+ if(!target)return false;
+ const r=target.getBoundingClientRect();
+ const cx=r.left+r.width/2,cy=r.top+r.height/2;
+ const tx=lm[8].x*innerWidth,ty=lm[8].y*innerHeight;
+ const mx=(1-lm[8].x)*innerWidth;
+ const padX=Math.max(70,r.width*1.25),padY=Math.max(70,r.height*1.25);
+ return (Math.abs(tx-cx)<=r.width/2+padX&&Math.abs(ty-cy)<=r.height/2+padY)||
+        (Math.abs(mx-cx)<=r.width/2+padX&&Math.abs(ty-cy)<=r.height/2+padY);
+}
+function maybeTapCentralMic(lm){
+ // This feature is intentionally limited to Main JARVIS, Command Centre and Vision Intelligence.
+ if(!active||$('#jarvis-hand-gesture-toggle')?.getAttribute('aria-pressed')!=='true'){
+   indexTapLastZ=null;return;
+ }
+ const e=environment();
+ if(e!=='main'&&e!=='command'&&e!=='vision'){indexTapLastZ=null;return;}
+ const target=hubTapTarget();
+ if(!target||!indexOnlyPose(lm)||!fingertipOverHub(lm,target)){
+   indexTapLastZ=lm[8].z;indexTapLastAt=performance.now();return;
+ }
+ const now=performance.now(),z=Number(lm[8].z);
+ if(indexTapLastZ!==null&&now-indexTapLastAt<220&&indexTapLastZ-z>=.035&&now>=indexTapCooldownUntil){
+   indexTapCooldownUntil=now+1700;
+   // Click the environment's existing microphone control; do not create a parallel voice engine.
+   const mic=e==='main'?target:e==='command'?$('#nn-core'):$('#jvi-voice');
+   if(mic&&!mic.disabled){
+     mic.click();
+     showStatus(e==='vision'?'VISION INTELLIGENCE · MICROPHONE ACTIVATED':e==='command'?'COMMAND CENTRE · MICROPHONE ACTIVATED':'JARVIS · MICROPHONE ACTIVATED');
+   }
+   indexTapLastZ=null;
+   indexTapLastAt=now;
+   return;
+ }
+ indexTapLastZ=z;indexTapLastAt=now;
+}
 function onResults(results){
  if(!active)return;const lm=results.multiHandLandmarks&&results.multiHandLandmarks[0];
- if(!lm){if(Date.now()-lastSeen>1300)anchorDistance=0;handRollAngle=null;return;}
+ if(!lm){if(Date.now()-lastSeen>1300)anchorDistance=0;handRollAngle=null;indexTapLastZ=null;return;}
  lastSeen=Date.now();
+ maybeTapCentralMic(lm);
  updateHandRoll(lm);
  const d=distance(lm[4],lm[8]);
  if(!anchorDistance){anchorDistance=d;anchorZoom=targetZoom;return;}
