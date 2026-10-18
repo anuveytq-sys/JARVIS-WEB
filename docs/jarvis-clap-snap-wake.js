@@ -192,9 +192,14 @@
       stopRecognition();
       return;
     }
-    // Each time the user manually turns the normal wake word OFF, re-arm the
-    // startup phrase so "Wake up Jarvis" works again without a page refresh.
-    if (triggered && shouldListenForStartupPhrase()) triggered = false;
+    // Each time the normal wake-word control returns to its OFF label, re-arm
+    // the startup phrase. Check the label directly because shouldListen... is
+    // intentionally false while the previous startup cycle is marked triggered.
+    const button = toggle();
+    const buttonIsOff = !!button &&
+      /ENABLE WAKE WORD|WAKE WORD:\s*OFF|TAP TO RETRY WAKE WORD/i.test(String(button.textContent || "")) &&
+      !isWakeOnOrStarting();
+    if (triggered && buttonIsOff) triggered = false;
     if (shouldListenForStartupPhrase() && !recognition && !starting && !retryFromGesture) {
       startRecognition();
     }
