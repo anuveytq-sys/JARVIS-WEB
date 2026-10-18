@@ -3326,7 +3326,7 @@ async function sendCommand(command) {
   const installMatch = localCommand.match(/^(?:please\s+)?(?:find\s+and\s+install|search\s+for\s+and\s+install|install|download|get)\s+(?:the\s+)?(?:app\s+)?(.+?)\s*$/i);
   if (installMatch) {
     const appName = installMatch[1].trim()
-      .replace(/\s+(?:on|for)\s+(?:my\s+)?(?:mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|android|windows|mac(?:book)?)$/i, "")
+      .replace(/\s+(?:on|for)\s+(?:my\s+)?(?:android\s+phone|windows\s+(?:pc|computer|laptop)|mac(?:book)?\s+(?:laptop|computer)|mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|android|windows|mac(?:book)?)$/i, "")
       .replace(/^(?:named|called)\s+/i, "")
       .replace(/\s+(?:application|app)$/i, "")
       .trim();
