@@ -3316,9 +3316,9 @@ async function sendCommand(command) {
   // frontend has no AI backend configured. This is also the path used by the
   // central-core microphone, so simple actions do not silently fail.
   const localCommand = command
-    .replace(/^\\s*(?:(?:hey|hello|hi)\\s+)?jarvis[, ]*/i, "")
+    .replace(/^\s*(?:(?:hey|hello|hi)\s+)?jarvis[, ]*/i, "")
     .replace(/[.!?]+$/, "").trim();
-  const normalizedLocal = localCommand.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+  const normalizedLocal = localCommand.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
   const localApps = [
     ["youtube", "https://www.youtube.com/", ["youtube", "yt"]],
     ["google", "https://www.google.com/", ["google", "google search"]],
@@ -3341,17 +3341,17 @@ async function sendCommand(command) {
     ["notion", "https://www.notion.so/", ["notion"]],
     ["zoom", "https://zoom.us/join", ["zoom"]]
   ];
-  const openIntent = /^(open|launch|start|show|go to|take me to|navigate to)\\b/.test(normalizedLocal);
-  const youtubeSearch = localCommand.match(/^(?:please\\s+)?(?:search(?:\\s+for)?|play|watch|find|show|open)\\s+(.+?)\\s+(?:video\\s+)?(?:on|in)\\s+youtube[.!?]*$/i);
+  const openIntent = /^(open|launch|start|show|go to|take me to|navigate to)\b/.test(normalizedLocal);
+  const youtubeSearch = localCommand.match(/^(?:please\s+)?(?:search(?:\s+for)?|play|watch|find|show|open)\s+(.+?)\s+(?:video\s+)?(?:on|in)\s+youtube[.!?]*$/i);
   let localTarget = null;
   let localReply = "";
   if (youtubeSearch && youtubeSearch[1].trim()) {
     localTarget = "https://www.youtube.com/results?search_query=" + encodeURIComponent(youtubeSearch[1].trim());
     localReply = "Opening YouTube results for " + youtubeSearch[1].trim() + ".";
-  } else if (/^(open|launch|start|go to)\\s+youtube$/.test(normalizedLocal)) {
+  } else if (/^(open|launch|start|go to)\s+youtube$/.test(normalizedLocal)) {
     localTarget = "https://www.youtube.com/";
     localReply = "Opening YouTube.";
-  } else if (/^(open|launch|start|show|go to|take me to|navigate to)\\s+(browser|web browser|internet)$/.test(normalizedLocal)) {
+  } else if (/^(open|launch|start|show|go to|take me to|navigate to)\s+(browser|web browser|internet)$/.test(normalizedLocal)) {
     localTarget = "https://www.google.com/";
     localReply = "Opening your browser.";
   } else if (openIntent) {
