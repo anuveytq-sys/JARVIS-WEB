@@ -1,6 +1,8 @@
 /* JARVIS CORE 3D — clean central reactor with voice activation. */
 (()=>{'use strict';
+  const loadHandRotation=()=>{if(window.__JARVIS_HAND_ROTATION__)return;const s=document.createElement('script');s.src='./jarvis-hand-rotation.js?v=20261018a';s.async=true;document.head.appendChild(s)};
   const boot=()=>{
+    loadHandRotation();
     const stage=document.querySelector('.core-stage');
     if(stage&&!stage.dataset.jarvisCore3d){
       stage.dataset.jarvisCore3d='1';stage.classList.add('jarvis-core-enhanced');
