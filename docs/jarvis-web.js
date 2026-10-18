@@ -804,11 +804,16 @@
 
   function handleInstallCommand(command) {
     const raw = String(command || "").trim();
-    const match = raw.match(/^(?:(?:hey|hello|ok|okay)\\s+)?(?:jarvis[, :]?\\s*)?(?:please\\s+)?(?:find\\s+and\\s+install|search\\s+for\\s+and\\s+install|install|download|get)\\s+(?:(?:the|this|that)\\s+)?(?:(?:app|application)\\s+)?(.+?)\\s*[.!?]*$/i);
+    // Accept natural spoken/typed variations while keeping the app name intact.
+    const cleaned = raw
+      .replace(/^\\s*(?:(?:hey|hello|hi|ok|okay)\\s+)?(?:jarvis[, :]?\\s*)?(?:please\\s+)?/i, "")
+      .replace(/[.!?]+$/, "")
+      .trim();
+    const match = cleaned.match(/^(?:find\\s+and\\s+install|search\\s+for\\s+and\\s+install|install|download|get)\\s+(?:(?:the|this|that)\\s+)?(?:(?:app|application)\\s+)?(.+?)$/i);
     if (!match) return null;
 
-    let appName = match[1]
-      .replace(/\\s+(?:on|for)\\s+(?:my\\s+)?(?:mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|android|windows|mac(?:book)?)$/i, "")
+    const appName = match[1]
+      .replace(/\\s+(?:on|for)\\s+(?:my\\s+)?(?:mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|ipod|android|windows|mac(?:book)?)$/i, "")
       .replace(/\\s+(?:application|app)$/i, "")
       .replace(/^(?:named|called)\\s+/i, "")
       .trim();
@@ -817,11 +822,30 @@
       return say("Tell me the app name, for example: install Spotify on my iPhone.");
     }
 
-    const target = getInstallStoreTarget(appName);
-    // A website cannot silently install software or press the store's Install/Get
-    // button. Navigate to the official store's matching search; the device owner
-    // reviews the app/publisher and confirms installation there.
-    try { window.location.assign(target.url); } catch (_) {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.userAgentData?.platform || navigator.platform || "";
+    const isAppleMobile = /iPhone|iPad|iPod/i.test(ua) ||
+      (/Mac/i.test(platform) && Number(navigator.maxTouchPoints || 0) > 1);
+    const term = encodeURIComponent(appName);
+    let target;
+
+    if (isAppleMobile) {
+      target = { name: "Apple App Store", url: "https://apps.apple.com/in/search?term=" + term };
+    } else if (/Android/i.test(ua)) {
+      target = { name: "Google Play Store", url: "https://play.google.com/store/search?q=" + term + "&c=apps" };
+    } else if (/Windows NT|Windows/i.test(ua + " " + platform)) {
+      target = { name: "Microsoft Store", url: "https://apps.microsoft.com/search?query=" + term };
+    } else if (/Macintosh|Mac OS X|macOS/i.test(ua + " " + platform)) {
+      target = { name: "Apple App Store", url: "https://apps.apple.com/us/search?term=" + term };
+    } else {
+      target = { name: "Flathub app catalog", url: "https://flathub.org/apps/search?q=" + term };
+    }
+
+    // Browsers cannot silently install native apps or press a store's Install/Get
+    // button. Send the visitor directly to the official store's search results.
+    try {
+      window.location.assign(target.url);
+    } catch (_) {
       return say("Open " + target.name + " and search for " + appName + " to install the correct app.");
     }
     return say("Opening " + target.name + " search for " + appName + ". Check the app and publisher, then confirm installation in the store.");
