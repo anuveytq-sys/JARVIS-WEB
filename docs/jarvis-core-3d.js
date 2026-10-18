@@ -18,6 +18,4 @@
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
   const wait=setInterval(()=>{boot();if(document.querySelector('.core-stage')&&document.querySelector('#nn-core'))clearInterval(wait)},700);setTimeout(()=>clearInterval(wait),15000);
-  const loadRollFix=()=>{if(window.__JARVIS_HAND_ROLL_FIX__)return;const s=document.createElement('script');s.src='https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-hand-roll-fix.js?v=20261018f';s.async=true;document.head.appendChild(s)};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadRollFix,{once:true});else loadRollFix();
 })();
