@@ -3270,67 +3270,24 @@ function setState(state) {
 /* =========================================================
    BROWSER TTS (Text-to-Speech)
    ========================================================= */
-/* JARVIS voice: free, device-native cinematic profile.
-   Select the best available English masculine-sounding voice on each device.
-   Device voice catalogs differ, so this is a best-effort free profile, not a
-   promise of identical voice timbre on every operating system. */
-function getJarvisVoice() {
-  if (!window.speechSynthesis) return null;
-  const voices = window.speechSynthesis.getVoices() || [];
-  if (!voices.length) return null;
-
-  const english = voices.filter(v => /^en([_-]|$)/i.test(v.lang || ""));
-  if (!english.length) return voices[0] || null;
-
-  const score = voice => {
-    const name = String(voice.name || "").toLowerCase();
-    const lang = String(voice.lang || "").toLowerCase();
-    let points = 0;
-
-    // Prefer recognizable masculine English voices where the OS exposes them.
-    if (/daniel|david|george|james|mark|guy|ryan|aaron|arthur|alex|fred|oliver|tom|male/.test(name)) points += 8;
-    if (/google.*male|microsoft.*(david|guy|ryan|mark|james)/.test(name)) points += 5;
-    if (/female|zira|samantha|victoria|karen|susan|hazel|aria|jenny|sonia|libby|moira/.test(name)) points -= 7;
-
-    // Favor broadly intelligible English voices; do not force one regional accent.
-    if (/en-us|en-gb|en-in/.test(lang)) points += 2;
-    if (voice.localService) points += 1;
-    if (voice.default) points += 1;
-    return points;
-  };
-
-  return english.slice().sort((a, b) => score(b) - score(a))[0] || english[0] || null;
-}
-
 function speak(text) {
-  if (!window.speechSynthesis || !String(text || "").trim()) return;
+  if (!window.speechSynthesis) return;
 
   window.speechSynthesis.cancel();
 
-  const u = new SpeechSynthesisUtterance(String(text));
+  const u = new SpeechSynthesisUtterance(text);
   u.lang  = "en-US";
-  u.rate  = 0.88;
-  u.pitch = 0.72;
-  u.volume = 1;
+  u.rate  = 0.95;
+  u.pitch = 0.95;
 
-  const preferred = getJarvisVoice();
-  if (preferred) {
-    u.voice = preferred;
-    u.lang = preferred.lang || u.lang;
-  }
+  const voices = speechSynthesis.getVoices();
+  const preferred = voices.find(v =>
+    /daniel|david|mark|google us english|microsoft david|sam/i.test(v.name)
+  ) || voices.find(v => v.lang.startsWith("en"));
 
-  // Retain a free built-in voice fallback on browsers that load voices late.
-  if (!preferred) {
-    const retryVoice = () => {
-      const lateVoice = getJarvisVoice();
-      if (!lateVoice) return;
-      u.voice = lateVoice;
-      u.lang = lateVoice.lang || u.lang;
-    };
-    window.speechSynthesis.addEventListener?.("voiceschanged", retryVoice, { once: true });
-  }
+  if (preferred) u.voice = preferred;
 
-  window.speechSynthesis.speak(u);
+  speechSynthesis.speak(u);
 }
 
 /* =========================================================
