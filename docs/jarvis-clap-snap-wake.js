@@ -192,13 +192,32 @@
       stopRecognition();
       return;
     }
+    // Each time the user manually turns the normal wake word OFF, re-arm the
+    // startup phrase so "Wake up Jarvis" works again without a page refresh.
+    if (triggered && shouldListenForStartupPhrase()) triggered = false;
     if (shouldListenForStartupPhrase() && !recognition && !starting && !retryFromGesture) {
       startRecognition();
     }
   }
 
   function unlockAfterUserInteraction() {
-    if (triggered) return;
+    // Mobile browsers may block speech recognition and speech output until the
+    // page receives a real user gesture. Warm the browser's existing TTS engine
+    // silently; this does not change JARVIS's configured voice or spoken output.
+    try {
+      const synth = window.speechSynthesis;
+      if (synth) {
+        synth.getVoices();
+        synth.resume();
+        if (!window.__JARVIS_TTS_GESTURE_READY__) {
+          const warmup = new SpeechSynthesisUtterance(" ");
+          warmup.volume = 0;
+          warmup.rate = 1;
+          window.__JARVIS_TTS_GESTURE_READY__ = true;
+          synth.speak(warmup);
+        }
+      }
+    } catch (_) {}
     retryFromGesture = false;
     if (shouldListenForStartupPhrase() && !recognition && !starting) startRecognition();
   }
