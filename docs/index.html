@@ -3339,22 +3339,33 @@ async function sendCommand(command) {
 
     const ua = navigator.userAgent || "";
     const platform = navigator.userAgentData?.platform || navigator.platform || "";
+    const term = encodeURIComponent(appName);
     let storeUrl;
+    let nativeStoreUrl;
     if (/iPhone|iPad|iPod/i.test(ua) || (/Mac/i.test(platform) && navigator.maxTouchPoints > 1)) {
-      storeUrl = "https://apps.apple.com/in/search?term=" + encodeURIComponent(appName);
+      storeUrl = "https://apps.apple.com/in/search?term=" + term;
+      nativeStoreUrl = "itms-apps://itunes.apple.com/in/search?term=" + term + "&entity=software";
     } else if (/Android/i.test(ua)) {
-      storeUrl = "https://play.google.com/store/search?q=" + encodeURIComponent(appName) + "&c=apps";
+      storeUrl = "https://play.google.com/store/search?q=" + term + "&c=apps";
+      nativeStoreUrl = "market://search?q=" + term + "&c=apps";
     } else if (/Windows/i.test(platform) || /Windows NT/i.test(ua)) {
-      storeUrl = "https://apps.microsoft.com/search?query=" + encodeURIComponent(appName);
+      storeUrl = "https://apps.microsoft.com/search?query=" + term;
+      nativeStoreUrl = "ms-windows-store://search/?query=" + term;
     } else if (/Mac/i.test(platform) || /Macintosh|Mac OS X/i.test(ua)) {
-      storeUrl = "https://apps.apple.com/us/search?term=" + encodeURIComponent(appName);
+      storeUrl = "https://apps.apple.com/us/search?term=" + term;
+      nativeStoreUrl = "macappstore://itunes.apple.com/search?term=" + term;
     } else {
-      storeUrl = "https://flathub.org/apps/search?q=" + encodeURIComponent(appName);
+      storeUrl = "https://flathub.org/apps/search?q=" + term;
+      nativeStoreUrl = storeUrl;
     }
 
-    speak("Searching the official app store for " + appName + ". Check the app name and publisher, then confirm installation in the store.");
+    speak("Opening the official store search for " + appName + ". Check the app name and publisher, then confirm installation in the store.");
     setState("idle");
-    setTimeout(() => { window.location.assign(storeUrl); }, 250);
+    // Attempt native store handoff immediately while preserving an official web fallback.
+    window.location.href = nativeStoreUrl;
+    setTimeout(() => {
+      if (document.visibilityState !== "hidden") window.location.href = storeUrl;
+    }, 900);
     return;
   }
 
