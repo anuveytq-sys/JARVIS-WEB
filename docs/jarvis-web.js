@@ -813,7 +813,7 @@
     if (!match) return null;
 
     const appName = match[1]
-      .replace(/\s+(?:on|for)\s+(?:my\s+)?(?:mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|ipod|android|windows|mac(?:book)?)$/i, "")
+      .replace(/\s+(?:on|for)\s+(?:my\s+)?(?:android\s+phone|windows\s+(?:pc|computer|laptop)|mac(?:book)?\s+(?:laptop|computer)|mobile|phone|device|laptop|computer|pc|desktop|iphone|ipad|ipod|android|windows|mac(?:book)?)$/i, "")
       .replace(/\s+(?:application|app)$/i, "")
       .replace(/^(?:named|called)\s+/i, "")
       .trim();
