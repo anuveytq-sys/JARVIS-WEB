@@ -16,6 +16,7 @@
   let triggered = false;
   let retryTimer = 0;
   let retryFromGesture = false;
+  let pausedForCoreMic = false;
 
   const isWakeOnOrStarting = () => {
     const button = toggle();
@@ -102,6 +103,23 @@
     finish();
   }
 
+  
+  // Let the central-core microphone temporarily own the device microphone.
+  // This is separate from the normal wake-word toggle and restores startup
+  // phrase listening when the one-shot core command finishes.
+  window.__JARVISPauseStartupPhrase = function() {
+    pausedForCoreMic = true;
+    clearTimeout(retryTimer);
+    stopRecognition();
+  };
+  window.__JARVISResumeStartupPhrase = function() {
+    pausedForCoreMic = false;
+    if (shouldListenForStartupPhrase() && !recognition && !starting) {
+      retryFromGesture = false;
+      scheduleRetry(500);
+    }
+  };
+
   function triggerStartupWake() {
     if (triggered || !shouldListenForStartupPhrase()) return;
     triggered = true;
@@ -118,7 +136,7 @@
   }
 
   function startRecognition() {
-    if (starting || triggered || !shouldListenForStartupPhrase()) return;
+    if (starting || triggered || pausedForCoreMic || !shouldListenForStartupPhrase()) return;
     if (!Recognition) {
       console.warn("[JARVIS startup wake] SpeechRecognition is not supported in this browser.");
       return;
@@ -200,7 +218,7 @@
       /ENABLE WAKE WORD|WAKE WORD:\s*OFF|TAP TO RETRY WAKE WORD/i.test(String(button.textContent || "")) &&
       !isWakeOnOrStarting();
     if (triggered && buttonIsOff) triggered = false;
-    if (shouldListenForStartupPhrase() && !recognition && !starting && !retryFromGesture) {
+    if (!pausedForCoreMic && shouldListenForStartupPhrase() && !recognition && !starting && !retryFromGesture) {
       startRecognition();
     }
   }
@@ -224,7 +242,7 @@
       }
     } catch (_) {}
     retryFromGesture = false;
-    if (shouldListenForStartupPhrase() && !recognition && !starting) startRecognition();
+    if (!pausedForCoreMic && shouldListenForStartupPhrase() && !recognition && !starting) startRecognition();
   }
 
   function boot() {
