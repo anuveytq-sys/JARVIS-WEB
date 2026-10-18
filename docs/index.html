@@ -3312,6 +3312,65 @@ async function sendCommand(command) {
 
   setState("thinking");
 
+  // Local browser-launch commands must work even when this static GitHub Pages
+  // frontend has no AI backend configured. This is also the path used by the
+  // central-core microphone, so simple actions do not silently fail.
+  const localCommand = command
+    .replace(/^\\s*(?:(?:hey|hello|hi)\\s+)?jarvis[, ]*/i, "")
+    .replace(/[.!?]+$/, "").trim();
+  const normalizedLocal = localCommand.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+  const localApps = [
+    ["youtube", "https://www.youtube.com/", ["youtube", "yt"]],
+    ["google", "https://www.google.com/", ["google", "google search"]],
+    ["maps", "https://maps.google.com/", ["maps", "google maps"]],
+    ["gmail", "https://mail.google.com/", ["gmail", "mail"]],
+    ["drive", "https://drive.google.com/", ["drive", "google drive"]],
+    ["photos", "https://photos.google.com/", ["photos", "google photos"]],
+    ["docs", "https://docs.google.com/", ["docs", "google docs"]],
+    ["sheets", "https://sheets.google.com/", ["sheets", "google sheets"]],
+    ["slides", "https://slides.google.com/", ["slides", "google slides"]],
+    ["calendar", "https://calendar.google.com/", ["calendar", "google calendar"]],
+    ["meet", "https://meet.google.com/", ["meet", "google meet"]],
+    ["translate", "https://translate.google.com/", ["translate", "google translate"]],
+    ["spotify", "https://open.spotify.com/", ["spotify"]],
+    ["discord", "https://discord.com/app", ["discord"]],
+    ["slack", "https://app.slack.com/client/", ["slack"]],
+    ["teams", "https://teams.microsoft.com/", ["teams", "microsoft teams"]],
+    ["outlook", "https://outlook.live.com/mail/", ["outlook"]],
+    ["onedrive", "https://onedrive.live.com/", ["onedrive"]],
+    ["notion", "https://www.notion.so/", ["notion"]],
+    ["zoom", "https://zoom.us/join", ["zoom"]]
+  ];
+  const openIntent = /^(open|launch|start|show|go to|take me to|navigate to)\\b/.test(normalizedLocal);
+  const youtubeSearch = localCommand.match(/^(?:please\\s+)?(?:search(?:\\s+for)?|play|watch|find|show|open)\\s+(.+?)\\s+(?:video\\s+)?(?:on|in)\\s+youtube[.!?]*$/i);
+  let localTarget = null;
+  let localReply = "";
+  if (youtubeSearch && youtubeSearch[1].trim()) {
+    localTarget = "https://www.youtube.com/results?search_query=" + encodeURIComponent(youtubeSearch[1].trim());
+    localReply = "Opening YouTube results for " + youtubeSearch[1].trim() + ".";
+  } else if (/^(open|launch|start|go to)\\s+youtube$/.test(normalizedLocal)) {
+    localTarget = "https://www.youtube.com/";
+    localReply = "Opening YouTube.";
+  } else if (/^(open|launch|start|show|go to|take me to|navigate to)\\s+(browser|web browser|internet)$/.test(normalizedLocal)) {
+    localTarget = "https://www.google.com/";
+    localReply = "Opening your browser.";
+  } else if (openIntent) {
+    for (const [name, target, aliases] of localApps) {
+      if (aliases.some(alias => normalizedLocal === alias || normalizedLocal.includes(" " + alias) || normalizedLocal.startsWith(alias + " "))) {
+        localTarget = target;
+        localReply = "Opening " + name + ".";
+        break;
+      }
+    }
+  }
+  if (localTarget) {
+    speak(localReply);
+    setState("idle");
+    // Navigation stays in the current tab to work reliably on mobile browsers.
+    setTimeout(() => { window.location.assign(localTarget); }, 180);
+    return;
+  }
+
   if (!JARVIS_API_BASE) {
     speak("The JARVIS interface is online, but its AI backend has not been connected yet.");
     setState("idle");
