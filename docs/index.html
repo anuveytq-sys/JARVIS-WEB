@@ -3416,52 +3416,82 @@ commandForm.addEventListener("submit", async (e) => {
    ========================================================= */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
-
-if (SpeechRecognition) {
-  recognition = new SpeechRecognition();
-  recognition.continuous     = false;
-  recognition.interimResults = false;
-  recognition.lang           = "en-US";
-
-  recognition.onstart = () => {
-    setState("listening");
-  };
-
-  recognition.onresult = async (event) => {
-    const transcript = event.results[0][0].transcript.trim();
-    console.log("[JARVIS VOICE] Heard:", transcript);
-
-    if (transcript) {
-      await sendCommand(transcript);
-    } else {
-      setState("idle");
-      speak("I didn't catch that.");
-    }
-  };
-
-  recognition.onerror = (event) => {
-    console.warn("[VOICE]", event.error);
-    setState("idle");
-
-    if (event.error === "not-allowed") {
-      speak("Microphone permission is required.");
-    } else if (event.error === "no-speech") {
-      speak("I didn't hear anything.");
-    }
-  };
-
-  recognition.onend = () => {};
-}
+let coreVoiceSession = 0;
 
 voiceButton.addEventListener("click", () => {
-  if (!recognition) {
-    speak("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) {
+    speak("Speech recognition is not supported in this browser. Please use Safari, Chrome, or Edge.");
     return;
   }
 
+  // Avoid two recognizers competing for the same phone microphone. A fresh
+  // one-shot recognizer is created for each explicit central-core tap.
+  const session = ++coreVoiceSession;
+  let commandStarted = false;
+  let cleanedUp = false;
+  const finishSession = () => {
+    if (cleanedUp || session !== coreVoiceSession) return;
+    cleanedUp = true;
+    if (window.__JARVISResumeStartupPhrase) window.__JARVISResumeStartupPhrase();
+    if (window.__jarvisResumeWakeWordAfterEnvironment) window.__jarvisResumeWakeWordAfterEnvironment();
+  };
   try {
-    recognition.start();
-  } catch (e) {}
+    if (window.__JARVISPauseStartupPhrase) window.__JARVISPauseStartupPhrase();
+    if (window.__jarvisPauseWakeWordForEnvironment) window.__jarvisPauseWakeWordForEnvironment();
+    try { recognition?.abort(); } catch (_) {}
+    const current = new Recognition();
+    recognition = current;
+    current.continuous = false;
+    current.interimResults = false;
+    current.maxAlternatives = 1;
+    current.lang = "en-IN";
+    current.onstart = () => setState("listening");
+    current.onresult = async event => {
+      if (session !== coreVoiceSession) return;
+      const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
+      console.log("[JARVIS VOICE] Heard:", transcript);
+      commandStarted = true;
+      try {
+        if (transcript) await sendCommand(transcript);
+        else {
+          setState("idle");
+          speak("I didn't catch that.");
+        }
+      } finally {
+        finishSession();
+      }
+    };
+    current.onerror = event => {
+      if (session !== coreVoiceSession) return;
+      console.warn("[JARVIS VOICE]", event.error);
+      setState("idle");
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        speak("Microphone permission is required. Please allow microphone access in your browser settings.");
+      } else if (event.error === "no-speech") {
+        speak("I didn't hear anything. Tap the core and try again.");
+      } else {
+        speak("The microphone could not start. Please tap the core and try again.");
+      }
+      finishSession();
+    };
+    current.onend = () => {
+      if (session !== coreVoiceSession) return;
+      if (!commandStarted) {
+        setState("idle");
+        // Some mobile browsers end an empty session without dispatching error.
+        setTimeout(finishSession, 250);
+      }
+    };
+    current.start();
+  } catch (error) {
+    console.warn("[JARVIS VOICE] Could not start microphone:", error);
+    setState("idle");
+    speak(error?.name === "NotAllowedError"
+      ? "Microphone permission is required."
+      : "The microphone could not start. Please tap the core and try again.");
+    finishSession();
+  }
 });
 
 /* =========================================================
