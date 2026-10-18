@@ -10,6 +10,7 @@ let anchorDistance=0,anchorZoom=1,targetZoom=1,currentZoom=1,lastAppliedZoom=1,l
 let handRollAngle=null,handRotation=0;
 let indexTapLastZ=null,indexTapLastAt=0,indexTapCooldownUntil=0;
 const MIN_ZOOM=.72,MAX_ZOOM=2.05,ROLL_DEAD=.010,ROLL_MAX=.16,ROLL_SPEED=1.75;
+// VELVE/God's Eye use a filtered roll signal to prevent tiny camera-landmark jitter from accumulating.
 const $=(s,r=document)=>r.querySelector(s);
 const visible=el=>{if(!el)return false;const cs=getComputedStyle(el);return cs.display!=='none'&&cs.visibility!=='hidden'&&Number(cs.opacity||1)>.01&&el.getClientRects().length>0;};
 const normAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -120,8 +121,20 @@ function updateHandRoll(lm){
  const a=lm[5],b=lm[17];if(!a||!b)return;
  const angle=Math.atan2(b.y-a.y,b.x-a.x);
  if(handRollAngle===null){handRollAngle=angle;return;}
- let d=normAngle(angle-handRollAngle);handRollAngle=angle;
- if(Math.abs(d)<ROLL_DEAD)return;
+ const e=environment();
+ let d=normAngle(angle-handRollAngle);
+ if(e==='velve'||e==='gods'){
+   // Low-pass the noisy landmark angle, then reject tiny residual motion. Compensate
+   // for the filter so intentional hand-roll sensitivity stays close to its old level.
+   const previous=handRollAngle,alpha=.38;
+   handRollAngle=normAngle(previous+d*alpha);
+   d=normAngle(handRollAngle-previous);
+   if(Math.abs(d)<.014)return;
+   d=d/alpha;
+ }else{
+   handRollAngle=angle;
+   if(Math.abs(d)<ROLL_DEAD)return;
+ }
  d=Math.max(-ROLL_MAX,Math.min(ROLL_MAX,d));
  rotateEnvironment(d*ROLL_SPEED);
 }
