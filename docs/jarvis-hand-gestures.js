@@ -50,10 +50,7 @@ function rotateEnvironment(delta){
  const e=environment();
  if(e!==lastEnv){lastEnv=e;handRollAngle=null;return;}
  handRotation+=delta*180/Math.PI;if(handRotation>360||handRotation<-360)handRotation%=360;
- if(e==='terra'){
-   try{if(typeof window.__TERRANEXUS_HAND_ROTATE==='function'){window.__TERRANEXUS_HAND_ROTATE(delta);return}}catch(_){}
-   rotateCss($('#terranexus-overlay canvas'),handRotation);return;
- }
+ // VELVE and Vision retain their original, working roll systems.
  if(e==='velve'){
    try{const v=window.__VELVE_VIEWER;if(v&&v.camera&&typeof v.camera.rotateRight==='function'){v.camera.rotateRight(-delta*ROLL_SPEED);return}}catch(_){}
    rotateCss($('#velve-globe canvas'),handRotation);return;
@@ -61,16 +58,64 @@ function rotateEnvironment(delta){
  if(e==='vision'){
    rotateCss($('.jvi-core-orb'),handRotation);rotateCss($('.jvi-holo'),handRotation);rotateCss($('.jvi-neural-network'),handRotation);return;
  }
+ if(e==='terra'){
+   try{if(typeof window.__TERRANEXUS_HAND_ROTATE==='function'){window.__TERRANEXUS_HAND_ROTATE(delta);return}}catch(_){}
+   // Rotate the simulation object, never the workshop canvas. Capture the most substantial
+   // renderable scene child when Three.js first renders the Terra Nexus scene.
+   const THREE=window.THREE;
+   if(THREE&&THREE.WebGLRenderer&&THREE.WebGLRenderer.prototype&&!window.__TERRANEXUS_ROLL_PATCHED__){
+     const proto=THREE.WebGLRenderer.prototype,original=proto.render;
+     if(typeof original==='function'){
+       proto.render=function(scene,camera){
+         if(scene&&!window.__TERRANEXUS_SIMULATION_ROOT__){
+           let best=null,countBest=0;
+           for(const child of scene.children||[]){
+             if(child.isLight||child.isCamera)continue;
+             let count=0;child.traverse?.(o=>{if(o.isMesh||o.isLine||o.isPoints)count++;});
+             if(count>countBest){best=child;countBest=count;}
+           }
+           if(best&&countBest>0)window.__TERRANEXUS_SIMULATION_ROOT__=best;
+         }
+         return original.apply(this,arguments);
+       };
+       window.__TERRANEXUS_ROLL_PATCHED__=true;
+     }
+   }
+   const root=window.__TERRANEXUS_SIMULATION_ROOT__;
+   if(root&&root.rotation){root.rotation.y+=delta*.45;}
+   return;
+ }
  if(e==='command'){
-   rotateCss($('#nn-core'),handRotation);rotateCss($('.nn-core-area'),handRotation);return;
+   const core=$('#nn-core');
+   if(core){
+     const base=core.dataset.jgRollBaseTransform;
+     if(base===undefined)core.dataset.jgRollBaseTransform=getComputedStyle(core).transform==='none'?'':getComputedStyle(core).transform;
+     const z=Math.max(MIN_ZOOM,Math.min(MAX_ZOOM,currentZoom||1));
+     core.style.removeProperty('rotate');
+     core.style.transformOrigin='50% 50%';
+     core.style.transform=(core.dataset.jgRollBaseTransform?core.dataset.jgRollBaseTransform+' ':'')+'scale('+z+') rotate('+handRotation.toFixed(3)+'deg)';
+   }
+   // Never rotate .nn-core-area: that moves the whole Command Centre layout.
+   return;
  }
  if(e==='gods'){
-   try{const v=window.__GODS_EYE_VIEWER||window.__GODSEYE_VIEWER;if(v&&v.camera&&typeof v.camera.rotateRight==='function'){v.camera.rotateRight(-delta*ROLL_SPEED);return}}catch(_){}
-   const g=$('#gods-eye-globe canvas')||$('#gods-eye-root canvas')||$('#godseye-root canvas');rotateCss(g,handRotation);return;
+   try{const v=window.__GODS_EYE_VIEWER||window.__GODSEYE_VIEWER;if(v&&v.camera&&typeof v.camera.rotateRight==='function'){v.camera.rotateRight(-delta*ROLL_SPEED*.45);return}}catch(_){}
+   const g=$('#gods-eye-globe canvas')||$('#gods-eye-root canvas')||$('#godseye-root canvas');
+   if(g){g.style.transformOrigin='50% 50%';g.style.setProperty('rotate',handRotation.toFixed(3)+'deg');}
+   return;
  }
- rotateCss($('.core-stage .jarvis-core-3d'),handRotation);rotateCss($('.core-stage .jarvis-core-voice-hit'),handRotation);
+ // Main JARVIS: compose translation, zoom and roll in one transform so the core
+ // spins around its own centre instead of orbiting around the stage.
+ const stage=$('.core-stage');
+ if(stage){
+   const reactor=stage.querySelector('.jarvis-core-3d');
+   const hit=stage.querySelector('.jarvis-core-voice-hit');
+   const z=Math.max(MIN_ZOOM,Math.min(MAX_ZOOM,currentZoom||1));
+   [reactor,hit].forEach(el=>{if(!el)return;el.style.removeProperty('rotate');el.style.transformOrigin='50% 50%';el.style.transform='translate(-50%,-50%) scale('+z+') rotate('+handRotation.toFixed(3)+'deg)';});
+ }
 }
 function updateHandRoll(lm){
+ if(!active||$('#jarvis-hand-gesture-toggle')?.getAttribute('aria-pressed')!=='true')return;
  const a=lm[5],b=lm[17];if(!a||!b)return;
  const angle=Math.atan2(b.y-a.y,b.x-a.x);
  if(handRollAngle===null){handRollAngle=angle;return;}
@@ -102,9 +147,9 @@ function applyVisualZoom(value){
    const stage=$('.core-stage');
    if(stage){
      const reactor=stage.querySelector('.jarvis-core-3d');
-     if(reactor){reactor.style.transformOrigin='50% 50%';reactor.style.transform='translate(-50%,-50%) scale('+value+')';}
+     if(reactor){reactor.style.transformOrigin='50% 50%';reactor.style.transform='translate(-50%,-50%) scale('+value+') rotate('+handRotation.toFixed(3)+'deg)';}
      const hit=stage.querySelector('.jarvis-core-voice-hit');
-     if(hit){hit.style.transformOrigin='50% 50%';hit.style.transform='translate(-50%,-50%) scale('+value+')';}
+     if(hit){hit.style.transformOrigin='50% 50%';hit.style.transform='translate(-50%,-50%) scale('+value+') rotate('+handRotation.toFixed(3)+'deg)';}
    }else{
      const core=$('.jarvis-core-3d');if(core){core.style.transformOrigin='50% 50%';core.style.transform='translate(-50%,-50%) scale('+value+')';}
    }
