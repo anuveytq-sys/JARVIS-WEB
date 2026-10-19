@@ -3357,57 +3357,11 @@ commandForm.addEventListener("submit", async (e) => {
    ========================================================= */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
-
-if (SpeechRecognition) {
-  recognition = new SpeechRecognition();
-  recognition.continuous     = false;
-  recognition.interimResults = false;
-  recognition.lang           = "en-IN";
-  recognition.maxAlternatives = 5;
-
-  recognition.onstart = () => {
-    setState("listening");
-  };
-
-  recognition.onresult = async (event) => {
-    const alternatives = Array.from(event.results[0] || []).map(item => String(item.transcript || "").trim()).filter(Boolean);
-    const score = (text) => {
-      const t = text.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-      let value = 0;
-      if (/geo\s*core|geocore|geocor|geo cor/.test(t)) value += 10;
-      if (/\b(open|start|launch|activate|enter)\b/.test(t)) value += 3;
-      if (/\b(jarvis|velve)\b/.test(t)) value += 2;
-      if (/\b(core|jor|geor)\b/.test(t)) value += 5;
-      return value;
-    };
-    alternatives.sort((a, b) => score(b) - score(a));
-    const transcript = alternatives[0] || "";
-    console.log("[JARVIS VOICE] Heard:", transcript, "| Alternatives:", alternatives);
-
-    if (transcript) {
-      await sendCommand(transcript);
-    } else {
-      setState("idle");
-      speak("I didn't catch that. Please try again.");
-    }
-  };
-
-  recognition.onerror = (event) => {
-    console.warn("[VOICE]", event.error);
-    setState("idle");
-
-    if (event.error === "not-allowed") {
-      speak("Microphone permission is required.");
-    } else if (event.error === "no-speech") {
-      speak("I didn't hear anything.");
-    }
-  };
-
-  recognition.onend = () => {};
-}
+let coreVoiceSession = 0;
 
 voiceButton.addEventListener("click", () => {
-  if (!recognition) {
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) {
     commandInput.placeholder = "Tap here and use your keyboard microphone to dictate a command";
     commandInput.focus();
     setState("keyboard dictation available");
@@ -3415,10 +3369,91 @@ voiceButton.addEventListener("click", () => {
     return;
   }
 
+  // Give the central core exclusive ownership of the microphone for one command.
+  // Startup/wake listeners are paused and resumed without replacing their systems.
+  const session = ++coreVoiceSession;
+  let commandStarted = false;
+  let cleanedUp = false;
+  const finishSession = () => {
+    if (cleanedUp || session !== coreVoiceSession) return;
+    cleanedUp = true;
+    if (recognition) recognition = null;
+    if (window.__JARVISResumeStartupPhrase) window.__JARVISResumeStartupPhrase();
+    if (window.__jarvisResumeWakeWordAfterEnvironment) window.__jarvisResumeWakeWordAfterEnvironment();
+  };
+
   try {
-    recognition.start();
-  } catch (e) {
-    setState("tap again to start listening");
+    if (window.__JARVISPauseStartupPhrase) window.__JARVISPauseStartupPhrase();
+    if (window.__jarvisPauseWakeWordForEnvironment) window.__jarvisPauseWakeWordForEnvironment();
+    try { recognition?.abort(); } catch (_) {}
+
+    const current = new Recognition();
+    recognition = current;
+    current.continuous = false;
+    current.interimResults = false;
+    current.lang = "en-IN";
+    current.maxAlternatives = 5;
+    current.onstart = () => {
+      if (session === coreVoiceSession) setState("listening");
+    };
+    current.onresult = async (event) => {
+      if (session !== coreVoiceSession) return;
+      const alternatives = Array.from(event.results?.[0] || [])
+        .map(item => String(item.transcript || "").trim())
+        .filter(Boolean);
+      const score = (text) => {
+        const t = text.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+        let value = 0;
+        if (/geo\s*core|geocore|geocor|geo cor/.test(t)) value += 10;
+        if (/\b(open|start|launch|activate|enter)\b/.test(t)) value += 3;
+        if (/\b(jarvis|velve)\b/.test(t)) value += 2;
+        if (/\b(core|jor|geor)\b/.test(t)) value += 5;
+        return value;
+      };
+      alternatives.sort((a, b) => score(b) - score(a));
+      const transcript = alternatives[0] || "";
+      console.log("[JARVIS VOICE] Heard:", transcript, "| Alternatives:", alternatives);
+      commandStarted = true;
+      try {
+        if (transcript) await sendCommand(transcript);
+        else {
+          setState("idle");
+          speak("I didn't catch that. Please try again.");
+        }
+      } finally {
+        finishSession();
+      }
+    };
+    current.onerror = (event) => {
+      if (session !== coreVoiceSession) return;
+      console.warn("[JARVIS VOICE]", event.error);
+      setState("idle");
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        speak("Microphone permission is required. Please allow microphone access in your browser settings.");
+      } else if (event.error === "no-speech") {
+        speak("I didn't hear anything. Tap the core and try again.");
+      } else {
+        speak("The microphone could not start. Please tap the core and try again.");
+      }
+      finishSession();
+    };
+    current.onend = () => {
+      if (session !== coreVoiceSession) return;
+      if (!commandStarted) {
+        setState("idle");
+        // Some mobile browsers end an empty session without dispatching an error.
+        setTimeout(finishSession, 250);
+      }
+      if (recognition === current) recognition = null;
+    };
+    current.start();
+  } catch (error) {
+    console.warn("[JARVIS VOICE] Could not start microphone:", error);
+    setState("idle");
+    speak(error?.name === "NotAllowedError"
+      ? "Microphone permission is required."
+      : "The microphone could not start. Please tap the core and try again.");
+    finishSession();
   }
 });
 
