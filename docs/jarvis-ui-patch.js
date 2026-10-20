@@ -490,8 +490,9 @@
       if (system) system.textContent = "VOICE ACTIVE";
       setStatus("LISTENING FOR COMMAND");
 
-      // End wake-word recognition before opening command recognition. A short
-      // handoff gives the UI time to update and avoids overlapping mic sessions.
+      // End wake-word recognition before opening command recognition. Update the
+      // UI synchronously and start capture on the next event-loop turn to minimize
+      // the gap between hearing the wake word and accepting the command.
       const previousWakeRecognition = wakeRecognition;
       if (previousWakeRecognition) {
         previousWakeRecognition.onresult = null;
@@ -586,7 +587,7 @@
             : "TAP TO RETRY WAKE WORD");
           if (wakeEnabled && error?.name !== "NotAllowedError") scheduleWakeRestart(900);
         }
-      }, 300);
+      }, 0);
     }
 
     function startWakeRecognition() {
