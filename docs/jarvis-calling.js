@@ -167,6 +167,62 @@
     return count;
   }
 
+  function decodeVCardValue(value) {
+    return String(value || "")
+      .replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\")
+      .trim();
+  }
+  function parseContactsFile(text, filename) {
+    var source = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    var out = [];
+    if (/\.vcf$|\.vcard$/i.test(filename || "") || /BEGIN:VCARD/i.test(source)) {
+      source = source.replace(/\n[ \t]/g, "");
+      source.split(/BEGIN:VCARD/i).slice(1).forEach(function (block) {
+        var body = block.split(/END:VCARD/i)[0] || "";
+        var name = "";
+        var numbers = [];
+        body.split("\n").forEach(function (line) {
+          var colon = line.indexOf(":");
+          if (colon < 0) return;
+          var head = line.slice(0, colon).split(";")[0].toUpperCase();
+          var value = decodeVCardValue(line.slice(colon + 1));
+          if (head === "FN" && value) name = value;
+          else if (head === "N" && value && !name) {
+            var parts = value.split(";");
+            name = [parts[1], parts[0], parts[2], parts[3], parts[4]].filter(Boolean).join(" ").trim();
+          }
+          if (head === "TEL" && value) numbers.push(value);
+        });
+        numbers.forEach(function (tel) { if (name && cleanPhone(tel)) out.push({ name: name, tel: tel }); });
+      });
+      return out;
+    }
+    // CSV fallback: accepts common Name,Phone / Name,Telephone column headers.
+    var rows = [], row = [], cell = "", quoted = false;
+    for (var i = 0; i < source.length; i++) {
+      var ch = source[i];
+      if (ch === '"' && quoted && source[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') quoted = !quoted;
+      else if (ch === "," && !quoted) { row.push(cell); cell = ""; }
+      else if (ch === "\n" && !quoted) { row.push(cell); rows.push(row); row = []; cell = ""; }
+      else cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); rows.push(row); }
+    if (!rows.length) return out;
+    var headers = rows[0].map(function (v) { return String(v).trim().toLowerCase().replace(/[^a-z]/g, ""); });
+    var nameIndex = headers.findIndex(function (v) { return /^(name|fullname|contactname|displayname)$/.test(v); });
+    var phoneIndex = headers.findIndex(function (v) { return /^(phone|phonenumber|telephone|tel|mobile|mobilenumber|number)$/.test(v); });
+    var start = nameIndex >= 0 && phoneIndex >= 0 ? 1 : 0;
+    if (nameIndex < 0) nameIndex = 0;
+    if (phoneIndex < 0) phoneIndex = 1;
+    rows.slice(start).forEach(function (values) {
+      var name = String(values[nameIndex] || "").trim();
+      var tel = String(values[phoneIndex] || "").trim();
+      if (name && cleanPhone(tel)) out.push({ name: name, tel: tel });
+    });
+    return out;
+  }
+
   /*
    * Native bridge contract for an Android/iOS JARVIS wrapper:
    * window.JARVISNativeContacts.pickContacts({multiple:true, selectAll:true})
@@ -221,10 +277,18 @@
       return b;
     }
     var selectButton = makeButton("SELECT FROM PHONE");
-    var allButton = makeButton("SELECT ALL");
+    var allButton = makeButton("IMPORT ALL (.VCF / .CSV)");
     row.appendChild(selectButton);
     row.appendChild(allButton);
     section.appendChild(row);
+
+    var fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".vcf,.vcard,.csv,text/vcard,text/csv";
+    fileInput.multiple = false;
+    fileInput.style.display = "none";
+    fileInput.setAttribute("aria-label", "Choose a contacts VCF or CSV export");
+    section.appendChild(fileInput);
 
     var saveButton = makeButton("SAVE LOCALLY");
     saveButton.style.marginTop = "8px";
@@ -255,8 +319,8 @@
         status.style.color = "#ffd0d0";
         if (String(err && err.message) === "native-contact-picker-unavailable") {
           status.textContent = /iPhone|iPad|iPod/i.test(navigator.userAgent || "")
-            ? "Safari cannot provide the native iPhone address-book picker to a normal website. Use the JARVIS iOS native app/wrapper for this exact Select All + Import flow."
-            : "This browser cannot provide the phone contact picker. Use the JARVIS Android/iOS native app/wrapper for the exact Select All + Import flow.";
+            ? "iPhone Safari does not expose its native address book to websites. Tap IMPORT ALL (.VCF / .CSV) and choose a contacts export; no contacts are accessed without your selection."
+            : "This browser does not support the contact picker. Tap IMPORT ALL (.VCF / .CSV) and choose a contacts export.";
         } else {
           status.textContent = "Contact selection was cancelled or unavailable. No contacts were saved.";
         }
@@ -265,7 +329,32 @@
       }
     }
     selectButton.addEventListener("click", function () { pick(false); });
-    allButton.addEventListener("click", function () { pick(true); });
+    allButton.addEventListener("click", function () { fileInput.click(); });
+    fileInput.addEventListener("change", async function () {
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      setBusy(true);
+      status.style.color = "#b6dce7";
+      status.textContent = "Reading the contacts file locally…";
+      try {
+        var text = await file.text();
+        pending = parseContactsFile(text, file.name);
+        if (!pending.length) {
+          status.style.color = "#ffdca8";
+          status.textContent = "No valid name + phone-number pairs were found. Export contacts as .VCF, or use a CSV with Name and Phone columns.";
+        } else {
+          status.style.color = "#9fffcf";
+          status.textContent = pending.length + " contact number(s) imported from " + file.name + ". Tap SAVE LOCALLY to store them on this device.";
+        }
+      } catch (_) {
+        pending = [];
+        status.style.color = "#ffd0d0";
+        status.textContent = "The selected contacts file could not be read. No contacts were saved.";
+      } finally {
+        fileInput.value = "";
+        setBusy(false);
+      }
+    });
     saveButton.addEventListener("click", function () {
       if (!pending.length) return;
       try {
@@ -329,7 +418,7 @@
   }
 
   window.JARVISCalling = {
-    version: "3.4.0",
+    version: "3.5.0",
     handleCommand: handleCommand,
     rememberPhone: rememberPhone,
     rememberGroup: rememberGroup,
