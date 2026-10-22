@@ -19,9 +19,9 @@
       }
     } catch (_) {}
   }
-  function normName(v) { return String(v || "").trim().toLowerCase().replace(/\\s+/g, " "); }
+  function normName(v) { return String(v || "").trim().toLowerCase().replace(/\s+/g, " "); }
   function cleanPhone(v) {
-    var d = String(v || "").replace(/\\D/g, "");
+    var d = String(v || "").replace(/\D/g, "");
     if (d.length === 10 && /^[6-9]/.test(d)) d = "91" + d;
     return d.length >= 7 && d.length <= 15 ? d : "";
   }
@@ -56,7 +56,7 @@
   }
   function rememberGroup(name, url) {
     var key = normName(name), value = String(url || "").trim();
-    if (!key || !/^https?:\\/\\/(chat\\.whatsapp\\.com\\/|wa\\.me\\/)/i.test(value)) {
+    if (!key || !/^https?:\/\/(chat\.whatsapp\.com\/|wa\.me\/)/i.test(value)) {
       say("Give me a group name and its WhatsApp group invite link, for example remember WhatsApp group family as followed by the invite link.");
       return true;
     }
@@ -99,28 +99,28 @@
   }
   function handleCommand(raw) {
     var c = String(raw || "").trim()
-      .replace(/^(?:(?:hey|hello|hi|ok|okay)\\s+)?jarvis[\\s,:;-]*/i, "")
-      .replace(/[.!?]+$/, "").replace(/\\s+/g, " ").trim();
+      .replace(/^(?:(?:hey|hello|hi|ok|okay)\s+)?jarvis[\s,:;-]*/i, "")
+      .replace(/[.!?]+$/, "").replace(/\s+/g, " ").trim();
     if (!c) return false;
     var m;
 
-    m = c.match(/^(?:remember|save|add|set)\\s+(?:whatsapp\\s+)?group\\s+(.+?)\\s+(?:as|with(?:\\s+invite)?(?:\\s+link)?)\\s+(https?:\\/\\/\\S+)$/i);
+    m = c.match(/^(?:remember|save|add|set)\s+(?:whatsapp\s+)?group\s+(.+?)\s+(?:as|with(?:\s+invite)?(?:\s+link)?)\s+(https?:\/\/\S+)$/i);
     if (m) return rememberGroup(m[1], m[2]);
-    m = c.match(/^(?:remember|save|add|set)\\s+(?:whatsapp\\s+)?(?:contact|phone)\\s+(.+?)\\s+(?:as|with(?:\\s+phone)?(?:\\s+number)?)\\s+(\\+?[0-9][0-9\\s().-]{5,})$/i);
+    m = c.match(/^(?:remember|save|add|set)\s+(?:whatsapp\s+)?(?:contact|phone)\s+(.+?)\s+(?:as|with(?:\s+phone)?(?:\s+number)?)\s+(\+?[0-9][0-9\s().-]{5,})$/i);
     if (m) return rememberPhone(m[1], m[2]);
-    m = c.match(/^remember\\s+(?:whatsapp\\s+)?(.+?)\\s+(?:is|at)\\s+(\\+?[0-9][0-9\\s().-]{5,})$/i);
+    m = c.match(/^remember\s+(?:whatsapp\s+)?(.+?)\s+(?:is|at)\s+(\+?[0-9][0-9\s().-]{5,})$/i);
     if (m) return rememberPhone(m[1], m[2]);
 
-    m = c.match(/^(?:video\\s+call|whatsapp\\s+video\\s+call|start\\s+(?:a\\s+)?video\\s+call\\s+(?:on\\s+)?whatsapp|call\\s+on\\s+whatsapp\\s+video)\\s+(?:the\\s+)?group\\s+(.+)$/i);
+    m = c.match(/^(?:video\s+call|whatsapp\s+video\s+call|start\s+(?:a\s+)?video\s+call\s+(?:on\s+)?whatsapp|call\s+on\s+whatsapp\s+video)\s+(?:the\s+)?group\s+(.+)$/i);
     if (m) return openWhatsApp(m[1], true, true);
-    m = c.match(/^(?:video\\s+call|whatsapp\\s+video\\s+call|start\\s+(?:a\\s+)?video\\s+call\\s+(?:on\\s+)?whatsapp|call\\s+on\\s+whatsapp\\s+video)\\s+(.+)$/i);
+    m = c.match(/^(?:video\s+call|whatsapp\s+video\s+call|start\s+(?:a\s+)?video\s+call\s+(?:on\s+)?whatsapp|call\s+on\s+whatsapp\s+video)\s+(.+)$/i);
     if (m) {
-      var who = m[1].replace(/^(?:the\\s+)?group\\s+/i, "");
-      return openWhatsApp(who, true, /^(?:the\\s+)?group\\b/i.test(m[1]));
+      var who = m[1].replace(/^(?:the\s+)?group\s+/i, "");
+      return openWhatsApp(who, true, /^(?:the\s+)?group\b/i.test(m[1]));
     }
-    m = c.match(/^(?:open|show|launch|go to)\\s+whatsapp(?:\\s+(?:chat|app))?$/i);
+    m = c.match(/^(?:open|show|launch|go to)\s+whatsapp(?:\s+(?:chat|app))?$/i);
     if (m) return openUrl("https://web.whatsapp.com/", "WhatsApp");
-    m = c.match(/^(?:call|phone|dial|make\\s+(?:a\\s+)?call\\s+to|call\\s+the\\s+contact\\s+)\\s*(.+)$/i);
+    m = c.match(/^(?:call|phone|dial|make\s+(?:a\s+)?call\s+to|call\s+the\s+contact\s+)\s*(.+)$/i);
     if (m) return callPhone(m[1]);
 
     return false;
