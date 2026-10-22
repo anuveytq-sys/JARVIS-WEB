@@ -92,20 +92,30 @@ jobs:
                   raw = json.load(r)
               print('Satellite catalog refreshed from CelesTrak.')
           except Exception as feed_error:
-              # If the upstream feed temporarily blocks CI, reuse the last successfully
-              # published catalog rather than preventing unrelated JARVIS updates from deploying.
-              fallback_url = 'https://anuveytq-sys.github.io/JARVIS-WEB/velve-static-satellite-feed.js'
-              fallback_req = urllib.request.Request(fallback_url, headers={'User-Agent': 'JARVIS-WEB-VELVE-static-snapshot/1.0'})
+              # CelesTrak may return HTTP 403 when a large group has already been
+              # fetched for the current update cycle. Use a maintained static mirror.
+              mirror_url = 'https://raw.githubusercontent.com/satvisorcom/satvisor-data/master/celestrak/json/active.json'
+              mirror_req = urllib.request.Request(mirror_url, headers={'User-Agent': 'JARVIS-WEB-VELVE-static-snapshot/1.0', 'Accept': 'application/json'})
               try:
-                  with urllib.request.urlopen(fallback_req, timeout=30) as r:
-                      fallback_text = r.read().decode('utf-8')
-                  match = re.search(r'window\.__VELVE_STATIC_SATELLITES\s*=\s*(\[.*\]);', fallback_text, re.S)
-                  if not match:
-                      raise RuntimeError('Published satellite catalog was not parseable')
-                  raw = json.loads(match.group(1))
-                  print(f'Upstream satellite feed unavailable ({feed_error}); reusing last published catalog ({len(raw)} records).')
-              except Exception as fallback_error:
-                  raise SystemExit(f'Could not refresh satellite catalog ({feed_error}) or load previous published catalog ({fallback_error}).')
+                  with urllib.request.urlopen(mirror_req, timeout=60) as r:
+                      raw = json.load(r)
+                  if not isinstance(raw, list) or len(raw) < 200:
+                      raise RuntimeError('Satellite mirror returned fewer than 200 records')
+                  print(f'CelesTrak unavailable ({feed_error}); refreshed catalog from satellite data mirror ({len(raw)} records).')
+              except Exception as mirror_error:
+                  # Last-resort reuse of the previous deployed catalog.
+                  fallback_url = 'https://anuveytq-sys.github.io/JARVIS-WEB/velve-static-satellite-feed.js'
+                  fallback_req = urllib.request.Request(fallback_url, headers={'User-Agent': 'JARVIS-WEB-VELVE-static-snapshot/1.0'})
+                  try:
+                      with urllib.request.urlopen(fallback_req, timeout=30) as r:
+                          fallback_text = r.read().decode('utf-8')
+                      match = re.search(r'window\.__VELVE_STATIC_SATELLITES\s*=\s*(\[.*\]);', fallback_text, re.S)
+                      if not match:
+                          raise RuntimeError('Published satellite catalog was not parseable')
+                      raw = json.loads(match.group(1))
+                      print(f'Upstream and mirror unavailable; reusing published catalog ({len(raw)} records).')
+                  except Exception as fallback_error:
+                      raise SystemExit(f'Could not load CelesTrak ({feed_error}), satellite mirror ({mirror_error}), or previous catalog ({fallback_error}).')
 
           selected = []
           seen = set()
