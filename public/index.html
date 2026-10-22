@@ -3297,6 +3297,12 @@ async function sendCommand(command) {
   command = String(command || "").trim();
   if (!command) return;
 
+  // Isolated JARVIS phone calling commands; all unrelated commands keep the original path.
+  if (window.JARVISCalling && window.JARVISCalling.handleCommand(command)) {
+    setState("idle");
+    return;
+  }
+
   // Local command aliases for NEON NEXUS / Command Centre. Do not depend on the AI backend.
   const nexusPhrase = command.toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
