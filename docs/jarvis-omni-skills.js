@@ -23,16 +23,16 @@ function normalizePhoneCandidate(s) {
   return p;
 }
 function waUrl(phone, text) {
+  /* Use WhatsApp's official universal link. On iPhone/Android, when the
+     native WhatsApp app is installed, wa.me should hand off to that app;
+     WhatsApp Web is only the fallback when the app cannot handle the link. */
   var p = new URLSearchParams();
-  if (phone) p.set("phone", phone);
   if (text) p.set("text", text);
-  return "https://web.whatsapp.com/send" + (p.toString() ? "?" + p.toString() : "");
+  var number = String(phone || "").replace(/[^0-9]/g, "");
+  return "https://wa.me/" + number + (p.toString() ? "?" + p.toString() : "");
 }
 function waMobileUrl(phone, text) {
-  var p = new URLSearchParams();
-  if (phone) p.set("phone", phone);
-  if (text) p.set("text", text);
-  return "https://wa.me/" + (phone || "") + (p.toString() ? "?" + p.toString() : "");
+  return waUrl(phone, text);
 }
 
 /* Open immediately when the command arrives. This is important on iPhone:
@@ -221,7 +221,7 @@ function handle(raw) {
 }
 
 window.JARVISOmni = {
-  version: "1.2.0",
+  version: "1.2.1",
   skills: [{ id:"browser", name:"Browser navigation" }, { id:"email", name:"AI email drafts" }, { id:"whatsapp", name:"WhatsApp message handoff" }, { id:"vision", name:"Vision actions" }, { id:"skills", name:"Extensible skills engine" }],
   handleCommand: handle,
   getEmailDraft: draft,
