@@ -164,11 +164,10 @@
       return videoCall("", false);
     }
 
-    match = command.match(/^(?:video\s+call|call\s+on\s+video|start\s+(?:a\s+)?video\s+call\s+(?:with|for)|google\s+meet\s+with)\s+(?:the\s+)?(?:group\s+)?(.+)$/i);
+    match = command.match(/^(?:video\s+call|call\s+on\s+video|start\s+(?:a\s+)?video\s+call\s+(?:with|for)|google\s+meet\s+with)\s+(?:(?:the\s+)?(group)\s+)?(.+)$/i);
     if (match) {
-      var target = match[1].trim();
-      var group = /^(?:my\s+)?group\s+/i.test(target) || /\b(group|family group|team group)$/i.test(target);
-      target = target.replace(/^(?:my\s+)?group\s+/i, "").trim();
+      var group = Boolean(match[1]);
+      var target = match[2].trim().replace(/^(?:my\s+)?group\s+/i, "").trim();
       return videoCall(target, group);
     }
 
