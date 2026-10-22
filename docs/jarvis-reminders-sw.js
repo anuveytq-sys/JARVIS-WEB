@@ -9,11 +9,26 @@ self.addEventListener("message",function(event){
       body:String(d.body||"Reminder due"),
       tag:String(d.tag||"jarvis-reminder"),
       data:{url:d.url||"./",id:d.id||null},
-      icon:"./favicon.ico",
+      icon:"./jarvis-pwa-icon.svg",
       badge:"./favicon.ico",
       renotify:false
     }));
   }
+});
+self.addEventListener("push",function(event){
+  var payload={};
+  try{payload=event.data?event.data.json():{};}catch(_){try{payload={body:event.data.text()};}catch(__){}}
+  var title=payload.title||"JARVIS Reminder";
+  var body=payload.body||payload.text||"A reminder is due.";
+  var opts={
+    body:String(body),
+    tag:String(payload.tag||("jarvis-push-"+Date.now())),
+    data:{url:payload.url||"./",id:payload.id||null},
+    icon:"./jarvis-pwa-icon.svg",
+    badge:"./jarvis-pwa-icon.svg",
+    renotify:false
+  };
+  event.waitUntil(self.registration.showNotification(String(title),opts));
 });
 self.addEventListener("notificationclick",function(event){
   event.notification.close();
