@@ -3227,6 +3227,7 @@ body.thinking
 </div>
 
 
+<script src="./jarvis-calling.js"></script>
 <script>
 /* =========================================================
    ELEMENTS
@@ -3309,6 +3310,12 @@ const JARVIS_API_BASE = (
 async function sendCommand(command) {
   command = String(command || "").trim();
   if (!command) return;
+
+  // Independent calling module: intercept only its own commands, before any backend request.
+  if (window.JARVISCalling && window.JARVISCalling.handleCommand(command)) {
+    setState("idle");
+    return;
+  }
 
   setState("thinking");
 
