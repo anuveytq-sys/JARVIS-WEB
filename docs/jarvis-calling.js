@@ -156,6 +156,10 @@
     m = c.match(/^remember\s+(?:whatsapp\s+)?(.+?)\s+(?:is|at)\s+(\+?[0-9][0-9\s().-]{5,})$/i);
     if (m) return rememberPhone(m[1], m[2]);
 
+    m = c.match(/^(?:whatsapp\\s+(?:video\\s+)?call|call\\s+(?:on\\s+)?whatsapp)\\s+(?:the\\s+)?group\\s+(.+)$/i);
+    if (m) return openWhatsApp(m[1], /video/i.test(c), true);
+    m = c.match(/^(?:whatsapp\\s+(?:video\\s+)?call|call\\s+(?:on\\s+)?whatsapp)\\s+(.+)$/i);
+    if (m) return openWhatsApp(m[1].replace(/^(?:the\\s+)?group\\s+/i, ""), /video/i.test(c), /^(?:the\\s+)?group\\b/i.test(m[1]));
     m = c.match(/^(?:video\s+call|whatsapp\s+video\s+call|start\s+(?:a\s+)?video\s+call\s+(?:on\s+)?whatsapp|call\s+on\s+whatsapp\s+video)\s+(?:the\s+)?group\s+(.+)$/i);
     if (m) return openWhatsApp(m[1], true, true);
     m = c.match(/^(?:video\s+call|whatsapp\s+video\s+call|start\s+(?:a\s+)?video\s+call\s+(?:on\s+)?whatsapp|call\s+on\s+whatsapp\s+video)\s+(.+)$/i);
