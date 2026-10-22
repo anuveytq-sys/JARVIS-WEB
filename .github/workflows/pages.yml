@@ -99,7 +99,7 @@ jobs:
               try:
                   with urllib.request.urlopen(fallback_req, timeout=30) as r:
                       fallback_text = r.read().decode('utf-8')
-                  match = re.search(r'window\\.__VELVE_STATIC_SATELLITES\\s*=\\s*(\\[.*\\]);', fallback_text, re.S)
+                  match = re.search(r'window\.__VELVE_STATIC_SATELLITES\s*=\s*(\[.*\]);', fallback_text, re.S)
                   if not match:
                       raise RuntimeError('Published satellite catalog was not parseable')
                   raw = json.loads(match.group(1))
