@@ -57,6 +57,7 @@ jobs:
           node --check docs/jarvis-environment-shortcuts.js
           node --check docs/jarvis-calling.js
           node --check docs/jarvis-advanced-modules.js
+          node --check docs/jarvis-reminders-sw.js
 
       - name: Verify VELVE satellite interaction upgrade
         run: |
@@ -177,6 +178,7 @@ jobs:
           cp docs/jarvis-environment-shortcuts.js _site/jarvis-environment-shortcuts.js
           cp docs/jarvis-calling.js _site/jarvis-calling.js
           cp docs/jarvis-advanced-modules.js _site/jarvis-advanced-modules.js
+          cp docs/jarvis-reminders-sw.js _site/jarvis-reminders-sw.js
           curl -fsSL https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/5b76480bc0b155fef1e25d57b755e9efa00e3838/docs/jarvis-vision-intelligence.css -o _site/jarvis-vision-intelligence.css
           python3 - <<'PY'
           from pathlib import Path
@@ -202,6 +204,7 @@ jobs:
           grep -q "jarvis-omni-skills.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-calling.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-advanced-modules.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          test -s _site/jarvis-reminders-sw.js
           grep -q "jarvis-universal-service-router.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-github-access.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-platform-search.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
