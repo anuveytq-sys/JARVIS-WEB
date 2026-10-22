@@ -1,13 +1,14 @@
-/* JARVIS PhoneCall — isolated phone dialer and contact intelligence.
-   The browser opens the native dialer; the user confirms the call.
-   Reuses the existing WhatsApp contact map without modifying that feature. */
+/* JARVIS command-only calling and WhatsApp video-call handoff.
+   No injected buttons, panels, styles, or HUD changes.
+   Browsers cannot read private contacts or press native call buttons;
+   this module opens the appropriate app/dialer and leaves confirmation to the user. */
 (function () {
   "use strict";
-  if (window.JARVISCalling) return;
+  if (window.JARVISCalling && window.JARVISCalling.version === "3.0.0") return;
 
-  var CONTACTS_KEY = "jarvisVoiceCallContacts";
-  var WHATSAPP_KEY = "jarvisOmniWhatsAppContacts";
-  var panel = null;
+  var PHONE_KEY = "jarvisVoiceCallContacts";
+  var WA_KEY = "jarvisOmniWhatsAppContacts";
+  var GROUP_KEY = "jarvisWhatsAppGroupLinks";
 
   function say(message) {
     try {
@@ -18,253 +19,125 @@
       }
     } catch (_) {}
   }
-
-  function normalizeName(value) {
-    return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  function normName(v) { return String(v || "").trim().toLowerCase().replace(/\\s+/g, " "); }
+  function cleanPhone(v) {
+    var d = String(v || "").replace(/\\D/g, "");
+    if (d.length === 10 && /^[6-9]/.test(d)) d = "91" + d;
+    return d.length >= 7 && d.length <= 15 ? d : "";
   }
-
-  function normalizePhone(value) {
-    var raw = String(value || "").trim();
-    var digits = raw.replace(/\D/g, "");
-    if (digits.length === 10 && /^[6-9]/.test(digits)) digits = "91" + digits;
-    if (digits.length < 7 || digits.length > 15) return "";
-    return digits;
+  function store(key) {
+    try { var v = JSON.parse(localStorage.getItem(key) || "{}"); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+    catch (_) { return {}; }
   }
-
-  function readStore(key) {
+  function save(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_) { return false; }
+  }
+  function phoneFor(target) {
+    var key = normName(target), a = store(PHONE_KEY), b = store(WA_KEY);
+    return cleanPhone(a[key] || b[key] || target);
+  }
+  function openUrl(url, label) {
     try {
-      var value = JSON.parse(localStorage.getItem(key) || "{}");
-      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    } catch (_) { return {}; }
+      var w = window.open(url, "_blank");
+      if (w) { try { w.opener = null; } catch (_) {} say("Opening " + label + "."); return true; }
+    } catch (_) {}
+    try { window.location.assign(url); say("Opening " + label + "."); return true; }
+    catch (_) { say("I couldn't open " + label + " from this browser."); return true; }
   }
-
-  function writeStore(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
-    catch (_) { return false; }
-  }
-
-  function allContacts() {
-    var merged = {};
-    var whatsapp = readStore(WHATSAPP_KEY);
-    var phone = readStore(CONTACTS_KEY);
-    Object.keys(whatsapp).forEach(function (key) { merged[key] = normalizePhone(whatsapp[key]) || ""; });
-    Object.keys(phone).forEach(function (key) { merged[key] = normalizePhone(phone[key]) || merged[key] || ""; });
-    Object.keys(merged).forEach(function (key) { if (!merged[key]) delete merged[key]; });
-    return merged;
-  }
-
-  function findPhone(nameOrNumber) {
-    var key = normalizeName(nameOrNumber);
-    var contacts = allContacts();
-    return contacts[key] || normalizePhone(nameOrNumber);
-  }
-
-  function renderContacts() {
-    if (!panel) return;
-    var list = panel.querySelector("[data-call-contact-list]");
-    if (!list) return;
-    var contacts = allContacts();
-    var names = Object.keys(contacts).sort();
-    list.innerHTML = "";
-    if (!names.length) {
-      var empty = document.createElement("p");
-      empty.className = "jvc-empty";
-      empty.textContent = "No saved contacts yet. Add a name and number below, or save one by voice command.";
-      list.appendChild(empty);
-      return;
-    }
-    names.forEach(function (name) {
-      var row = document.createElement("div");
-      row.className = "jvc-contact";
-      var details = document.createElement("div");
-      details.className = "jvc-contact-details";
-      var title = document.createElement("strong");
-      title.textContent = name.replace(/\b\w/g, function (c) { return c.toUpperCase(); });
-      var number = document.createElement("span");
-      number.textContent = "+" + contacts[name];
-      details.appendChild(title);
-      details.appendChild(number);
-      var call = document.createElement("button");
-      call.type = "button";
-      call.className = "jvc-action";
-      call.textContent = "CALL";
-      call.addEventListener("click", function () { phoneCall(name); });
-      var remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "jvc-remove";
-      remove.textContent = "×";
-      remove.setAttribute("aria-label", "Remove " + name);
-      remove.addEventListener("click", function () {
-        var saved = readStore(CONTACTS_KEY);
-        delete saved[name];
-        if (!writeStore(CONTACTS_KEY, saved)) { say("I couldn't update contacts in this browser."); return; }
-        renderContacts();
-        say("Removed the JARVIS calling alias. Your original WhatsApp contact is unchanged.");
-      });
-      row.appendChild(details);
-      row.appendChild(call);
-      row.appendChild(remove);
-      list.appendChild(row);
-    });
-  }
-
-  function openPanel() {
-    if (!panel) buildPanel();
-    panel.hidden = false;
-    renderContacts();
-    var name = panel.querySelector("[data-call-name]");
-    if (name) name.focus();
-  }
-
-  function buildPanel() {
-    var style = document.createElement("style");
-    style.id = "jarvis-phone-call-styles";
-    style.textContent = `
-      #jvc-launcher{position:fixed;right:16px;bottom:92px;z-index:99990;background:#071923;color:#65f4ff;border:1px solid #24cfe8;border-radius:10px;padding:10px 14px;font:700 12px/1.2 Arial,sans-serif;letter-spacing:1px;box-shadow:0 0 18px #00d9ff35;cursor:pointer}
-      #jvc-panel{position:fixed;right:14px;bottom:145px;z-index:99999;width:min(360px,calc(100vw - 28px));max-height:min(72vh,620px);overflow:auto;box-sizing:border-box;background:rgba(3,15,25,.98);color:#dffcff;border:1px solid #20cde8;border-radius:14px;padding:16px;box-shadow:0 0 28px #00d9ff30;font:14px/1.4 Arial,sans-serif}
-      #jvc-panel[hidden]{display:none!important}#jvc-panel *{box-sizing:border-box}#jvc-panel h2{margin:0;color:#62efff;font-size:17px;letter-spacing:1px}#jvc-panel .jvc-sub{font-size:12px;color:#9bbdc7;margin:5px 0 13px}
-      #jvc-panel .jvc-close{float:right;background:transparent;color:#b9f8ff;border:1px solid #285968;border-radius:7px;padding:3px 8px;cursor:pointer}
-      #jvc-panel .jvc-fields{display:grid;grid-template-columns:1fr;gap:8px}#jvc-panel input{width:100%;min-height:39px;padding:9px 10px;border:1px solid #285968;border-radius:7px;background:#071923;color:#efffff;font-size:14px}
-      #jvc-panel button{font-size:12px}#jvc-panel .jvc-primary{width:100%;margin-top:8px;background:#07313c;color:#79f6ff;border:1px solid #20cde8;border-radius:7px;padding:10px;font-weight:700;cursor:pointer}
-      #jvc-panel .jvc-contact-list{display:grid;gap:7px;margin-top:12px}#jvc-panel .jvc-contact{display:flex;align-items:center;gap:7px;border:1px solid #1b4351;border-radius:8px;padding:8px}
-      #jvc-panel .jvc-contact-details{min-width:0;flex:1;display:grid;gap:2px}#jvc-panel .jvc-contact-details strong{overflow-wrap:anywhere;color:#e6fcff}#jvc-panel .jvc-contact-details span{font-size:12px;color:#93b9c2}
-      #jvc-panel .jvc-action{border:1px solid #20cde8;background:#07313c;color:#78f6ff;border-radius:6px;padding:8px;cursor:pointer}#jvc-panel .jvc-remove{border:1px solid #6b3940;background:#24131a;color:#ffb9c0;border-radius:6px;padding:5px 9px;cursor:pointer}
-      #jvc-panel .jvc-empty{font-size:12px;color:#a9c4cb}#jvc-panel .jvc-note{font-size:11px;color:#8eabb4;margin:12px 0 0}
-      @media(max-width:520px){#jvc-launcher{right:10px;bottom:82px;padding:9px 10px}#jvc-panel{right:8px;bottom:132px;width:calc(100vw - 16px)}}
-    `;
-    document.head.appendChild(style);
-
-    var launcher = document.createElement("button");
-    launcher.id = "jvc-launcher";
-    launcher.type = "button";
-    launcher.textContent = "☎ PHONE CALLS";
-    launcher.setAttribute("aria-controls", "jvc-panel");
-    launcher.setAttribute("aria-expanded", "false");
-    launcher.addEventListener("click", function () {
-      openPanel();
-      launcher.setAttribute("aria-expanded", "true");
-    });
-    document.body.appendChild(launcher);
-
-    panel = document.createElement("section");
-    panel.id = "jvc-panel";
-    panel.hidden = true;
-    panel.setAttribute("aria-label", "JARVIS phone calling and contacts");
-    panel.innerHTML = '<button type="button" class="jvc-close" data-call-close aria-label="Close phone panel">CLOSE</button>' +
-      '<h2>JARVIS // PHONE CALLS</h2><p class="jvc-sub">Voice, text, and one-tap dialer handoff</p>' +
-      '<form data-call-form><div class="jvc-fields"><input data-call-name maxlength="80" autocomplete="off" placeholder="Contact name (e.g. Anil)" aria-label="Contact name" required>' +
-      '<input data-call-number inputmode="tel" autocomplete="tel" maxlength="24" placeholder="Phone number with country code" aria-label="Phone number" required></div>' +
-      '<button class="jvc-primary" type="submit">SAVE CONTACT</button></form>' +
-      '<div class="jvc-contact-list" data-call-contact-list></div>' +
-      '<p class="jvc-note">Contacts stay in this browser. JARVIS opens your device dialer; you review and confirm the call. Existing WhatsApp aliases are read-only and remain unchanged.</p>';
-    panel.querySelector("[data-call-close]").addEventListener("click", function () {
-      panel.hidden = true;
-      launcher.setAttribute("aria-expanded", "false");
-      launcher.focus();
-    });
-    panel.querySelector("[data-call-form]").addEventListener("submit", function (event) {
-      event.preventDefault();
-      var name = panel.querySelector("[data-call-name]").value.trim();
-      var number = panel.querySelector("[data-call-number]").value.trim();
-      saveContact(name, number);
-    });
-    document.body.appendChild(panel);
-  }
-
-  function saveContact(name, number) {
-    var key = normalizeName(name);
-    var phone = normalizePhone(number);
-    if (!key || !phone) {
-      say("Please enter a contact name and a valid phone number, including country code when needed.");
-      return false;
-    }
-    var contacts = readStore(CONTACTS_KEY);
-    contacts[key] = phone;
-    if (!writeStore(CONTACTS_KEY, contacts)) {
-      say("I couldn't save that contact in this browser.");
-      return false;
-    }
-    renderContacts();
-    var nameField = panel && panel.querySelector("[data-call-name]");
-    var numberField = panel && panel.querySelector("[data-call-number]");
-    if (nameField) nameField.value = "";
-    if (numberField) numberField.value = "";
-    say("Saved " + name + " for phone calling.");
+  function rememberPhone(name, rawNumber) {
+    var key = normName(name), number = cleanPhone(rawNumber);
+    if (!key || !number) { say("Please give me a contact name and a valid phone number."); return true; }
+    var p = store(PHONE_KEY); p[key] = number;
+    if (!save(PHONE_KEY, p)) { say("I couldn't save that contact in this browser."); return true; }
+    /* Keep the existing WhatsApp alias map useful to the separate Omni Skills module. */
+    var w = store(WA_KEY); if (!w[key]) { w[key] = number; save(WA_KEY, w); }
+    say("Saved " + name + ". You can now say call " + name + " or video call " + name + ".");
     return true;
   }
-
-  function phoneCall(target) {
-    var value = String(target || "").trim().replace(/[,.!?]+$/, "");
-    var phone = findPhone(value);
-    if (!phone) {
-      say("I don't have a saved number for " + value + ". Open Phone Calls to add it, or say remember contact " + value + " as followed by the number.");
-      openPanel();
+  function rememberGroup(name, url) {
+    var key = normName(name), value = String(url || "").trim();
+    if (!key || !/^https?:\\/\\/(chat\\.whatsapp\\.com\\/|wa\\.me\\/)/i.test(value)) {
+      say("Give me a group name and its WhatsApp group invite link, for example remember WhatsApp group family as followed by the invite link.");
       return true;
     }
-    say("Opening the phone dialer. Review the number and tap Call when ready.");
-    window.location.href = "tel:+" + phone;
+    var groups = store(GROUP_KEY); groups[key] = value;
+    if (!save(GROUP_KEY, groups)) { say("I couldn't save that group link in this browser."); return true; }
+    say("Saved the WhatsApp group link for " + name + ". Say video call group " + name + " when you need it.");
     return true;
   }
-
+  function callPhone(target) {
+    var number = phoneFor(target);
+    if (!number) {
+      say("I don't have a saved phone number for " + target + ". Say remember contact " + target + " as followed by the phone number, then say call " + target + ".");
+      return true;
+    }
+    say("Opening your phone dialer for " + target + ". Review the contact and tap Call.");
+    try { window.location.href = "tel:+" + number; } catch (_) { say("I couldn't open the phone dialer."); }
+    return true;
+  }
+  function openWhatsApp(target, video, group) {
+    var name = String(target || "").trim().replace(/[,.!?]+$/, "");
+    var key = normName(name);
+    if (group) {
+      var groups = store(GROUP_KEY), groupUrl = groups[key];
+      if (groupUrl) {
+        say("Opening WhatsApp group " + name + ". If the group supports calls, tap its video-call control in WhatsApp.");
+        return openUrl(groupUrl, "WhatsApp group " + name);
+      }
+      say("I don't have a saved invite link for group " + name + ". Opening WhatsApp so you can search for the group. Save its invite link with remember WhatsApp group " + name + " as followed by the invite link.");
+      return openUrl("https://web.whatsapp.com/", "WhatsApp");
+    }
+    var number = phoneFor(name);
+    if (number) {
+      say(video
+        ? "Opening the WhatsApp chat for " + name + ". Tap the video-call button in WhatsApp to start the call."
+        : "Opening the WhatsApp chat for " + name + ".");
+      return openUrl("https://wa.me/" + number, video ? "WhatsApp video-call contact" : "WhatsApp contact");
+    }
+    say("I don't have a saved WhatsApp number for " + name + ". Opening WhatsApp so you can search for the person. For one-step opening next time, say remember WhatsApp contact " + name + " as followed by their phone number.");
+    return openUrl("https://web.whatsapp.com/", "WhatsApp");
+  }
   function handleCommand(raw) {
-    var command = String(raw || "").trim()
-      .replace(/^(?:(?:hey|hello|hi|ok|okay)\s+)?jarvis[\s,:;-]*/i, "")
-      .replace(/[.!?]+$/, "").replace(/\s+/g, " ").trim();
-    if (!command) return false;
-    var match;
+    var c = String(raw || "").trim()
+      .replace(/^(?:(?:hey|hello|hi|ok|okay)\\s+)?jarvis[\\s,:;-]*/i, "")
+      .replace(/[.!?]+$/, "").replace(/\\s+/g, " ").trim();
+    if (!c) return false;
+    var m;
 
-    match = command.match(/^(?:remember|save|add|set)\s+(?:a\s+)?contact\s+(.+?)\s+(?:as|with(?:\s+phone)?(?:\s+number)?)\s+(\+?[0-9][0-9\s().-]{5,})$/i);
-    if (match) return saveContact(match[1], match[2]);
-    match = command.match(/^remember\s+(?:phone\s+)?(.+?)\s+(?:is|at)\s+(\+?[0-9][0-9\s().-]{5,})$/i);
-    if (match) return saveContact(match[1], match[2]);
+    m = c.match(/^(?:remember|save|add|set)\\s+(?:whatsapp\\s+)?group\\s+(.+?)\\s+(?:as|with(?:\\s+invite)?(?:\\s+link)?)\\s+(https?:\\/\\/\\S+)$/i);
+    if (m) return rememberGroup(m[1], m[2]);
+    m = c.match(/^(?:remember|save|add|set)\\s+(?:whatsapp\\s+)?(?:contact|phone)\\s+(.+?)\\s+(?:as|with(?:\\s+phone)?(?:\\s+number)?)\\s+(\\+?[0-9][0-9\\s().-]{5,})$/i);
+    if (m) return rememberPhone(m[1], m[2]);
+    m = c.match(/^remember\\s+(?:whatsapp\\s+)?(.+?)\\s+(?:is|at)\\s+(\\+?[0-9][0-9\\s().-]{5,})$/i);
+    if (m) return rememberPhone(m[1], m[2]);
 
-    match = command.match(/^(?:call|phone|dial)\s+(.+)$/i);
-    if (match) return phoneCall(match[1]);
-
-    match = command.match(/^(?:open|show|manage)\s+(?:the\s+)?(?:phone\s+calls?|calling\s+contacts?|calling\s+panel)$/i);
-    if (match) { openPanel(); return true; }
+    m = c.match(/^(?:video\\s+call|whatsapp\\s+video\\s+call|start\\s+(?:a\\s+)?video\\s+call\\s+(?:on\\s+)?whatsapp|call\\s+on\\s+whatsapp\\s+video)\\s+(?:the\\s+)?group\\s+(.+)$/i);
+    if (m) return openWhatsApp(m[1], true, true);
+    m = c.match(/^(?:video\\s+call|whatsapp\\s+video\\s+call|start\\s+(?:a\\s+)?video\\s+call\\s+(?:on\\s+)?whatsapp|call\\s+on\\s+whatsapp\\s+video)\\s+(.+)$/i);
+    if (m) {
+      var who = m[1].replace(/^(?:the\\s+)?group\\s+/i, "");
+      return openWhatsApp(who, true, /^(?:the\\s+)?group\\b/i.test(m[1]));
+    }
+    m = c.match(/^(?:open|show|launch|go to)\\s+whatsapp(?:\\s+(?:chat|app))?$/i);
+    if (m) return openUrl("https://web.whatsapp.com/", "WhatsApp");
+    m = c.match(/^(?:call|phone|dial|make\\s+(?:a\\s+)?call\\s+to|call\\s+the\\s+contact\\s+)\\s*(.+)$/i);
+    if (m) return callPhone(m[1]);
 
     return false;
   }
 
   window.JARVISCalling = {
-    version: "2.0.0",
+    version: "3.0.0",
     handleCommand: handleCommand,
-    openPanel: openPanel,
-    getContacts: allContacts,
-    saveContact: saveContact,
-    phoneCall: phoneCall,
+    rememberPhone: rememberPhone,
+    rememberGroup: rememberGroup,
+    callPhone: callPhone,
+    openWhatsApp: openWhatsApp,
     commands: [
-      "call Anil",
-      "phone Mom",
-      "dial +91 9876543210",
-      "remember contact Anil as +91 9876543210",
-      "open phone calls"
+      "call Jayant", "phone wife", "dial +91 9876543210",
+      "video call Jayant", "WhatsApp video call wife", "video call group family",
+      "remember contact Jayant as +91 9876543210",
+      "remember WhatsApp group family as https://chat.whatsapp.com/INVITE_CODE"
     ]
   };
-
-  document.addEventListener("DOMContentLoaded", function () {
-    buildPanel();
-  });
-  if (document.readyState !== "loading") buildPanel();
-
-  document.addEventListener("submit", function (event) {
-    if (!event.target || event.target.id !== "commandForm") return;
-    var input = document.getElementById("commandInput");
-    if (input && handleCommand(input.value)) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      input.value = "";
-    }
-  }, true);
-
-  document.addEventListener("keydown", function (event) {
-    if (event.key !== "Enter" || event.shiftKey || !event.target || event.target.id !== "commandInput") return;
-    var input = document.getElementById("commandInput");
-    if (input && handleCommand(input.value)) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      input.value = "";
-    }
-  }, true);
 })();
