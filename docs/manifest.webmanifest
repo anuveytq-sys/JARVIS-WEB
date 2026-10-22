@@ -1,0 +1,23 @@
+{
+  "name": "JARVIS — Advanced Personal AI",
+  "short_name": "JARVIS",
+  "description": "Your personal AI assistant, live information, project tools and reminders.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#010b18",
+  "theme_color": "#010b18",
+  "icons": [
+    {
+      "src": "./jarvis-pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
