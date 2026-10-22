@@ -37,22 +37,21 @@
     return cleanPhone(a[key] || b[key] || target);
   }
   function openUrl(url, label) {
-    /* Prefer native WhatsApp on phones. Universal links can otherwise leave the
-       user in Safari/Chrome. A short fallback opens the web route if the app
-       scheme is not handled by the operating system. */
+    /* Prefer the native WhatsApp app on phones; use universal links as fallback. */
     var mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
-    if (mobile && /^https?:\\/\\/(?:wa\\.me|chat\\.whatsapp\\.com|web\\.whatsapp\\.com)/i.test(url)) {
+    var isWaMe = url.indexOf("https://wa.me/") === 0 || url.indexOf("http://wa.me/") === 0;
+    var isGroupLink = url.indexOf("https://chat.whatsapp.com/") === 0 || url.indexOf("http://chat.whatsapp.com/") === 0;
+    var isWhatsAppWeb = url.indexOf("https://web.whatsapp.com") === 0 || url.indexOf("http://web.whatsapp.com") === 0;
+    if (mobile && (isWaMe || isGroupLink || isWhatsAppWeb)) {
       var nativeUrl = url;
-      if (/^https?:\\/\\/wa\\.me\\//i.test(url)) {
+      if (isWaMe) {
         var number = url.replace(/^https?:\\/\\/wa\\.me\\//i, "").split(/[?#]/)[0];
         nativeUrl = "whatsapp://send?phone=" + encodeURIComponent(number);
-      } else if (/^https?:\\/\\/web\\.whatsapp\\.com/i.test(url)) {
+      } else if (isWhatsAppWeb) {
         nativeUrl = "whatsapp://";
       }
       var fallbackTimer = window.setTimeout(function () {
-        try {
-          if (!document.hidden) window.location.href = url;
-        } catch (_) {}
+        try { if (!document.hidden) window.location.href = url; } catch (_) {}
       }, 1600);
       try {
         document.addEventListener("visibilitychange", function onVisibility() {
@@ -66,9 +65,8 @@
         return true;
       } catch (_) { window.clearTimeout(fallbackTimer); }
     }
-    if (mobile || /^tel:/i.test(url) || /^intent:/i.test(url)) {
-      try { say("Opening " + label + "."); window.location.href = url; return true; }
-      catch (_) {}
+    if (mobile || url.indexOf("tel:") === 0 || url.indexOf("intent:") === 0) {
+      try { say("Opening " + label + "."); window.location.href = url; return true; } catch (_) {}
     }
     try {
       var w = window.open(url, "_blank");
