@@ -45,7 +45,7 @@
     if (mobile && (isWaMe || isGroupLink || isWhatsAppWeb)) {
       var nativeUrl = url;
       if (isWaMe) {
-        var number = url.replace(/^https?:\\/\\/wa\\.me\\//i, "").split(/[?#]/)[0];
+        var number = url.replace("https://wa.me/", "").replace("http://wa.me/", "").split(/[?#]/)[0];
         nativeUrl = "whatsapp://send?phone=" + encodeURIComponent(number);
       } else if (isWhatsAppWeb) {
         nativeUrl = "whatsapp://";
