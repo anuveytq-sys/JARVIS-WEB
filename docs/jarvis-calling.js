@@ -4,7 +4,7 @@
    this module opens the appropriate app/dialer and leaves confirmation to the user. */
 (function () {
   "use strict";
-  if (window.JARVISCalling && window.JARVISCalling.version === "3.4.0") return;
+  if (window.JARVISCalling && window.JARVISCalling.version === "3.5.0") return;
 
   var PHONE_KEY = "jarvisVoiceCallContacts";
   var WA_KEY = "jarvisOmniWhatsAppContacts";
@@ -258,7 +258,7 @@
     section.appendChild(title);
 
     var info = document.createElement("p");
-    info.textContent = "Import selected contacts from the phone, save them locally, and use their saved numbers for JARVIS calling. Android/iOS native wrappers can provide Select All; supported browsers use the system Contact Picker.";
+    info.textContent = "Import selected contacts where your browser supports the contact picker, or import a VCF/CSV contacts export on iPhone, Android, Mac, or PC. Save locally, then say “call <name>”. Contacts stay in this browser on this device.";
     info.style.cssText = "margin:0 0 10px;color:#b6dce7;font-size:12px";
     section.appendChild(info);
 
@@ -328,7 +328,17 @@
         setBusy(false);
       }
     }
-    selectButton.addEventListener("click", function () { pick(false); });
+    selectButton.addEventListener("click", function () {
+      var isIOSBrowser = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+      if (isIOSBrowser && !(window.JARVISNativeContacts && typeof window.JARVISNativeContacts.pickContacts === "function") &&
+          !(navigator.contacts && typeof navigator.contacts.select === "function")) {
+        status.style.color = "#b6dce7";
+        status.textContent = "Choose an exported .VCF contacts file from your iPhone Files app. Safari cannot open the native address book directly.";
+        fileInput.click();
+        return;
+      }
+      pick(false);
+    });
     allButton.addEventListener("click", function () { fileInput.click(); });
     fileInput.addEventListener("change", async function () {
       var file = fileInput.files && fileInput.files[0];
