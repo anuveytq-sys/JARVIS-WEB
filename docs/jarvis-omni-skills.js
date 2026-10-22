@@ -134,12 +134,15 @@ function sendWhatsAppDraft(recipient, message) {
     say("WhatsApp opened for " + r + " with your message prepared. Review it and press Send yourself.");
     return true;
   }
-  /* A name alone is not enough to address a WhatsApp chat reliably:
-     browser pages cannot read the user's private WhatsApp contact list.
-     Do not open a generic recipient picker, because that defeats the
-     requested direct-to-person flow. Ask once for the contact's number. */
-  if (reserved) { try { reserved.close(); } catch (_) {} }
-  say("I can't identify " + r + " in WhatsApp yet. Say: remember WhatsApp " + r + " as, followed by their WhatsApp phone number including country code. Then repeat your message command.");
+  /* A website cannot inspect a user's private WhatsApp contacts by name.
+     Without a saved number, WhatsApp can still open its chat picker with the
+     message prefilled; the user selects the intended contact before sending. */
+  var pickerUrl = waUrl("", text);
+  if (reserved) {
+    try { reserved.location.href = pickerUrl; say("WhatsApp opened with your message prepared. Select " + r + " in WhatsApp, review it, and press Send yourself."); return true; } catch (_) {}
+  }
+  openExternal(pickerUrl, "WhatsApp message");
+  say("WhatsApp opened with your message prepared. Select " + r + " in WhatsApp, review it, and press Send yourself.");
   return true;
 }
 function vision(action) {
@@ -218,7 +221,7 @@ function handle(raw) {
 }
 
 window.JARVISOmni = {
-  version: "1.2.2",
+  version: "1.2.1",
   skills: [{ id:"browser", name:"Browser navigation" }, { id:"email", name:"AI email drafts" }, { id:"whatsapp", name:"WhatsApp message handoff" }, { id:"vision", name:"Vision actions" }, { id:"skills", name:"Extensible skills engine" }],
   handleCommand: handle,
   getEmailDraft: draft,
