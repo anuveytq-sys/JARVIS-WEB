@@ -4,7 +4,7 @@
    this module opens the appropriate app/dialer and leaves confirmation to the user. */
 (function () {
   "use strict";
-  if (window.JARVISCalling && window.JARVISCalling.version === "3.0.0") return;
+  if (window.JARVISCalling && window.JARVISCalling.version === "3.1.0") return;
 
   var PHONE_KEY = "jarvisVoiceCallContacts";
   var WA_KEY = "jarvisOmniWhatsAppContacts";
@@ -37,9 +37,35 @@
     return cleanPhone(a[key] || b[key] || target);
   }
   function openUrl(url, label) {
-    /* On phones, navigate the current tab directly so iOS Safari does not
-       block a delayed popup and can hand universal links to the native app. */
+    /* Prefer native WhatsApp on phones. Universal links can otherwise leave the
+       user in Safari/Chrome. A short fallback opens the web route if the app
+       scheme is not handled by the operating system. */
     var mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
+    if (mobile && /^https?:\\/\\/(?:wa\\.me|chat\\.whatsapp\\.com|web\\.whatsapp\\.com)/i.test(url)) {
+      var nativeUrl = url;
+      if (/^https?:\\/\\/wa\\.me\\//i.test(url)) {
+        var number = url.replace(/^https?:\\/\\/wa\\.me\\//i, "").split(/[?#]/)[0];
+        nativeUrl = "whatsapp://send?phone=" + encodeURIComponent(number);
+      } else if (/^https?:\\/\\/web\\.whatsapp\\.com/i.test(url)) {
+        nativeUrl = "whatsapp://";
+      }
+      var fallbackTimer = window.setTimeout(function () {
+        try {
+          if (!document.hidden) window.location.href = url;
+        } catch (_) {}
+      }, 1600);
+      try {
+        document.addEventListener("visibilitychange", function onVisibility() {
+          if (document.hidden) {
+            window.clearTimeout(fallbackTimer);
+            document.removeEventListener("visibilitychange", onVisibility);
+          }
+        });
+        say("Opening the WhatsApp app" + (label ? " for " + label : "") + ".");
+        window.location.href = nativeUrl;
+        return true;
+      } catch (_) { window.clearTimeout(fallbackTimer); }
+    }
     if (mobile || /^tel:/i.test(url) || /^intent:/i.test(url)) {
       try { say("Opening " + label + "."); window.location.href = url; return true; }
       catch (_) {}
@@ -92,10 +118,10 @@
     if (group) {
       var groups = store(GROUP_KEY), groupUrl = groups[key];
       if (groupUrl) {
-        say("Opening WhatsApp group " + name + ". If the group supports calls, tap its video-call control in WhatsApp.");
+        say("Opening the WhatsApp app for group " + name + ". If WhatsApp opens the group, tap its video-call control.");
         return openUrl(groupUrl, "WhatsApp group " + name);
       }
-      say("I don't have a saved invite link for group " + name + ". Opening WhatsApp so you can search for the group. Save its invite link with remember WhatsApp group " + name + " as followed by the invite link.");
+      say("Opening the WhatsApp app. Search for group " + name + " there, then tap its video-call control. A website cannot search your private WhatsApp groups by name.");
       return openUrl("https://web.whatsapp.com/", "WhatsApp");
     }
     var number = phoneFor(name);
@@ -105,7 +131,7 @@
         : "Opening the WhatsApp chat for " + name + ".");
       return openUrl("https://wa.me/" + number, video ? "WhatsApp video-call contact" : "WhatsApp contact");
     }
-    say("I don't have a saved WhatsApp number for " + name + ". Opening WhatsApp so you can search for the person. For one-step opening next time, say remember WhatsApp contact " + name + " as followed by their phone number.");
+    say("Opening the WhatsApp app. Search for " + name + " in WhatsApp, then tap the video-call button. To open the chat directly next time, save their number by saying remember contact " + name + " as followed by their phone number.");
     return openUrl("https://web.whatsapp.com/", "WhatsApp");
   }
   function handleCommand(raw) {
@@ -138,7 +164,7 @@
   }
 
   window.JARVISCalling = {
-    version: "3.0.0",
+    version: "3.1.0",
     handleCommand: handleCommand,
     rememberPhone: rememberPhone,
     rememberGroup: rememberGroup,
