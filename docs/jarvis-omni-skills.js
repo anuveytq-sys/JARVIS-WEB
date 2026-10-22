@@ -7,7 +7,7 @@ var KEY = "jarvisOmniEmailDraftSession";
 function say(s) { try { if (window.speak) window.speak(s); } catch (_) {} }
 function norm(s) { return String(s || "").trim().replace(/^(hey\s+)?jarvis[\s,:;-]*/i, "").replace(/[.!?]+$/, "").trim(); }
 function draft() { try { return JSON.parse(sessionStorage.getItem(KEY) || "null"); } catch (_) { return null; } }
-function open(url, label) { var w = null; try { w = window.open(url, "_blank", "noopener,noreferrer"); } catch (_) {} say(w ? "Opening " + label : "Allow pop-ups for JARVIS, then repeat the command."); return !!w; }
+function open(url, label) { var w = null; try { w = window.open(url, "_blank"); if (w) w.opener = null; } catch (_) {} say(w ? "Opening " + label : "Allow pop-ups for JARVIS, then repeat the command."); return !!w; }
 function ai(prompt) {
  return window.fetch("/api/command", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({command:prompt})})
  .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok||d.ok===false)throw Error(d.reply||"AI unavailable");var s=String(d.reply||"");var a=s.indexOf("{"),b=s.lastIndexOf("}");if(a<0||b<=a)throw Error("Could not parse the email draft");return JSON.parse(s.slice(a,b+1));});});
