@@ -4,7 +4,7 @@
    this module opens the appropriate app/dialer and leaves confirmation to the user. */
 (function () {
   "use strict";
-  if (window.JARVISCalling && window.JARVISCalling.version === "3.5.0") return;
+  if (window.JARVISCalling && window.JARVISCalling.version === "3.6.0") return;
 
   var PHONE_KEY = "jarvisVoiceCallContacts";
   var WA_KEY = "jarvisOmniWhatsAppContacts";
@@ -35,7 +35,21 @@
   }
   function phoneFor(target) {
     var key = normName(target), a = store(PHONE_KEY), b = store(WA_KEY);
-    return cleanPhone(a[key] || b[key] || target);
+    var exact = cleanPhone(a[key] || b[key] || target);
+    if (exact) return exact;
+
+    // Imported VCFs often store a full display name (e.g. "Jayant Kumar")
+    // while the user says only the first name. Match only an unambiguous name.
+    var combined = Object.assign({}, b, a), matches = [];
+    Object.keys(combined).forEach(function (savedName) {
+      var savedKey = normName(savedName);
+      if (!savedKey || !key) return;
+      if (savedKey.indexOf(key) === 0 || savedKey.split(" ").indexOf(key) >= 0) {
+        var number = cleanPhone(combined[savedName]);
+        if (number && matches.indexOf(number) < 0) matches.push(number);
+      }
+    });
+    return matches.length === 1 ? matches[0] : "";
   }
   function openUrl(url, label) {
     var mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
@@ -184,7 +198,8 @@
         body.split("\n").forEach(function (line) {
           var colon = line.indexOf(":");
           if (colon < 0) return;
-          var head = line.slice(0, colon).split(";")[0].toUpperCase();
+          // Apple/iCloud exports can group properties as item1.TEL or item2.FN.
+          var head = line.slice(0, colon).split(";")[0].toUpperCase().split(".").pop();
           var value = decodeVCardValue(line.slice(colon + 1));
           if (head === "FN" && value) name = value;
           else if (head === "N" && value && !name) {
@@ -193,7 +208,11 @@
           }
           if (head === "TEL" && value) numbers.push(value);
         });
-        numbers.forEach(function (tel) { if (name && cleanPhone(tel)) out.push({ name: name, tel: tel }); });
+        numbers.forEach(function (tel) {
+          // vCard 4 may encode the phone as tel:+<number>; discard URI and extension metadata.
+          tel = String(tel || "").replace(/^tel:/i, "").split(";")[0].trim();
+          if (name && cleanPhone(tel)) out.push({ name: name, tel: tel });
+        });
       });
       return out;
     }
@@ -428,7 +447,7 @@
   }
 
   window.JARVISCalling = {
-    version: "3.5.0",
+    version: "3.6.0",
     handleCommand: handleCommand,
     rememberPhone: rememberPhone,
     rememberGroup: rememberGroup,
