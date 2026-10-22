@@ -4,7 +4,7 @@
    this module opens the appropriate app/dialer and leaves confirmation to the user. */
 (function () {
   "use strict";
-  if (window.JARVISCalling && window.JARVISCalling.version === "3.1.0") return;
+  if (window.JARVISCalling && window.JARVISCalling.version === "3.2.0") return;
 
   var PHONE_KEY = "jarvisVoiceCallContacts";
   var WA_KEY = "jarvisOmniWhatsAppContacts";
@@ -97,18 +97,28 @@
     return true;
   }
   function callPhone(target) {
-    var number = phoneFor(target);
-    if (!number) {
-      say("I don't have a saved number for " + target + ". A website cannot search your private phone contacts by name. I'll try opening Contacts; if your phone blocks this link, save the number with remember contact " + target + " as followed by the number.");
-      /* Android can route this intent to its contacts app. iOS may reject the
-         non-public contacts scheme; in that case the spoken fallback explains why. */
-      var ua = navigator.userAgent || "";
-      if (/Android/i.test(ua)) return openUrl("intent://contacts/people/#Intent;scheme=content;package=com.google.android.contacts;end", "Contacts");
-      if (/iPhone|iPad|iPod/i.test(ua)) return openUrl("contacts://", "Contacts");
-      return openUrl("https://contacts.google.com/", "Google Contacts");
+    var name = String(target || "").trim().replace(/[,.!?]+$/, "");
+    var number = phoneFor(name);
+    if (number) {
+      say("Opening the phone dialer for " + name + ". Check the number and tap Call.");
+      return openUrl("tel:+" + number, "phone dialer");
     }
-    say("Opening the phone dialer for " + target + ". Check the number and tap Call.");
-    return openUrl("tel:+" + number, "phone dialer");
+
+    /* Never send Safari to the unsupported contacts:// scheme. Ordinary web
+       pages cannot search the iPhone/Android address book by contact name. */
+    say("I can't search your private phone contacts by name from this website. Enter " + name + "'s phone number once and I'll open the dialer.");
+    var entered = "";
+    try {
+      if (typeof window.prompt === "function") entered = window.prompt("Phone number for " + name + " (include country code if needed):", "") || "";
+    } catch (_) {}
+    var enteredNumber = cleanPhone(entered);
+    if (enteredNumber) {
+      rememberPhone(name, enteredNumber);
+      say("Opening the phone dialer for " + name + ". Check the number and tap Call.");
+      return openUrl("tel:+" + enteredNumber, "phone dialer");
+    }
+    say("No number was entered, so I haven't opened an invalid phone link. Save the contact number and say call " + name + " again.");
+    return true;
   }
   function openWhatsApp(target, video, group) {
     var name = String(target || "").trim().replace(/[,.!?]+$/, "");
@@ -162,7 +172,7 @@
   }
 
   window.JARVISCalling = {
-    version: "3.1.0",
+    version: "3.2.0",
     handleCommand: handleCommand,
     rememberPhone: rememberPhone,
     rememberGroup: rememberGroup,
