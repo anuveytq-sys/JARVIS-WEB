@@ -682,7 +682,156 @@
       showReply("Personal Gemini key removed. JARVIS will use its configured backend if available.");
     });
     row.append(save, remove, close);
-    card.append(heading, intro, warning, voiceSection, providerLabel, providerSelect, label, input, modelLabel, modelSelect, openRouterSection, status, row);
+
+    // Contact import is opt-in and remains local to this browser. Browser APIs
+    // only expose contacts after a user gesture and may not exist on iOS Safari.
+    const contactsSection = document.createElement("div");
+    Object.assign(contactsSection.style, {
+      margin: "14px 0", padding: "14px", border: "1px solid #287b91",
+      borderRadius: "10px", background: "rgba(0,10,24,.72)"
+    });
+    const contactsHeading = document.createElement("h3");
+    contactsHeading.textContent = "PHONE CONTACTS // JARVIS";
+    Object.assign(contactsHeading.style, { margin: "0 0 6px", color: "#62f5ff", fontSize: "14px", letterSpacing: "1px" });
+    const contactsInfo = document.createElement("p");
+    contactsInfo.textContent = "Import contacts so JARVIS can match saved names to phone numbers for calling and WhatsApp. Contacts are saved only in this browser on this device; nothing is uploaded. Your browser decides whether it can share contacts.";
+    Object.assign(contactsInfo.style, { margin: "0 0 10px", color: "#b6dce7", fontSize: "12px" });
+    const contactsStatus = document.createElement("p");
+    contactsStatus.setAttribute("role", "status");
+    contactsStatus.textContent = "No import performed yet.";
+    Object.assign(contactsStatus.style, { margin: "0 0 10px", color: "#baf7ff", fontSize: "12px", overflowWrap: "anywhere" });
+    const contactsButtons = document.createElement("div");
+    Object.assign(contactsButtons.style, { display: "flex", flexWrap: "wrap", gap: "8px" });
+    const makeContactsButton = (text) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = text;
+      Object.assign(b.style, {
+        flex: "1 1 150px", minHeight: "42px", padding: "10px", borderRadius: "8px",
+        border: "1px solid #00d9ff", background: "rgba(0,0,0,.35)", color: "#fff",
+        font: "bold 12px system-ui,sans-serif", cursor: "pointer"
+      });
+      return b;
+    };
+    const importPhoneContacts = makeContactsButton("SELECT PHONE CONTACTS");
+    const importContactFile = makeContactsButton("IMPORT .VCF / .CSV");
+    const contactsFile = document.createElement("input");
+    contactsFile.type = "file";
+    contactsFile.accept = ".vcf,.vcard,.csv,text/vcard,text/csv";
+    contactsFile.hidden = true;
+    const contactCount = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem("jarvisVoiceCallContacts") || "{}");
+        return saved && typeof saved === "object" ? Object.keys(saved).length : 0;
+      } catch (_) { return 0; }
+    };
+    function saveImportedContacts(entries) {
+      const phones = JSON.parse(localStorage.getItem("jarvisVoiceCallContacts") || "{}");
+      const whatsapp = JSON.parse(localStorage.getItem("jarvisOmniWhatsAppContacts") || "{}");
+      let added = 0, skipped = 0;
+      entries.forEach(entry => {
+        const name = String(entry.name || "").trim().replace(/\s+/g, " ");
+        const number = String(entry.tel || "").replace(/[^\d+]/g, "");
+        const digits = number.replace(/\D/g, "");
+        if (!name || digits.length < 7 || digits.length > 15) { skipped++; return; }
+        const key = name.toLowerCase();
+        // Keep an existing explicit mapping unless the imported contact has a valid number.
+        phones[key] = digits.length === 10 && /^[6-9]/.test(digits) ? "91" + digits : digits;
+        whatsapp[key] = phones[key];
+        added++;
+      });
+      try {
+        localStorage.setItem("jarvisVoiceCallContacts", JSON.stringify(phones));
+        localStorage.setItem("jarvisOmniWhatsAppContacts", JSON.stringify(whatsapp));
+        contactsStatus.style.color = "#9dffcb";
+        contactsStatus.textContent = "Import complete: " + added + " contact number(s) saved; " + skipped + " skipped. JARVIS now has " + contactCount() + " saved phone contacts in this browser.";
+        if (typeof window.speak === "function") window.speak("Contact import complete. Saved " + added + " contacts for JARVIS.");
+      } catch (error) {
+        contactsStatus.style.color = "#ffd0d0";
+        contactsStatus.textContent = "Could not save contacts. Browser storage may be full or unavailable. No contacts were uploaded.";
+      }
+    }
+    importPhoneContacts.addEventListener("click", async () => {
+      if (!navigator.contacts || typeof navigator.contacts.select !== "function") {
+        contactsStatus.style.color = "#ffdca8";
+        contactsStatus.textContent = "This browser does not provide the phone contact picker. On iPhone/Safari, export your contacts as a .VCF file and use IMPORT .VCF / .CSV below. JARVIS cannot silently read the phone address book.";
+        return;
+      }
+      importPhoneContacts.disabled = true;
+      contactsStatus.textContent = "Opening the system contact picker… choose the contacts you want to save.";
+      try {
+        const selected = await navigator.contacts.select(["name", "tel"], { multiple: true });
+        const entries = [];
+        selected.forEach(contact => {
+          const names = Array.isArray(contact.name) ? contact.name : [];
+          const tels = Array.isArray(contact.tel) ? contact.tel : [];
+          if (names[0] && tels.length) tels.forEach(tel => entries.push({ name: names[0], tel }));
+        });
+        if (!entries.length) {
+          contactsStatus.textContent = "No contacts with both a name and phone number were selected.";
+          return;
+        }
+        saveImportedContacts(entries);
+      } catch (error) {
+        contactsStatus.style.color = "#ffdca8";
+        contactsStatus.textContent = error && error.name === "AbortError" ? "Contact selection cancelled. Nothing was changed." : "The contact picker could not complete. Try importing a .VCF or .CSV contacts file.";
+      } finally { importPhoneContacts.disabled = false; }
+    });
+    importContactFile.addEventListener("click", () => contactsFile.click());
+    contactsFile.addEventListener("change", async () => {
+      const f = contactsFile.files && contactsFile.files[0];
+      if (!f) return;
+      try {
+        const raw = await f.text();
+        const entries = [];
+        if (/\.vcf$|\.vcard$/i.test(f.name) || /BEGIN:VCARD/i.test(raw)) {
+          raw.replace(/\r/g, "").split(/END:VCARD/i).forEach(cardText => {
+            if (!/BEGIN:VCARD/i.test(cardText)) return;
+            const lines = cardText.replace(/\n[ \t]/g, "").split("\n");
+            let name = "";
+            const tels = [];
+            lines.forEach(line => {
+              const colon = line.indexOf(":");
+              if (colon < 0) return;
+              const field = line.slice(0, colon).split(";")[0].toUpperCase();
+              const value = line.slice(colon + 1).trim().replace(/\\([,;\\])/g, "$1");
+              if (field === "FN") name = value;
+              else if (field === "N" && !name) name = value.split(";").filter(Boolean).reverse().join(" ").trim();
+              else if (field === "TEL" && value) tels.push(value);
+            });
+            tels.forEach(tel => entries.push({ name, tel }));
+          });
+        } else {
+          const lines = raw.split(/\r?\n/).filter(Boolean);
+          const parseCsv = line => {
+            const out = []; let value = "", quoted = false;
+            for (let i = 0; i < line.length; i++) {
+              const ch = line[i];
+              if (ch === '"' && line[i + 1] === '"' && quoted) { value += '"'; i++; }
+              else if (ch === '"') quoted = !quoted;
+              else if (ch === "," && !quoted) { out.push(value.trim()); value = ""; }
+              else value += ch;
+            }
+            out.push(value.trim()); return out;
+          };
+          const headers = parseCsv(lines.shift()).map(x => x.toLowerCase());
+          const ni = headers.findIndex(x => /^(name|full name|display name)$/.test(x));
+          const ti = headers.findIndex(x => /^(phone|phone number|mobile|mobile phone|tel|telephone)$/.test(x));
+          if (ni < 0 || ti < 0) throw new Error("CSV needs Name and Phone Number columns.");
+          lines.forEach(line => { const cells = parseCsv(line); if (cells[ni] && cells[ti]) entries.push({ name: cells[ni], tel: cells[ti] }); });
+        }
+        if (!entries.length) throw new Error("No contacts with names and valid phone numbers were found in that file.");
+        saveImportedContacts(entries);
+      } catch (error) {
+        contactsStatus.style.color = "#ffd0d0";
+        contactsStatus.textContent = "Import failed: " + (error.message || "could not read the contacts file") + ". Use a standard .VCF file or CSV with Name and Phone Number columns.";
+      } finally { contactsFile.value = ""; }
+    });
+    contactsButtons.append(importPhoneContacts, importContactFile);
+    contactsSection.append(contactsHeading, contactsInfo, contactsButtons, contactsFile, contactsStatus);
+    contactsStatus.textContent = contactCount() + " phone contact(s) currently saved in this browser.";
+
+    card.append(heading, intro, warning, voiceSection, providerLabel, providerSelect, label, input, modelLabel, modelSelect, openRouterSection, contactsSection, status, row);
     modal.appendChild(card);
     document.body.append(modal);
   }
