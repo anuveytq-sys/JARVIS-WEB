@@ -42,6 +42,13 @@
     } catch (_) { return {}; }
   }
 
+  function findContactPhone(nameOrNumber) {
+    var key = normalizeName(nameOrNumber);
+    var localContacts = readStore(CONTACTS_KEY);
+    var existingWhatsAppContacts = readStore("jarvisOmniWhatsAppContacts");
+    return localContacts[key] || existingWhatsAppContacts[key] || normalizePhone(nameOrNumber);
+  }
+
   function writeStore(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); return true; }
     catch (_) { return false; }
@@ -99,8 +106,7 @@
 
   function phoneCall(target) {
     var value = String(target || "").trim().replace(/[,.!?]+$/, "");
-    var contacts = readStore(CONTACTS_KEY);
-    var phone = contacts[normalizeName(value)] || normalizePhone(value);
+    var phone = findContactPhone(value);
     if (!phone) {
       say("I don't have a saved phone number for " + value + ". Say remember contact " + value + " as, followed by the phone number.");
       return true;
@@ -122,14 +128,18 @@
     if (isGroup) {
       var groups = readStore(GROUPS_KEY);
       var savedGroup = groups[normalizeName(value)];
-      if (savedGroup) return openUrl(savedGroup, "the saved group video-call link");
+      if (savedGroup) {
+        openUrl(savedGroup, "the saved group link");
+        if (/chat\.whatsapp\.com/i.test(savedGroup)) say("Join the WhatsApp group, then tap its video-call control to start the group call.");
+        else say("Follow the meeting link to join the group video call.");
+        return true;
+      }
       openUrl("https://meet.google.com/new", "a new Google Meet");
       say("I couldn't find a saved link for " + value + ". A new Google Meet is opening; invite the group from there, or save its WhatsApp group invite link first.");
       return true;
     }
 
-    var contacts = readStore(CONTACTS_KEY);
-    var phone = contacts[normalizeName(value)] || normalizePhone(value);
+    var phone = findContactPhone(value);
     if (phone) {
       openUrl("https://wa.me/" + phone, "the WhatsApp chat for " + value);
       say("Opening the WhatsApp chat for " + value + ". Tap the video-call icon in WhatsApp to start the call.");
