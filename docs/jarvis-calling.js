@@ -4,11 +4,12 @@
    this module opens the appropriate app/dialer and leaves confirmation to the user. */
 (function () {
   "use strict";
-  if (window.JARVISCalling && window.JARVISCalling.version === "3.3.0") return;
+  if (window.JARVISCalling && window.JARVISCalling.version === "3.4.0") return;
 
   var PHONE_KEY = "jarvisVoiceCallContacts";
   var WA_KEY = "jarvisOmniWhatsAppContacts";
   var GROUP_KEY = "jarvisWhatsAppGroupLinks";
+  var CONTACTS_VERSION = "native-contact-import-1";
 
   function say(message) {
     try {
@@ -37,7 +38,6 @@
     return cleanPhone(a[key] || b[key] || target);
   }
   function openUrl(url, label) {
-    /* Prefer the native WhatsApp app on phones; use universal links as fallback. */
     var mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
     var isWaMe = url.indexOf("https://wa.me/") === 0 || url.indexOf("http://wa.me/") === 0;
     var isGroupLink = url.indexOf("https://chat.whatsapp.com/") === 0 || url.indexOf("http://chat.whatsapp.com/") === 0;
@@ -80,7 +80,6 @@
     if (!key || !number) { say("Please give me a contact name and a valid phone number."); return true; }
     var p = store(PHONE_KEY); p[key] = number;
     if (!save(PHONE_KEY, p)) { say("I couldn't save that contact in this browser."); return true; }
-    /* Keep the existing WhatsApp alias map useful to the separate Omni Skills module. */
     var w = store(WA_KEY); if (!w[key]) { w[key] = number; save(WA_KEY, w); }
     say("Saved " + name + ". You can now say call " + name + " or video call " + name + ".");
     return true;
@@ -103,9 +102,6 @@
       say("Opening the phone dialer for " + name + ". Check the number and tap Call.");
       return openUrl("tel:+" + number, "phone dialer");
     }
-
-    /* Never send Safari to the unsupported contacts:// scheme. Ordinary web
-       pages cannot search the iPhone/Android address book by contact name. */
     say("I can't search your private phone contacts by name from this website. Enter " + name + "'s phone number once and I'll open the dialer.");
     var entered = "";
     try {
@@ -142,24 +138,182 @@
     say("Opening the WhatsApp app. Search for " + name + " in WhatsApp, then tap the video-call button. To open the chat directly next time, save their number by saying remember contact " + name + " as followed by their phone number.");
     return openUrl("https://web.whatsapp.com/", "WhatsApp");
   }
+
+  function contactsFromPicker(selected) {
+    var out = [];
+    (Array.isArray(selected) ? selected : []).forEach(function (contact) {
+      var names = Array.isArray(contact.name) ? contact.name : [];
+      var tels = Array.isArray(contact.tel) ? contact.tel : [];
+      var name = String(names[0] || "").trim();
+      if (!name) return;
+      tels.forEach(function (tel) {
+        var number = cleanPhone(tel);
+        if (number) out.push({ name: name, tel: number });
+      });
+    });
+    return out;
+  }
+  function mergeLocalContacts(entries) {
+    var phone = store(PHONE_KEY), wa = store(WA_KEY), count = 0;
+    entries.forEach(function (entry) {
+      var key = normName(entry.name), number = cleanPhone(entry.tel);
+      if (!key || !number) return;
+      phone[key] = number;
+      wa[key] = number;
+      count++;
+    });
+    if (!save(PHONE_KEY, phone) || !save(WA_KEY, wa)) throw new Error("storage");
+    try { localStorage.setItem("jarvisNativeContactsVersion", CONTACTS_VERSION); } catch (_) {}
+    return count;
+  }
+
+  /*
+   * Native bridge contract for an Android/iOS JARVIS wrapper:
+   * window.JARVISNativeContacts.pickContacts({multiple:true, selectAll:true})
+   * resolves to [{name:"Anil", tel:["+91..."]}, ...] or [{name,tel}].
+   * The web UI below uses this when present, while ordinary supported browsers
+   * use the Contact Picker API. No web page is given hidden address-book access.
+   */
+  async function nativePickContacts(selectAll) {
+    if (window.JARVISNativeContacts && typeof window.JARVISNativeContacts.pickContacts === "function") {
+      var result = await window.JARVISNativeContacts.pickContacts({ multiple: true, selectAll: !!selectAll });
+      return Array.isArray(result) ? result : (result && Array.isArray(result.contacts) ? result.contacts : []);
+    }
+    if (navigator.contacts && typeof navigator.contacts.select === "function") {
+      return await navigator.contacts.select(["name", "tel"], { multiple: true });
+    }
+    throw new Error("native-contact-picker-unavailable");
+  }
+
+  function installContactSettingsPanel() {
+    if (document.getElementById("jarvis-phone-contact-import-v2")) return true;
+    var modal = document.getElementById("jarvis-settings-modal");
+    if (!modal) return false;
+    var card = modal.querySelector("section");
+    if (!card) return false;
+
+    var section = document.createElement("div");
+    section.id = "jarvis-phone-contact-import-v2";
+    section.style.cssText = "margin:14px 0;padding:14px;border:1px solid #287b91;border-radius:10px;background:rgba(0,10,24,.72)";
+
+    var title = document.createElement("h3");
+    title.textContent = "PHONE CONTACTS // NATIVE IMPORT";
+    title.style.cssText = "margin:0 0 6px;color:#62f5ff;font-size:14px;letter-spacing:1px";
+    section.appendChild(title);
+
+    var info = document.createElement("p");
+    info.textContent = "Import selected contacts from the phone, save them locally, and use their saved numbers for JARVIS calling. Android/iOS native wrappers can provide Select All; supported browsers use the system Contact Picker.";
+    info.style.cssText = "margin:0 0 10px;color:#b6dce7;font-size:12px";
+    section.appendChild(info);
+
+    var status = document.createElement("p");
+    status.textContent = "Ready — contacts stay on this device/browser unless the native app says otherwise.";
+    status.style.cssText = "margin:0 0 10px;color:#9bd6e5;font-size:12px";
+    section.appendChild(status);
+
+    var row = document.createElement("div");
+    row.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:8px";
+    function makeButton(text) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = text;
+      b.style.cssText = "min-height:42px;padding:8px;border:1px solid #00d9ff;border-radius:8px;background:rgba(0,0,0,.35);color:#fff;font:bold 12px system-ui,sans-serif;cursor:pointer;touch-action:manipulation";
+      return b;
+    }
+    var selectButton = makeButton("SELECT FROM PHONE");
+    var allButton = makeButton("SELECT ALL");
+    row.appendChild(selectButton);
+    row.appendChild(allButton);
+    section.appendChild(row);
+
+    var saveButton = makeButton("SAVE LOCALLY");
+    saveButton.style.marginTop = "8px";
+    saveButton.disabled = true;
+    section.appendChild(saveButton);
+
+    var pending = [];
+    function setBusy(value) {
+      selectButton.disabled = value; allButton.disabled = value;
+      saveButton.disabled = value || !pending.length;
+    }
+    async function pick(selectAll) {
+      setBusy(true);
+      status.style.color = "#b6dce7";
+      status.textContent = selectAll ? "Opening the phone contact selector for Select All…" : "Opening the phone contact selector…";
+      try {
+        var raw = await nativePickContacts(selectAll);
+        pending = contactsFromPicker(raw);
+        if (!pending.length) {
+          status.style.color = "#ffdca8";
+          status.textContent = "No contacts with usable phone numbers were selected.";
+        } else {
+          status.style.color = "#9fffcf";
+          status.textContent = pending.length + " contact number(s) selected. Tap SAVE LOCALLY to store them on this device.";
+        }
+      } catch (err) {
+        pending = [];
+        status.style.color = "#ffd0d0";
+        if (String(err && err.message) === "native-contact-picker-unavailable") {
+          status.textContent = /iPhone|iPad|iPod/i.test(navigator.userAgent || "")
+            ? "Safari cannot provide the native iPhone address-book picker to a normal website. Use the JARVIS iOS native app/wrapper for this exact Select All + Import flow."
+            : "This browser cannot provide the phone contact picker. Use the JARVIS Android/iOS native app/wrapper for the exact Select All + Import flow.";
+        } else {
+          status.textContent = "Contact selection was cancelled or unavailable. No contacts were saved.";
+        }
+      } finally {
+        setBusy(false);
+      }
+    }
+    selectButton.addEventListener("click", function () { pick(false); });
+    allButton.addEventListener("click", function () { pick(true); });
+    saveButton.addEventListener("click", function () {
+      if (!pending.length) return;
+      try {
+        var count = mergeLocalContacts(pending);
+        pending = [];
+        saveButton.disabled = true;
+        status.style.color = "#9fffcf";
+        status.textContent = count + " contact number(s) saved locally. You can now say call <name> and JARVIS will use the saved number.";
+        say("Saved " + count + " contact numbers locally. You can now call a saved contact by name.");
+      } catch (_) {
+        status.style.color = "#ffd0d0";
+        status.textContent = "Could not save contacts locally. No contacts were uploaded by JARVIS.";
+      }
+    });
+
+    card.appendChild(section);
+    return true;
+  }
+
+  function watchForSettings() {
+    if (installContactSettingsPanel()) return;
+    try {
+      var observer = new MutationObserver(function () {
+        if (installContactSettingsPanel()) observer.disconnect();
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      window.setTimeout(function () { try { observer.disconnect(); } catch (_) {} }, 15000);
+    } catch (_) {}
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watchForSettings, { once: true });
+  else watchForSettings();
+
   function handleCommand(raw) {
     var c = String(raw || "").trim()
       .replace(/^(?:(?:hey|hello|hi|ok|okay)\s+)?jarvis[\s,:;-]*/i, "")
       .replace(/[.!?]+$/, "").replace(/\s+/g, " ").trim();
     if (!c) return false;
     var m;
-
     m = c.match(/^(?:remember|save|add|set)\s+(?:whatsapp\s+)?group\s+(.+?)\s+(?:as|with(?:\s+invite)?(?:\s+link)?)\s+(https?:\/\/\S+)$/i);
     if (m) return rememberGroup(m[1], m[2]);
     m = c.match(/^(?:remember|save|add|set)\s+(?:whatsapp\s+)?(?:contact|phone)\s+(.+?)\s+(?:as|with(?:\s+phone)?(?:\s+number)?)\s+(\+?[0-9][0-9\s().-]{5,})$/i);
     if (m) return rememberPhone(m[1], m[2]);
     m = c.match(/^remember\s+(?:whatsapp\s+)?(.+?)\s+(?:is|at)\s+(\+?[0-9][0-9\s().-]{5,})$/i);
     if (m) return rememberPhone(m[1], m[2]);
-
     m = c.match(/^(?:whatsapp\s+(?:video\s+)?call|call\s+(?:on\s+)?whatsapp)\s+(?:the\s+)?group\s+(.+)$/i);
     if (m) return openWhatsApp(m[1], /video/i.test(c), true);
     m = c.match(/^(?:whatsapp\s+(?:video\s+)?call|call\s+(?:on\s+)?whatsapp)\s+(.+)$/i);
-    if (m) return openWhatsApp(m[1].replace(/^(?:the\\s+)?group\\s+/i, ""), /video/i.test(c), /^(?:the\\s+)?group\\b/i.test(m[1]));
+    if (m) return openWhatsApp(m[1].replace(/^(?:the\s+)?group\s+/i, ""), /video/i.test(c), /^(?:the\s+)?group\b/i.test(m[1]));
     m = c.match(/^(?:video\s+call|whatsapp\s+video\s+call|start\s+(?:a\s+)?video\s+call\s+(?:on\s+)?whatsapp|call\s+on\s+whatsapp\s+video)\s+(?:the\s+)?group\s+(.+)$/i);
     if (m) return openWhatsApp(m[1], true, true);
     m = c.match(/^(?:video\s+call|whatsapp\s+video\s+call|start\s+(?:a\s+)?video\s+call\s+(?:on\s+)?whatsapp|call\s+on\s+whatsapp\s+video)\s+(.+)$/i);
@@ -171,17 +325,22 @@
     if (m) return openUrl("https://web.whatsapp.com/", "WhatsApp");
     m = c.match(/^(?:call|phone|dial|make\s+(?:a\s+)?call\s+to|call\s+the\s+contact\s+)\s*(.+)$/i);
     if (m) return callPhone(m[1]);
-
     return false;
   }
 
   window.JARVISCalling = {
-    version: "3.3.0",
+    version: "3.4.0",
     handleCommand: handleCommand,
     rememberPhone: rememberPhone,
     rememberGroup: rememberGroup,
     callPhone: callPhone,
     openWhatsApp: openWhatsApp,
+    importPhoneContacts: async function (selectAll) {
+      var raw = await nativePickContacts(!!selectAll);
+      var entries = contactsFromPicker(raw);
+      return { selected: entries.length, entries: entries };
+    },
+    saveImportedContacts: function (entries) { return mergeLocalContacts(Array.isArray(entries) ? entries : []); },
     commands: [
       "call Jayant", "phone wife", "dial +91 9876543210",
       "video call Jayant", "WhatsApp video call wife", "video call group family",
