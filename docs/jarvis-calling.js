@@ -37,11 +37,18 @@
     return cleanPhone(a[key] || b[key] || target);
   }
   function openUrl(url, label) {
+    /* On phones, navigate the current tab directly so iOS Safari does not
+       block a delayed popup and can hand universal links to the native app. */
+    var mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
+    if (mobile || /^tel:/i.test(url) || /^intent:/i.test(url)) {
+      try { say("Opening " + label + "."); window.location.href = url; return true; }
+      catch (_) {}
+    }
     try {
       var w = window.open(url, "_blank");
       if (w) { try { w.opener = null; } catch (_) {} say("Opening " + label + "."); return true; }
     } catch (_) {}
-    try { window.location.assign(url); say("Opening " + label + "."); return true; }
+    try { say("Opening " + label + "."); window.location.assign(url); return true; }
     catch (_) { say("I couldn't open " + label + " from this browser."); return true; }
   }
   function rememberPhone(name, rawNumber) {
@@ -68,12 +75,16 @@
   function callPhone(target) {
     var number = phoneFor(target);
     if (!number) {
-      say("I don't have a saved phone number for " + target + ". Say remember contact " + target + " as followed by the phone number, then say call " + target + ".");
-      return true;
+      say("I don't have a saved number for " + target + ". A website cannot search your private phone contacts by name. I'll try opening Contacts; if your phone blocks this link, save the number with remember contact " + target + " as followed by the number.");
+      /* Android can route this intent to its contacts app. iOS may reject the
+         non-public contacts scheme; in that case the spoken fallback explains why. */
+      var ua = navigator.userAgent || "";
+      if (/Android/i.test(ua)) return openUrl("intent://contacts/people/#Intent;scheme=content;package=com.google.android.contacts;end", "Contacts");
+      if (/iPhone|iPad|iPod/i.test(ua)) return openUrl("contacts://", "Contacts");
+      return openUrl("https://contacts.google.com/", "Google Contacts");
     }
-    say("Opening your phone dialer for " + target + ". Review the contact and tap Call.");
-    try { window.location.href = "tel:+" + number; } catch (_) { say("I couldn't open the phone dialer."); }
-    return true;
+    say("Opening the phone dialer for " + target + ". Check the number and tap Call.");
+    return openUrl("tel:+" + number, "phone dialer");
   }
   function openWhatsApp(target, video, group) {
     var name = String(target || "").trim().replace(/[,.!?]+$/, "");
