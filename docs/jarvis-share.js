@@ -1,7 +1,7 @@
-/* JARVIS Share + Home Screen panel v1.2 — isolated, additive PWA control. */
+/* JARVIS Share + Home Screen panel v1.3 — isolated PWA and background reminders. */
 (function () {
   "use strict";
-  if (window.JARVISShareControl && window.JARVISShareControl.version === "1.2.0") return;
+  if (window.JARVISShareControl && window.JARVISShareControl.version === "1.3.0") return;
 
   var SITE_URL = "https://anuveytq-sys.github.io/JARVIS-WEB/";
   var styleId = "jarvis-share-control-style";
@@ -207,6 +207,10 @@
       .replace(/^(?:please\s+|can you\s+|could you\s+|would you\s+|will you\s+)/i, "")
       .replace(/[.!?]+$/g, "")
       .replace(/\s+/g, " ").trim();
+    c = c.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|ninety)\s+(?=(?:seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d)\b)/gi, function (word) {
+      var values = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,ninety:90};
+      return String(values[word.toLowerCase()]) + " ";
+    });
     if (!/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\b/i.test(c)) return false;
     var m;
     var units = "seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d";
@@ -234,6 +238,10 @@
       var whenC = nextClockTime(Number(m[1]), Number(m[2] || 0), m[3], 0, false);
       if (whenC) return addSaved(m[4], whenC);
     }
+    m = c.match(new RegExp("^" + prefix + "\\s+(?:in|after)\\s+([\\s\\S]+?)\\s+(?:to|that|because|for)\\s+([\\s\\S]+)$", "i"));
+    if (m) { var compoundDelay = parseDuration(m[1]); if (compoundDelay) return addSaved(m[2], Date.now() + compoundDelay); }
+    m = c.match(new RegExp("^" + prefix + "\\s+(?:to\\s+)?([\\s\\S]+?)\\s+(?:in|after)\\s+([\\s\\S]+)$", "i"));
+    if (m) { var trailingDelay = parseDuration(m[2]); if (trailingDelay) return addSaved(m[1], Date.now() + trailingDelay); }
     m = c.match(new RegExp("^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\\s+(?:in|after)\\s+(\\d+(?:\\.\\d+)?)\\s*(" + units + ")\\s+(?:to|that|because|for)\\s+([\\s\\S]+)$", "i"));
     if (m) return addRelative(m[3], Number(m[1]), m[2]);
     /* Also accept the user's natural form: “remind me 5 minutes because I need …” */
@@ -252,6 +260,23 @@
       return true;
     }
     return false;
+  }
+
+  function parseDuration(value) {
+    var source = String(value || "").toLowerCase().trim();
+    var pattern = /(\\d+(?:\\.\\d+)?)\\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d)\\b/gi;
+    var total = 0, last = 0, match;
+    while ((match = pattern.exec(source))) {
+      var gap = source.slice(last, match.index).replace(/\\b(?:and|plus)\\b|[,]/gi, "").trim();
+      if (gap) return null;
+      var n = Number(match[1]), unit = match[2].toLowerCase();
+      if (!Number.isFinite(n) || n <= 0) return null;
+      var factor = /^(seconds?|secs?|sec|s)$/.test(unit) ? 1000 : /^(minutes?|mins?|min|m)$/.test(unit) ? 60000 : /^(hours?|hrs?|hr|h)$/.test(unit) ? 3600000 : 86400000;
+      total += n * factor;
+      last = pattern.lastIndex;
+    }
+    if (!total || source.slice(last).replace(/\\b(?:and|plus)\\b|[,]/gi, "").trim()) return null;
+    return total <= 365 * 86400000 ? total : null;
   }
 
   function addRelative(text, number, unit) {
@@ -289,9 +314,15 @@
   function addSaved(text, when, repeat) {
     if (!text || !Number.isFinite(when) || when <= Date.now()) return false;
     var ok = window.JARVISAdvancedModules.addReminder(text, when);
-    if (ok !== false) {
-      scheduleBestEffortBackgroundAlert(text, when);
+    if (ok === false) return false;
+    scheduleBestEffortBackgroundAlert(text, when);
+    if (getReminderToken()) {
       createServerReminder(text, when, repeat || "none");
+    } else if ("Notification" in window && Notification.permission === "granted") {
+      /* Permission was already granted, so finish push setup without another prompt. */
+      enableBackgroundReminders();
+    } else {
+      announce("Reminder saved. For alerts after leaving JARVIS, open SHARE and choose ENABLE LOCK-SCREEN REMINDERS once.");
     }
     return true;
   }
@@ -485,7 +516,7 @@
     }
   }
 
-  window.JARVISShareControl = { version: "1.2.0", share: shareNative, openPanel: togglePanel };
+  window.JARVISShareControl = { version: "1.3.0", share: shareNative, openPanel: togglePanel, enableBackgroundReminders: enableBackgroundReminders };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
   else init();
   var attempts = 0;
