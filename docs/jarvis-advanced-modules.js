@@ -1,7 +1,7 @@
 /* JARVIS Advanced Modules v1.2 — isolated add-on; reminder speech reliability fix. */
 (function(){
 "use strict";
-if(window.JARVISAdvancedModules&&window.JARVISAdvancedModules.version==="1.3.0")return;
+if(window.JARVISAdvancedModules&&window.JARVISAdvancedModules.version==="1.4.0")return;
 var KEY="jarvisAdvancedModulesV1",SW_URL="./jarvis-reminders-sw.js",swRegistration=null,DEFAULT_REPO="anuveytq-sys/JARVIS-WEB",state=read(),panel=null,timer=null;
 function read(){try{var x=JSON.parse(localStorage.getItem(KEY)||"{}");if(!Array.isArray(x.reminders))x.reminders=[];if(!Array.isArray(x.projects))x.projects=[];return x;}catch(_){return{reminders:[],projects:[]};}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));return true;}catch(_){return false;}}
@@ -56,11 +56,14 @@ m=c.match(/^(?:cancel|delete|remove|dismiss)\s+(?:reminder\s*)?(\d+)$/i);if(m){v
 m=c.match(/^(?:remind me|set (?:a )?reminder|create (?:a )?reminder|remind|alert me)\s+(?:in|after)\s+(\d+)\s*(seconds?|secs?|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d)\s+(?:to\s+)?([\s\S]+)$/i);if(m)return addReminder(m[3],duration("in "+m[1]+" "+m[2]));m=c.match(/^(?:remind me|set (?:a )?reminder|create (?:a )?reminder|remind|alert me)\s+(?:to\s+)?([\s\S]+?)\s+(?:in|after)\s+(\d+)\s*(seconds?|secs?|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d)$/i);if(m)return addReminder(m[1],duration("in "+m[2]+" "+m[3]));m=c.match(/^(?:remind me|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(?:to\s+)?([\s\S]+?)\s+(?:at|on)\s+(.+)$/i);if(m){var d=new Date(m[2]);if(!Number.isNaN(d.getTime())&&d.getTime()>Date.now())return addReminder(m[1],d.getTime());say("Try: remind me to study in 20 minutes.");return true;}if(/^(?:remind me|set (?:a )?reminder|create (?:a )?reminder|remind|alert me)\b/i.test(c)){say("Tell me the task and time, e.g. remind me to study in 20 minutes.");return true;}
 return browser(c);}
 
-window.JARVISAdvancedModules={version:"1.3.0",handleCommand:handle,analyzeProject:project,getWeather:weather,getNews:news,addReminder:addReminder,listReminders:listReminders,getReminders:function(){return state.reminders.slice();},getCapabilities:function(){return["project-intelligence","live-information","local-reminders","browser-control"];}};
+window.JARVISAdvancedModules={version:"1.4.0",handleCommand:handle,analyzeProject:project,getWeather:weather,getNews:news,addReminder:addReminder,listReminders:listReminders,getReminders:function(){return state.reminders.slice();},getCapabilities:function(){return["project-intelligence","live-information","local-reminders","browser-control"];}};
 registerReminderWorker();
 window.addEventListener("focus",due);document.addEventListener("visibilitychange",function(){if(!document.hidden)due();});window.addEventListener("storage",function(e){if(e.key===KEY){state=read();schedule();}});
 function install(){if(typeof window.sendCommand==="function"&&!window.sendCommand.__jamWrapped){var old=window.sendCommand,wrapped=function(command){if(handle(command))return Promise.resolve();return old.apply(this,arguments);};wrapped.__jamWrapped=true;window.sendCommand=wrapped;}}
 install();document.addEventListener("DOMContentLoaded",install);var retry=setInterval(function(){install();if(window.sendCommand&&window.sendCommand.__jamWrapped)clearInterval(retry);},250);setTimeout(function(){clearInterval(retry);},5000);
 /* Re-check overdue reminders after a suspended tab resumes; don't silently mark them done at startup. */
 setTimeout(function(){due();},900);
+}
+/* Load the three independent, free local-first power modules without editing the HUD. */
+(function(){if(window.__JARVISPowerModulesLoader)return;window.__JARVISPowerModulesLoader=true;var s=document.createElement("script");s.src="./jarvis-power-modules.js";s.async=true;s.onerror=function(){window.__JARVISPowerModulesLoader=false;};document.head.appendChild(s);})();
 })();
