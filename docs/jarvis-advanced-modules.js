@@ -63,6 +63,4 @@ function install(){if(typeof window.sendCommand==="function"&&!window.sendComman
 install();document.addEventListener("DOMContentLoaded",install);var retry=setInterval(function(){install();if(window.sendCommand&&window.sendCommand.__jamWrapped)clearInterval(retry);},250);setTimeout(function(){clearInterval(retry);},5000);
 /* Re-check overdue reminders after a suspended tab resumes; don't silently mark them done at startup. */
 setTimeout(function(){due();},900);
-/* Load the three independent, free local-first power modules without editing the HUD. */
-(function(){if(window.__JARVISPowerModulesLoader)return;window.__JARVISPowerModulesLoader=true;var s=document.createElement("script");s.src="./jarvis-power-modules.js";s.async=true;s.onerror=function(){window.__JARVISPowerModulesLoader=false;};document.head.appendChild(s);})();
 })();
