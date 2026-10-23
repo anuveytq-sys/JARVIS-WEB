@@ -1,11 +1,9 @@
-/* JARVIS // BEACON PROTOCOL v2.3 bootstrap
- * Existing Beacon bridge plus additive Inferno v1 + v2 capability layers.
- */
+/* JARVIS // BEACON PROTOCOL v2.4 bootstrap */
 (function(){
 'use strict';
 var LEGACY='https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/acd22ec49f7a78a97533dc86a73acba47ce17202/docs/jarvis-beacon.js';
 var INFERNO='./jarvis-inferno.js?v=inferno-20261023-1';
-var INFERNO2='./jarvis-inferno-v2.js?v=inferno-20261023-2';
+var INFERNO2='https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-inferno-v2.js?v=inferno-20261023-2';
 var installed=false;
 function load(src,attr){if(document.querySelector('script['+attr+']'))return;var s=document.createElement('script');s.src=src;s.async=false;s.setAttribute(attr,'true');s.onerror=function(){console.warn('JARVIS module could not be loaded:',src)};(document.head||document.documentElement).appendChild(s)}
 function loadInferno(){load(INFERNO,'data-jarvis-inferno');setTimeout(function(){load(INFERNO2,'data-jarvis-inferno-v2')},50)}
