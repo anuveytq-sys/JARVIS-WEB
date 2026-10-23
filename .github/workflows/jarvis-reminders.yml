@@ -15,9 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Request short-lived GitHub Actions identity token
-        id: oidc
+      - name: Authenticate scheduler and dispatch due reminders
         shell: bash
+        env:
+          DISPATCH_URL: https://jarvis-reminder-backend.vercel.app/api/dispatch
         run: |
           set -euo pipefail
           response="$(curl --fail --silent --show-error \
@@ -25,15 +26,7 @@ jobs:
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=jarvis-reminder-dispatch")"
           token="$(printf '%s' "$response" | jq -er '.value')"
           echo "::add-mask::$token"
-          echo "token=$token" >> "$GITHUB_OUTPUT"
-      - name: Dispatch due reminders
-        env:
-          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
-          DISPATCH_URL: https://jarvis-reminder-backend.vercel.app/api/dispatch
-        shell: bash
-        run: |
-          set -euo pipefail
-          response="$(curl --fail --silent --show-error --max-time 45 \
-            -X POST -H "Authorization: Bearer $OIDC_TOKEN" \
+          result="$(curl --fail --silent --show-error --max-time 45 \
+            -X POST -H "Authorization: Bearer $token" \
             -H "Content-Type: application/json" "$DISPATCH_URL")"
-          printf '%s' "$response" | jq -e '.ok == true'
+          printf '%s' "$result" | jq -e '.ok == true'
