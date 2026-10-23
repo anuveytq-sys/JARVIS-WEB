@@ -209,6 +209,30 @@
     if (!/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\b/i.test(c)) return false;
     var m;
     var units = "seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d";
+    var prefix = "(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)";
+    var clock = "(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?";
+    m = c.match(new RegExp("^" + prefix + "\\s+(?:to\\s+)?(.+?)\\s+(tomorrow|today)\\s+at\\s+" + clock + "$", "i"));
+    if (m) {
+      var absolute = nextClockTime(Number(m[3]), Number(m[4] || 0), m[5], m[2].toLowerCase() === "tomorrow" ? 1 : 0, false);
+      if (absolute) return addSaved(m[1], absolute);
+    }
+    m = c.match(new RegExp("^" + prefix + "\\s+(?:every day|daily|every weekday|weekdays|every week|weekly)\\s+(?:at\\s+)?" + clock + "\\s+(?:to|that|for)\\s+([\\s\\S]+)$", "i"));
+    if (m) {
+      var repeatA = /every weekday|weekdays/i.test(c) ? "weekdays" : /every week|weekly/i.test(c) ? "weekly" : "daily";
+      var whenA = nextClockTime(Number(m[1]), Number(m[2] || 0), m[3], 0, repeatA === "weekdays");
+      if (whenA) return addSaved(m[4], whenA, repeatA);
+    }
+    m = c.match(new RegExp("^" + prefix + "\\s+(?:to\\s+)?(.+?)\\s+(every day|daily|every weekday|weekdays|every week|weekly)\\s+(?:at\\s+)?" + clock + "$", "i"));
+    if (m) {
+      var repeatB = /every weekday|weekdays/i.test(m[2]) ? "weekdays" : /every week|weekly/i.test(m[2]) ? "weekly" : "daily";
+      var whenB = nextClockTime(Number(m[3]), Number(m[4] || 0), m[5], 0, repeatB === "weekdays");
+      if (whenB) return addSaved(m[1], whenB, repeatB);
+    }
+    m = c.match(new RegExp("^" + prefix + "\\s+(?:at\\s+)?" + clock + "\\s+(?:to|that|for)\\s+([\\s\\S]+)$", "i"));
+    if (m) {
+      var whenC = nextClockTime(Number(m[1]), Number(m[2] || 0), m[3], 0, false);
+      if (whenC) return addSaved(m[4], whenC);
+    }
     m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(?:in|after)\s+(\d+(?:\.\d+)?)\s*(" + units + ")\s+(?:to|that|because|for)\s+([\s\S]+)$/i);
     if (m) return addRelative(m[3], Number(m[1]), m[2]);
     /* Also accept the user's natural form: “remind me 5 minutes because I need …” */
@@ -261,14 +285,29 @@
     d.setHours(h, minute, 0, 0);
   }
 
-  function addSaved(text, when) {
+  function addSaved(text, when, repeat) {
     if (!text || !Number.isFinite(when) || when <= Date.now()) return false;
     var ok = window.JARVISAdvancedModules.addReminder(text, when);
     if (ok !== false) {
       scheduleBestEffortBackgroundAlert(text, when);
-      createServerReminder(text, when);
+      createServerReminder(text, when, repeat || "none");
     }
     return true;
+  }
+
+  function nextClockTime(hour, minute, ampm, dayOffset, weekdaysOnly) {
+    if (!Number.isFinite(hour) || hour < 0 || hour > 12 || minute < 0 || minute > 59) return null;
+    var h = hour;
+    if (ampm) {
+      if (ampm.toLowerCase() === "pm" && h < 12) h += 12;
+      if (ampm.toLowerCase() === "am" && h === 12) h = 0;
+    }
+    var d = new Date();
+    d.setDate(d.getDate() + (dayOffset || 0));
+    d.setHours(h, minute, 0, 0);
+    if (!dayOffset && d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+    if (weekdaysOnly) while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    return d.getTime() > Date.now() ? d.getTime() : null;
   }
 
   function getReminderToken() {
@@ -340,10 +379,10 @@
     });
   }
 
-  function createServerReminder(text, when) {
+  function createServerReminder(text, when, repeat) {
     var token = getReminderToken();
     if (!token) return;
-    apiRequest("create", { text: String(text).slice(0, 500), dueAt: when, repeat: "none" }, token)
+    apiRequest("create", { text: String(text).slice(0, 500), dueAt: when, repeat: repeat || "none" }, token)
       .then(function () { announce("Reminder saved for background delivery."); })
       .catch(function (error) {
         announce("Saved in JARVIS. Background delivery needs attention: " + String(error.message || error).slice(0, 90));
