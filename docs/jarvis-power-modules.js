@@ -102,7 +102,7 @@
   }
 
   function handle(raw){var c=clean(raw);if(!c)return false;
-    if(/\b(?:oracle|predictive decision|decision intelligence|forecast scenarios|compare scenarios|run scenarios|what if analysis|help me decide)\b/i.test(c))return oracle(c);
+    if(/\b(?:oracle|predictive decision|decision intelligence|forecast scenarios|compare scenarios|run scenarios|what if analysis|help me decide|compare (?:my )?(?:options|choices)|evaluate (?:this )?decision|analy[sz]e (?:the )?(?:decision|options|choices|outcomes)|forecast (?:the )?(?:outcome|risk|impact)|predict (?:the )?(?:outcome|risk|impact))\b/i.test(c))return oracle(c);
     if(/^(?:inspect visible controls|scan this page|show page controls|ghost operator|computer use)$/i.test(c)||/^(?:ghost operator\s+)?(?:click|press|activate|select|type|enter|fill)\s+/i.test(c))return ghost(c);
     if(/\b(?:digital twin|simulate (?:a )?(?:network|voice|ui|hud|storage|deployment|system)|what if (?:the )?(?:network|voice|ui|hud|storage|deployment)|simulate .*failure|simulate .*outage)\b/i.test(c))return twin(c);
     return false;
