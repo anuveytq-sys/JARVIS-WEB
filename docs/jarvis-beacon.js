@@ -1,25 +1,34 @@
-/* JARVIS // BEACON PROTOCOL
- * Independent cross-device browser companion. Does not patch or replace JARVIS Main.
- * Browser security/OS limits still apply: no universal overlay over other apps and no
- * guaranteed background microphone on iOS/mobile browsers.
+/* JARVIS // BEACON PROTOCOL v2
+ * Hidden while Main JARVIS is active. Enters compact mode only when a command
+ * actually navigates to another website/app target. Main HUD remains untouched
+ * until that transition and can be restored with a Beacon command.
+ * Browser/OS rules still apply: a normal website cannot guarantee an always-on-top
+ * overlay above other native apps or background microphone access on every device.
  */
 (function () {
   "use strict";
-  if (window.JARVISBeacon && window.JARVISBeacon.version === "1.0.0") return;
+  if (window.JARVISBeacon && window.JARVISBeacon.version === "2.0.0") return;
 
   var root = null, statusNode = null, inputNode = null, recognition = null;
   var listening = false, wantListening = false, restartTimer = 0;
-  var STORAGE_KEY = "jarvisBeaconPreferencesV1";
-  var prefs = { autoListen: false, minimized: true };
-  try { prefs = Object.assign(prefs, JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")); } catch (_) {}
-  function persist() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch (_) {} }
-  function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]; }); }
+  var contracted = false;
+  var STORAGE_KEY = "jarvisBeaconPreferencesV2";
+
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+    });
+  }
+
   function clean(v) {
     return String(v || "").trim()
-      .replace(/^(?:(?:hey|hello|hi|okay|ok)s+)?jarvis[s,:;-]*/i, "")
-      .replace(/^(?:pleases+|can yous+|could yous+|would yous+)/i, "")
-      .replace(/[.!?]+$/, "").replace(/s+/g, " ").trim();
+      .replace(/^(?:(?:hey|hello|hi|okay|ok)\s+)?jarvis[\s,:;-]*/i, "")
+      .replace(/^(?:please\s+|can you\s+|could you\s+|would you\s+)/i, "")
+      .replace(/[.!?]+$/, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
+
   function speak(message) {
     try {
       if (typeof window.speak === "function") window.speak(message);
@@ -29,13 +38,18 @@
       }
     } catch (_) {}
   }
+
   function status(message, error) {
-    if (statusNode) {
-      statusNode.textContent = message;
-      statusNode.style.color = error ? "#ffb6b6" : "#9cefff";
-    }
+    if (!statusNode) return;
+    statusNode.textContent = message;
+    statusNode.style.color = error ? "#ffb6b6" : "#9cefff";
   }
-  function sayStatus(message, error) { status(message, error); if (message) speak(message); }
+
+  function sayStatus(message, error) {
+    status(message, error);
+    if (message) speak(message);
+  }
+
   function ensureStyle() {
     if (document.getElementById("jarvis-beacon-style")) return;
     var style = document.createElement("style");
@@ -59,69 +73,139 @@
       #jarvis-beacon .jb-status{font-size:11px;min-height:30px;color:#9cefff;margin-top:8px;overflow-wrap:anywhere}
       #jarvis-beacon .jb-hint{font-size:10px;color:#7199ad;margin-top:7px}
       #jarvis-beacon[hidden],#jarvis-beacon .jb-card[hidden],#jarvis-beacon .jb-orb[hidden]{display:none!important}
+      body.jarvis-beacon-contracted #jarvis-beacon .jb-card{display:block!important}
+      body.jarvis-beacon-contracted #jarvis-beacon .jb-orb{display:none!important}
       @keyframes jbPulse{0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.35);opacity:0}}
       @media(prefers-reduced-motion:reduce){#jarvis-beacon .jb-orb:after{animation:none}}
     `;
     document.head.appendChild(style);
   }
-  function render() {
-    if (root && document.body.contains(root)) {
-      root.querySelector(".jb-card").hidden = !!prefs.minimized;
-      root.querySelector(".jb-orb").hidden = !prefs.minimized;
-      return;
+
+  function mainRoots() {
+    var selectors = ["#app", "#root", "main", ".app"];
+    var found = [];
+    for (var i = 0; i < selectors.length; i++) {
+      var el = document.querySelector(selectors[i]);
+      if (el && found.indexOf(el) === -1 && el !== root) found.push(el);
     }
-    ensureStyle();
-    root = document.createElement("aside");
-    root.id = "jarvis-beacon";
-    root.setAttribute("aria-label", "JARVIS Beacon command panel");
-    root.innerHTML = `
-      <section class="jb-card" ${prefs.minimized ? "hidden" : ""}>
-        <header class="jb-head"><div><div class="jb-title">JARVIS // BEACON</div><div class="jb-sub">QUICK COMMAND • MAIN HUD INDEPENDENT</div></div><button type="button" data-action="minimize" aria-label="Minimize Beacon">—</button></header>
-        <div class="jb-body">
-          <form class="jb-inputrow" data-form><input type="text" data-input autocomplete="off" placeholder="Say or type a command…" aria-label="Beacon command"><button type="submit">GO</button></form>
-          <div class="jb-actions"><button type="button" data-action="listen">🎙 Listen</button><button type="button" data-action="stop">■ Stop</button><button type="button" data-action="main">Main JARVIS</button></div>
-          <div class="jb-status" role="status" aria-live="polite" data-status>Beacon ready. Tap Listen and allow microphone access.</div>
-          <div class="jb-hint">Try: “open YouTube and search MrBeast”, “ask ChatGPT about black holes”, “search Google for NASA”.</div>
-        </div>
-      </section>
-      <button class="jb-orb" type="button" data-action="expand" aria-label="Open JARVIS Beacon" ${prefs.minimized ? "" : "hidden"}>J</button>
-    `;
-    document.body.appendChild(root);
+    return found;
+  }
+
+  function setMainVisibility(hidden) {
+    var roots = mainRoots();
+    roots.forEach(function (el) {
+      if (hidden) {
+        if (!el.hasAttribute("data-jb-prev-display")) el.setAttribute("data-jb-prev-display", el.style.display || "");
+        el.style.display = "none";
+      } else if (el.hasAttribute("data-jb-prev-display")) {
+        el.style.display = el.getAttribute("data-jb-prev-display");
+        el.removeAttribute("data-jb-prev-display");
+      }
+    });
+    document.body.classList.toggle("jarvis-beacon-contracted", !!hidden);
+  }
+
+  function render() {
+    if (!root || !document.body.contains(root)) {
+      ensureStyle();
+      root = document.createElement("aside");
+      root.id = "jarvis-beacon";
+      root.setAttribute("aria-label", "JARVIS Beacon command panel");
+      root.innerHTML = `
+        <section class="jb-card" hidden>
+          <header class="jb-head"><div><div class="jb-title">JARVIS // BEACON</div><div class="jb-sub">CONTRACTED COMMAND CORE • MAIN HUD PAUSED</div></div><button type="button" data-action="minimize" aria-label="Return to contracted orb">—</button></header>
+          <div class="jb-body">
+            <form class="jb-inputrow" data-form><input type="text" data-input autocomplete="off" placeholder="Say or type a command…" aria-label="Beacon command"><button type="submit">GO</button></form>
+            <div class="jb-actions"><button type="button" data-action="listen">🎙 Listen</button><button type="button" data-action="stop">■ Stop</button><button type="button" data-action="main">Main JARVIS</button></div>
+            <div class="jb-status" role="status" aria-live="polite" data-status>Beacon ready.</div>
+            <div class="jb-hint">Try: “open YouTube and search MrBeast”, “ask ChatGPT about black holes”, “search Google for NASA”, or “open Claude”.</div>
+          </div>
+        </section>
+        <button class="jb-orb" type="button" data-action="expand" aria-label="Open JARVIS Beacon" hidden>J</button>
+      `;
+      document.body.appendChild(root);
+      statusNode = root.querySelector("[data-status]");
+      inputNode = root.querySelector("[data-input]");
+      root.addEventListener("click", function (event) {
+        var button = event.target.closest("button[data-action]");
+        if (!button) return;
+        var action = button.getAttribute("data-action");
+        if (action === "minimize") {
+          if (contracted) {
+            showOrb();
+          }
+        } else if (action === "expand") {
+          showPanel();
+        } else if (action === "listen") {
+          startListening(true);
+        } else if (action === "stop") {
+          stopListening(true);
+        } else if (action === "main") {
+          restoreMain();
+        }
+      });
+      root.querySelector("[data-form]").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var command = inputNode.value;
+        inputNode.value = "";
+        handleCommand(command);
+      });
+    }
+    if (!contracted) {
+      root.querySelector(".jb-card").hidden = true;
+      root.querySelector(".jb-orb").hidden = true;
+    }
+  }
+
+  function showOrb() {
+    if (!root) render();
+    contracted = true;
+    setMainVisibility(true);
+    root.querySelector(".jb-card").hidden = true;
+    root.querySelector(".jb-orb").hidden = false;
     statusNode = root.querySelector("[data-status]");
+    status("Beacon contracted. Voice commands remain available while this page is active.");
+  }
+
+  function showPanel() {
+    if (!root) render();
+    contracted = true;
+    setMainVisibility(true);
+    root.querySelector(".jb-card").hidden = false;
+    root.querySelector(".jb-orb").hidden = true;
     inputNode = root.querySelector("[data-input]");
-    root.addEventListener("click", function (event) {
-      var button = event.target.closest("button[data-action]");
-      if (!button) return;
-      var action = button.getAttribute("data-action");
-      if (action === "minimize") { prefs.minimized = true; persist(); render(); }
-      if (action === "expand") { prefs.minimized = false; persist(); render(); if (inputNode) inputNode.focus(); }
-      if (action === "listen") startListening(true);
-      if (action === "stop") stopListening(true);
-      if (action === "main") restoreMain();
-    });
-    root.querySelector("[data-form]").addEventListener("submit", function (event) {
-      event.preventDefault();
-      var command = inputNode.value;
-      inputNode.value = "";
-      handleCommand(command);
-    });
+    if (inputNode) setTimeout(function () { inputNode.focus(); }, 0);
   }
+
   function restoreMain() {
-    prefs.minimized = true; persist(); stopListening(false);
-    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (_) { window.scrollTo(0, 0); }
-    var main = document.querySelector(".app, main, #app, #root");
-    if (main && main.scrollIntoView) main.scrollIntoView({ behavior: "smooth", block: "start" });
-    sayStatus("Main JARVIS is in this tab. Beacon has been minimized.");
-    render();
+    contracted = false;
+    setMainVisibility(false);
+    if (root) {
+      root.querySelector(".jb-card").hidden = true;
+      root.querySelector(".jb-orb").hidden = true;
+    }
+    try { window.scrollTo({top:0,behavior:"smooth"}); } catch (_) { window.scrollTo(0,0); }
+    var main = document.querySelector("#app, #root, main, .app");
+    if (main && main.scrollIntoView) main.scrollIntoView({behavior:"smooth",block:"start"});
+    status("Main JARVIS restored. Beacon hidden until the next external-navigation command.");
   }
+
+  function enterBeaconMode() {
+    showOrb();
+    if (wantListening || listening) return;
+    // The originating voice command is a user interaction, so attempt to keep
+    // the Beacon recognizer alive after the external navigation is requested.
+    startListening(false);
+  }
+
   function openExternal(url, label) {
+    enterBeaconMode();
     var w = null;
     try { w = window.open(url, "_blank", "noopener,noreferrer"); } catch (_) {}
     if (w) {
-      sayStatus("Opening " + label + ". Beacon stays available in the JARVIS tab, but browsers do not float it over the other tab or app.");
+      status("Opening " + label + ". Beacon is now contracted in the bottom-left of JARVIS.");
       return true;
     }
-    // Don't replace the JARVIS tab silently: provide a visible link the user can tap.
     statusNode.innerHTML = "";
     var msg = document.createElement("span");
     msg.textContent = "Popup blocked. Tap to open " + label + ": ";
@@ -129,9 +213,10 @@
     a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open " + label;
     a.style.cssText = "color:#74f2ff;text-decoration:underline";
     statusNode.appendChild(msg); statusNode.appendChild(a);
-    speak("Your browser blocked a new tab. Tap the open link for " + label + ".");
+    speak("Tap the open link for " + label + ". Beacon is ready in contracted mode.");
     return true;
   }
+
   function searchUrl(provider, query) {
     var q = encodeURIComponent(query);
     if (provider === "youtube") return "https://www.youtube.com/results?search_query=" + q;
@@ -143,6 +228,7 @@
     if (provider === "duckduckgo") return "https://duckduckgo.com/?q=" + q;
     return "https://www.google.com/search?q=" + q;
   }
+
   function handleCommand(raw) {
     var c = clean(raw);
     if (!c) return false;
@@ -151,11 +237,17 @@
     }
     if (/^(?:stop|mute|stop listening|beacon stop)$/i.test(c)) { stopListening(true); return true; }
     if (/^(?:start|begin|resume) listening$/i.test(c)) { startListening(true); return true; }
+
     var m;
-    // Reuse the existing, separately loaded contact/call handler rather than replacing it.
     if (/^(?:call|phone|dial|video call|voice call|make (?:a )?(?:video )?call to|whatsapp video call|whatsapp call)\b/i.test(c) && window.JARVISCalling && typeof window.JARVISCalling.handleCommand === "function") {
-      try { if (window.JARVISCalling.handleCommand(c)) { sayStatus("Handing the call request to JARVIS Calling. Confirm the call in the phone or messaging app."); return true; } } catch (_) {}
+      try {
+        if (window.JARVISCalling.handleCommand(c)) {
+          sayStatus("Handing the call request to JARVIS Calling. Confirm the call in the phone or messaging app.");
+          return true;
+        }
+      } catch (_) {}
     }
+
     m = c.match(/^(?:open|launch|go to|switch to)\s+(?:youtube\s+(?:and\s+)?search\s+(.+)|search\s+(.+)\s+on\s+youtube)$/i);
     if (m) return openExternal(searchUrl("youtube", (m[1] || m[2]).replace(/\s+on\s+youtube$/i, "")), "YouTube search");
     m = c.match(/^open\s+youtube\s+search\s+(.+)$/i);
@@ -174,12 +266,14 @@
     if (m) return openExternal(searchUrl(m[1].toLowerCase(), m[2]), m[1]);
     m = c.match(/^(?:search|look up|find)\s+(?:google\s+)?(?:for\s+)?(.+)$/i);
     if (m) return openExternal(searchUrl("google", m[1]), "Google search");
+
     m = c.match(/^(?:go back to|return to|switch back to)\s+(.+)$/i);
     if (m) {
       var returnTarget = m[1].trim();
       if (/^(?:main )?jarvis(?: main| website| hud)?$/i.test(returnTarget)) { restoreMain(); return true; }
       return handleCommand("open " + returnTarget);
     }
+
     m = c.match(/^(?:open|launch|go to|switch to|visit)\s+(.+)$/i);
     if (m) {
       var target = m[1].trim();
@@ -202,9 +296,11 @@
       }
       return openExternal(searchUrl("google", target), "web search for " + target);
     }
-    sayStatus("I couldn't safely match that command. Try “open YouTube and search MrBeast”, “ask ChatGPT about black holes”, or “call Jayanth”.");
+
+    sayStatus("I couldn't safely match that command. Try opening a website or use Main JARVIS to return to the full HUD.");
     return false;
   }
+
   function stopListening(announce) {
     wantListening = false; listening = false;
     if (restartTimer) { clearTimeout(restartTimer); restartTimer = 0; }
@@ -212,13 +308,14 @@
     if (announce) sayStatus("Beacon microphone stopped.");
     else status("Microphone stopped.");
   }
+
   function startListening(userInitiated) {
     var Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Speech) {
-      sayStatus("Voice recognition is not supported in this browser. Use the command box, or try a supported Chromium browser.");
+      status("Voice recognition is not supported in this browser. Use the command box or the existing JARVIS wake-word system.", true);
       return false;
     }
-    if (listening) { status("Beacon is listening. Say a command after “Hey Jarvis”."); return true; }
+    if (listening) return true;
     wantListening = true;
     try {
       recognition = new Speech();
@@ -226,7 +323,7 @@
       recognition.continuous = true;
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
-      recognition.onstart = function () { listening = true; status("Listening when this page is active. Say a command; use Stop to pause."); };
+      recognition.onstart = function () { listening = true; status("Beacon listening. Say a JARVIS command."); };
       recognition.onresult = function (event) {
         var result = event.results && event.results[event.results.length - 1];
         if (!result || !result[0]) return;
@@ -239,11 +336,11 @@
         listening = false;
         if (event && (event.error === "not-allowed" || event.error === "service-not-allowed")) {
           wantListening = false;
-          status("Microphone permission was denied. Enable it in browser settings and tap Listen again.", true);
+          status("Microphone permission was denied. Enable it in browser settings and try again.", true);
         } else if (event && event.error === "no-speech") {
-          status("Still ready. If listening stopped, tap Listen again.");
+          status("Beacon remains ready for another command.");
         } else {
-          status("Voice service paused (" + (event && event.error || "unavailable") + "). Use the command box or tap Listen again.", true);
+          status("Voice service paused. The text command box remains available.", true);
         }
       };
       recognition.onend = function () {
@@ -253,39 +350,44 @@
           if (!wantListening || document.hidden) return;
           try { recognition.start(); } catch (_) {}
         }, 700);
-        else if (wantListening) status("Beacon is paused while this tab is hidden. Return to this tab and tap Listen.");
+        else if (wantListening) status("Beacon is paused while this browser tab is hidden; browser security prevents guaranteed background microphone access.");
       };
       recognition.start();
       if (userInitiated) status("Requesting microphone access…");
       return true;
     } catch (_) {
       listening = false; wantListening = false;
-      sayStatus("Couldn't start the microphone. Check browser permissions and try again.");
+      status("Couldn't start the microphone. Check browser permissions.", true);
       return false;
     }
   }
+
   document.addEventListener("visibilitychange", function () {
-    if (document.hidden) {
-      if (restartTimer) { clearTimeout(restartTimer); restartTimer = 0; }
-      if (listening) { try { recognition.stop(); } catch (_) {} }
-      listening = false;
-    } else if (wantListening) {
-      status("Page active again. Tap Listen to resume microphone access.");
-    }
+    if (!document.hidden && contracted && wantListening) status("Beacon active again. Voice listening can resume while this tab is active.");
   });
+
   window.JARVISBeacon = {
-    version: "1.0.0",
+    version: "2.0.0",
     handleCommand: handleCommand,
     startListening: function () { return startListening(true); },
     stopListening: function () { stopListening(true); },
     restoreMain: restoreMain,
-    commands: ["open YouTube and search MrBeast", "ask ChatGPT about black holes", "ask Claude about NASA", "ask Grok about wormholes", "search Google about NASA", "call Jayanth", "video call Jayanth", "open WhatsApp"]
+    enterBeaconMode: enterBeaconMode,
+    isContracted: function () { return contracted; },
+    commands: [
+      "open YouTube and search MrBeast", "ask ChatGPT about black holes",
+      "ask Claude about NASA", "ask Grok about wormholes",
+      "search Google about NASA", "call Jayanth", "video call Jayanth",
+      "open WhatsApp", "go back to Main JARVIS"
+    ]
   };
+
   function init() {
     render();
-    status("Beacon ready. Tap Listen and allow microphone access.");
-    // Do not request microphone automatically; browser permission must be user-initiated.
+    // Critical behavior change: no Beacon orb/panel is rendered visibly on Main JARVIS.
+    // It is created hidden and becomes visible only after an external-navigation command.
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, {once:true});
   else init();
 })();
