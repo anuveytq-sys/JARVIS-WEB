@@ -3,7 +3,7 @@
 'use strict';
 var LEGACY='https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/acd22ec49f7a78a97533dc86a73acba47ce17202/docs/jarvis-beacon.js';
 var INFERNO='./jarvis-inferno.js?v=inferno-release-20261023-5';
-var INFERNO2='./jarvis-inferno-v2.js?v=inferno-release-20261023-4';
+var INFERNO2='./jarvis-inferno-v2.js?v=inferno-release-20261023-5';
 var installed=false;
 function load(src,attr){if(document.querySelector('script['+attr+']'))return;var s=document.createElement('script');s.src=src;s.async=false;s.setAttribute(attr,'true');s.onerror=function(){console.warn('JARVIS module could not be loaded:',src)};(document.head||document.documentElement).appendChild(s)}
 function loadInferno(){load(INFERNO,'data-jarvis-inferno');setTimeout(function(){load(INFERNO2,'data-jarvis-inferno-v2')},50)}
