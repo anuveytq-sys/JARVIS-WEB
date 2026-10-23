@@ -157,7 +157,9 @@
       try { if (window.JARVISCalling.handleCommand(c)) { sayStatus("Handing the call request to JARVIS Calling. Confirm the call in the phone or messaging app."); return true; } } catch (_) {}
     }
     m = c.match(/^(?:open|launch|go to|switch to)\s+(?:youtube\s+(?:and\s+)?search\s+(.+)|search\s+(.+)\s+on\s+youtube)$/i);
-    if (m) return openExternal(searchUrl("youtube", m[1] || m[2]), "YouTube search");
+    if (m) return openExternal(searchUrl("youtube", (m[1] || m[2]).replace(/\s+on\s+youtube$/i, "")), "YouTube search");
+    m = c.match(/^open\s+youtube\s+search\s+(.+)$/i);
+    if (m) return openExternal(searchUrl("youtube", m[1].replace(/\s+on\s+youtube$/i, "")), "YouTube search");
     m = c.match(/^(?:open|launch|go to)\s+(?:youtube|yt)(?:\s+app)?(?:\s+and\s+search\s+(.+))?$/i);
     if (m) return openExternal(m[1] ? searchUrl("youtube", m[1]) : "https://www.youtube.com/", "YouTube");
     m = c.match(/^(?:search\s+google\s+(?:for|about)\s+|google\s+(?:search\s+)?(?:for|about)\s+|search\s+(?:google\s+)?for\s+)(.+)$/i);
@@ -172,6 +174,12 @@
     if (m) return openExternal(searchUrl(m[1].toLowerCase(), m[2]), m[1]);
     m = c.match(/^(?:search|look up|find)\s+(?:google\s+)?(?:for\s+)?(.+)$/i);
     if (m) return openExternal(searchUrl("google", m[1]), "Google search");
+    m = c.match(/^(?:go back to|return to|switch back to)\s+(.+)$/i);
+    if (m) {
+      var returnTarget = m[1].trim();
+      if (/^(?:main )?jarvis(?: main| website| hud)?$/i.test(returnTarget)) { restoreMain(); return true; }
+      return handleCommand("open " + returnTarget);
+    }
     m = c.match(/^(?:open|launch|go to|switch to|visit)\s+(.+)$/i);
     if (m) {
       var target = m[1].trim();
