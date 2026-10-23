@@ -29,7 +29,7 @@ jobs:
       - name: Dispatch due reminders
         env:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
-          DISPATCH_URL: https://jarvis-reminder-backend-x-development3.vercel.app/api/dispatch
+          DISPATCH_URL: https://jarvis-reminder-backend.vercel.app/api/dispatch
         shell: bash
         run: |
           set -euo pipefail
