@@ -1,4 +1,4 @@
-/* JARVIS reminder notification worker. Scheduling remains in the open page; this worker displays and routes notifications. */
+/* JARVIS reminder notification worker. Push notifications work without an open page; speech is relayed only to a live client. */
 "use strict";
 self.addEventListener("install",function(event){event.waitUntil(self.skipWaiting());});
 self.addEventListener("activate",function(event){event.waitUntil(self.clients.claim());});
@@ -36,7 +36,11 @@ self.addEventListener("push",function(event){
     silent:false,
     requireInteraction:true
   };
-  event.waitUntil(self.registration.showNotification(String(title),opts));
+  event.waitUntil(self.registration.showNotification(String(title),opts).then(function(){
+    return self.clients.matchAll({type:"window",includeUncontrolled:true}).then(function(list){
+      list.forEach(function(client){client.postMessage({type:"JARVIS_REMINDER_PUSH",text:String(body),id:payload.id||null,dueAt:payload.dueAt||payload.timestamp||Date.now()});});
+    });
+  }));
 });
 self.addEventListener("notificationclick",function(event){
   event.notification.close();
