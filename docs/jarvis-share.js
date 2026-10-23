@@ -296,9 +296,10 @@
   }
 
   function nextClockTime(hour, minute, ampm, dayOffset, weekdaysOnly) {
-    if (!Number.isFinite(hour) || hour < 0 || hour > 12 || minute < 0 || minute > 59) return null;
+    if (!Number.isFinite(hour) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
     var h = hour;
     if (ampm) {
+      if (hour < 1 || hour > 12) return null;
       if (ampm.toLowerCase() === "pm" && h < 12) h += 12;
       if (ampm.toLowerCase() === "am" && h === 12) h = 0;
     }
