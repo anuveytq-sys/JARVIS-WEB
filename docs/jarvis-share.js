@@ -233,12 +233,12 @@
       var whenC = nextClockTime(Number(m[1]), Number(m[2] || 0), m[3], 0, false);
       if (whenC) return addSaved(m[4], whenC);
     }
-    m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(?:in|after)\s+(\d+(?:\.\d+)?)\s*(" + units + ")\s+(?:to|that|because|for)\s+([\s\S]+)$/i);
+    m = c.match(new RegExp("^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\\s+(?:in|after)\\s+(\\d+(?:\\.\\d+)?)\\s*(" + units + ")\\s+(?:to|that|because|for)\\s+([\\s\\S]+)$", "i"));
     if (m) return addRelative(m[3], Number(m[1]), m[2]);
     /* Also accept the user's natural form: “remind me 5 minutes because I need …” */
-    m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(\d+(?:\.\d+)?)\s*(" + units + ")\s+(?:to|that|because|for)\s+([\s\S]+)$/i);
+    m = c.match(new RegExp("^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\\s+(\\d+(?:\\.\\d+)?)\\s*(" + units + ")\\s+(?:to|that|because|for)\\s+([\\s\\S]+)$", "i"));
     if (m) return addRelative(m[3], Number(m[1]), m[2]);
-    m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(?:to\s+)?([\s\S]+?)\s+(?:in|after)\s+(\d+(?:\.\d+)?)\s*(" + units + ")$/i);
+    m = c.match(new RegExp("^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\\s+(?:to\\s+)?([\\s\\S]+?)\\s+(?:in|after)\\s+(\\d+(?:\\.\\d+)?)\\s*(" + units + ")$", "i"));
     if (m) return addRelative(m[1], Number(m[2]), m[3]);
     m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(?:to\s+)?([\s\S]+?)\s+(?:at|on)\s+([\s\S]+)$/i);
     if (m) {
