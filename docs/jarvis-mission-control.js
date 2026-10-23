@@ -136,6 +136,8 @@
   }
   function nextStep(m) {
     if (!m) return null;
+    var underway = m.steps.find(function (s) { return s.status === "in_progress"; });
+    if (underway) return underway;
     return m.steps.find(function (s) {
       return s.status === "pending" && s.dependsOn.every(function (dep) {
         var parent = m.steps.find(function (p) { return p.id === dep; });
