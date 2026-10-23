@@ -11,7 +11,9 @@ self.addEventListener("message",function(event){
       data:{url:d.url||"./",id:d.id||null},
       icon:"./jarvis-pwa-icon.svg",
       badge:"./favicon.ico",
-      renotify:false
+      vibrate:[250,100,250],
+      timestamp:Date.now(),
+      renotify:true
     }));
   }
 });
@@ -26,7 +28,9 @@ self.addEventListener("push",function(event){
     data:{url:payload.url||"./",id:payload.id||null},
     icon:"./jarvis-pwa-icon.svg",
     badge:"./jarvis-pwa-icon.svg",
-    renotify:false
+    vibrate:[250,100,250],
+    timestamp:Number(payload.dueAt)||Date.now(),
+    renotify:true
   };
   event.waitUntil(self.registration.showNotification(String(title),opts));
 });
