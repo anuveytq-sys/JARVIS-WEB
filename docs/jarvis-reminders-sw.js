@@ -13,7 +13,9 @@ self.addEventListener("message",function(event){
       badge:"./favicon.ico",
       vibrate:[250,100,250],
       timestamp:Date.now(),
-      renotify:true
+      renotify:true,
+      silent:false,
+      requireInteraction:true
     }));
   }
 });
@@ -30,7 +32,9 @@ self.addEventListener("push",function(event){
     badge:"./jarvis-pwa-icon.svg",
     vibrate:[250,100,250],
     timestamp:Number(payload.dueAt)||Date.now(),
-    renotify:true
+    renotify:true,
+    silent:false,
+    requireInteraction:true
   };
   event.waitUntil(self.registration.showNotification(String(title),opts));
 });
