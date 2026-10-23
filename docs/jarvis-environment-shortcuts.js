@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-20261023a';
+  const VERSION = 'env-shortcuts-20261023b';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -17,9 +17,10 @@
   const loadUltron=async()=>{
     if(typeof window.ULTRON?.open==='function'){ window.ULTRON.open(); return; }
     if(document.getElementById('jarvis-ultron-loader')) return;
-    const s=document.createElement('script'); s.id='jarvis-ultron-loader'; s.src='./jarvis-ultron.js'; s.async=true;
-    s.onload=()=>window.ULTRON?.open?.(); s.onerror=()=>console.error('[JARVIS] ULTRON module failed to load');
-    document.head.appendChild(s);
+    const s=document.createElement('script'); s.id='jarvis-ultron-loader';
+    s.src='https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron.js';
+    s.async=true; s.onload=()=>window.ULTRON?.open?.();
+    s.onerror=()=>console.error('[JARVIS] ULTRON module failed to load'); document.head.appendChild(s);
   };
   const buildPanel=()=>{
     if(document.getElementById(PANEL_ID)) return;
