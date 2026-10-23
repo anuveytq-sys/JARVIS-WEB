@@ -8,6 +8,9 @@
   var buttonId = "jarvis-share-control";
   var panelId = "jarvis-share-panel";
   var installPrompt = null;
+  var REMINDER_API = "https://jarvis-reminder-backend-x-development3.vercel.app/api/reminders";
+  var REMINDER_TOKEN_KEY = "jarvis-background-reminder-token-v1";
+  var reminderBackendReady = false;
 
   window.addEventListener("beforeinstallprompt", function (event) {
     event.preventDefault();
@@ -68,6 +71,7 @@
       '<button class="jsp-action" type="button" data-action="install">＋ &nbsp; INSTALL / ADD TO HOME SCREEN</button>' +
       '<button class="jsp-action" type="button" data-action="share">↗ &nbsp; SHARE JARVIS</button>' +
       '<button class="jsp-action" type="button" data-action="copy">▣ &nbsp; COPY JARVIS LINK</button>' +
+      '<button class="jsp-action" type="button" data-action="enable-reminders">🔔 &nbsp; ENABLE LOCK-SCREEN REMINDERS</button>' +
       '</div><div class="jsp-help" id="jarvis-home-screen-help">Choose “Install / Add to Home Screen” for device-specific steps.</div>';
     document.body.appendChild(panel);
     panel.querySelector(".jsp-close").addEventListener("click", function () { panel.hidden = true; });
@@ -76,6 +80,7 @@
       if (action === "install") installOrExplain();
       if (action === "share") shareNative();
       if (action === "copy") copyLink();
+      if (action === "enable-reminders") enableBackgroundReminders();
     });
     updateInstallButton();
   }
@@ -259,8 +264,96 @@
   function addSaved(text, when) {
     if (!text || !Number.isFinite(when) || when <= Date.now()) return false;
     var ok = window.JARVISAdvancedModules.addReminder(text, when);
-    if (ok !== false) scheduleBestEffortBackgroundAlert(text, when);
+    if (ok !== false) {
+      scheduleBestEffortBackgroundAlert(text, when);
+      createServerReminder(text, when);
+    }
     return true;
+  }
+
+  function getReminderToken() {
+    try { return localStorage.getItem(REMINDER_TOKEN_KEY) || ""; } catch (_) { return ""; }
+  }
+
+  function apiRequest(action, body, token) {
+    var headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = "Bearer " + token;
+    return fetch(REMINDER_API + "?action=" + encodeURIComponent(action), {
+      method: "POST", headers: headers, cache: "no-store",
+      body: JSON.stringify(body || {})
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        if (!response.ok) throw new Error(data.error || ("Reminder service returned " + response.status));
+        return data;
+      });
+    });
+  }
+
+  function decodeVapidKey(value) {
+    var normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+    while (normalized.length % 4) normalized += "=";
+    var raw = atob(normalized), output = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i);
+    return output;
+  }
+
+  function enableBackgroundReminders() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      showHelp("This browser does not support background web push. JARVIS reminders still work while the page is available. Try an updated browser or install JARVIS as a Home Screen app.");
+      return;
+    }
+    if (!window.isSecureContext) {
+      showHelp("Background reminders require HTTPS. Open the official JARVIS website, then try again.");
+      return;
+    }
+    var permissionPromise = Notification.permission === "granted" ? Promise.resolve("granted") :
+      Notification.requestPermission();
+    permissionPromise.then(function (permission) {
+      if (permission !== "granted") {
+        showHelp("Notifications were not allowed. Enable JARVIS notifications in your device/browser settings, then try again.");
+        return;
+      }
+      return navigator.serviceWorker.register("./jarvis-reminders-sw.js", { scope: "./" })
+        .then(function () { return navigator.serviceWorker.ready; })
+        .then(function (registration) {
+          return apiRequest("register", {}).then(function (result) {
+            if (!result.publicKey || !result.token) throw new Error("Reminder service is not configured yet.");
+            var token = getReminderToken() || result.token;
+            try { localStorage.setItem(REMINDER_TOKEN_KEY, token); } catch (_) {}
+            return registration.pushManager.getSubscription().then(function (subscription) {
+              if (subscription) return subscription;
+              return registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: decodeVapidKey(result.publicKey)
+              });
+            }).then(function (subscription) {
+              return apiRequest("subscribe", { subscription: subscription.toJSON() }, token);
+            }).then(function () {
+              reminderBackendReady = true;
+              showHelp("✓ Background reminders enabled on this device. Keep notifications allowed. On iPhone/iPad, add JARVIS to the Home Screen and open it from its icon.");
+              syncPendingReminders();
+            });
+          });
+        });
+    }).catch(function (error) {
+      showHelp("Could not enable background reminders: " + String(error.message || error).slice(0, 180) + ". Existing JARVIS features are unchanged.");
+    });
+  }
+
+  function createServerReminder(text, when) {
+    var token = getReminderToken();
+    if (!token) return;
+    apiRequest("create", { text: String(text).slice(0, 500), dueAt: when, repeat: "none" }, token)
+      .then(function () { announce("Reminder saved for background delivery."); })
+      .catch(function (error) {
+        announce("Saved in JARVIS. Background delivery needs attention: " + String(error.message || error).slice(0, 90));
+      });
+  }
+
+  function syncPendingReminders() {
+    /* Local reminder storage remains owned by the existing JARVIS module.
+       Future reminders created after push setup are synced immediately. */
+    announce("Background reminder notifications are enabled for this device.");
   }
 
   /* Best-effort device scheduling when a browser exposes a local scheduled-
