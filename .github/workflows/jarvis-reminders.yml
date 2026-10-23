@@ -1,5 +1,7 @@
 name: JARVIS background reminder dispatcher
 on:
+  push:
+    branches: [main]
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
@@ -11,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   dispatch-due-reminders:
-    if: github.repository == 'anuveytq-sys/JARVIS-WEB' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'anuveytq-sys/JARVIS-WEB' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
