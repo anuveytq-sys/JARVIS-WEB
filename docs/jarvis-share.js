@@ -8,7 +8,7 @@
   var buttonId = "jarvis-share-control";
   var panelId = "jarvis-share-panel";
   var installPrompt = null;
-  var REMINDER_API = "https://jarvis-reminder-backend-x-development3.vercel.app/api/reminders";
+  var REMINDER_API = "https://jarvis-reminder-backend.vercel.app/api/reminders";
   var REMINDER_TOKEN_KEY = "jarvis-background-reminder-token-v1";
   var reminderBackendReady = false;
 
