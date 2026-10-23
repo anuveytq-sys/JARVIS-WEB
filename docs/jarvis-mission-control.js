@@ -299,7 +299,7 @@
       if (!m) speak(statusText(m)); else { snapshot(m); speak("Mission checkpoint saved locally on this device. " + statusText(m)); }
       return true;
     }
-    if (/^(?:replan|rebuild plan|reorganize mission|adapt mission|recover mission)$/i.test(c)) { replan(); return true; }
+    if (/^(?:replan(?:\s+(?:the\s+)?mission)?|rebuild plan|reorganize mission|adapt mission|recover mission)$/i.test(c)) { replan(); return true; }
     if (/^(?:mission report|delivery report|final mission report|mission summary|summarize mission)$/i.test(c)) {
       if (!m) speak(statusText(m)); else { m.finalReport = missionReport(); persist(); speak(m.finalReport); }
       return true;
