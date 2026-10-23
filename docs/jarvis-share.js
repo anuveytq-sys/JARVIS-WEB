@@ -1,7 +1,7 @@
-/* JARVIS Share + Home Screen panel v1.1 — isolated, additive PWA control. */
+/* JARVIS Share + Home Screen panel v1.2 — isolated, additive PWA control. */
 (function () {
   "use strict";
-  if (window.JARVISShareControl && window.JARVISShareControl.version === "1.1.0") return;
+  if (window.JARVISShareControl && window.JARVISShareControl.version === "1.2.0") return;
 
   var SITE_URL = "https://anuveytq-sys.github.io/JARVIS-WEB/";
   var styleId = "jarvis-share-control-style";
@@ -191,15 +191,131 @@
     note._hideTimer = setTimeout(function () { note.style.display = "none"; }, 3200);
   }
 
+  /* Flexible reminder command layer. It sits above the existing reminder module
+     so the HUD stays untouched while phrases such as “remind me 5 minutes because …”
+     are accepted naturally. Saved reminders still use the existing reminder app/state. */
+  function reminderCommand(raw) {
+    if (!window.JARVISAdvancedModules || typeof window.JARVISAdvancedModules.addReminder !== "function") return false;
+    var c = String(raw || "").trim()
+      .replace(/^(?:(?:hey|hello|hi|ok|okay)\s+)?jarvis\b[\s,:;-]*/i, "")
+      .replace(/^(?:please\s+|can you\s+|could you\s+|would you\s+|will you\s+)/i, "")
+      .replace(/[.!?]+$/g, "")
+      .replace(/\s+/g, " ").trim();
+    if (!/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\b/i.test(c)) return false;
+    var m;
+    var units = "seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d";
+    m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(?:in|after)\s+(\d+(?:\.\d+)?)\s*(" + units + ")\s+(?:to|that|because|for)\s+([\s\S]+)$/i);
+    if (m) return addRelative(m[3], Number(m[1]), m[2]);
+    /* Also accept the user's natural form: “remind me 5 minutes because I need …” */
+    m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(\d+(?:\.\d+)?)\s*(" + units + ")\s+(?:to|that|because|for)\s+([\s\S]+)$/i);
+    if (m) return addRelative(m[3], Number(m[1]), m[2]);
+    m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(?:to\s+)?([\s\S]+?)\s+(?:in|after)\s+(\d+(?:\.\d+)?)\s*(" + units + ")$/i);
+    if (m) return addRelative(m[1], Number(m[2]), m[3]);
+    m = c.match(/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\s+(?:to\s+)?([\s\S]+?)\s+(?:at|on)\s+([\s\S]+)$/i);
+    if (m) {
+      var when = parseAbsolute(m[2]);
+      if (when) return addSaved(m[1], when);
+      return false;
+    }
+    if (/^(?:remind me|remind|set (?:a )?reminder|create (?:a )?reminder|alert me)\b/i.test(c)) {
+      if (typeof window.showReply === "function") window.showReply("Tell me what to remind you about and when. For example: remind me in 10 minutes to drink water.", "reply");
+      return true;
+    }
+    return false;
+  }
+
+  function addRelative(text, number, unit) {
+    var u = String(unit).toLowerCase();
+    var factor = /^(seconds?|secs?|sec|s)$/.test(u) ? 1000 : /^(minutes?|mins?|min|m)$/.test(u) ? 60000 : /^(hours?|hrs?|hr|h)$/.test(u) ? 3600000 : 86400000;
+    if (!Number.isFinite(number) || number <= 0 || number > 365) return false;
+    return addSaved(String(text).trim(), Date.now() + number * factor);
+  }
+
+  function parseAbsolute(input) {
+    var s = String(input || "").trim();
+    var now = new Date();
+    var m = s.match(/^tomorrow(?:\s+at)?\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+    if (m) {
+      var d = new Date(now); d.setDate(d.getDate() + 1);
+      setClock(d, Number(m[1]), Number(m[2] || 0), m[3]);
+      return d.getTime() > Date.now() ? d.getTime() : null;
+    }
+    m = s.match(/^(?:today\s+)?(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+    if (m) {
+      var t = new Date(now); setClock(t, Number(m[1]), Number(m[2] || 0), m[3]);
+      if (t.getTime() <= Date.now()) t.setDate(t.getDate() + 1);
+      return t.getTime();
+    }
+    var parsed = new Date(s);
+    return !Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now() ? parsed.getTime() : null;
+  }
+
+  function setClock(d, hour, minute, ampm) {
+    var h = hour;
+    if (ampm) { if (ampm.toLowerCase() === "pm" && h < 12) h += 12; if (ampm.toLowerCase() === "am" && h === 12) h = 0; }
+    d.setHours(h, minute, 0, 0);
+  }
+
+  function addSaved(text, when) {
+    if (!text || !Number.isFinite(when) || when <= Date.now()) return false;
+    var ok = window.JARVISAdvancedModules.addReminder(text, when);
+    if (ok !== false) scheduleBestEffortBackgroundAlert(text, when);
+    return true;
+  }
+
+  /* Best-effort device scheduling when a browser exposes a local scheduled-
+     notification implementation. Most browsers do not expose this API, so
+     the existing JARVIS foreground/background/resume logic remains the fallback. */
+  function scheduleBestEffortBackgroundAlert(text, when) {
+    try {
+      if (!("serviceWorker" in navigator) || !("Notification" in window) || Notification.permission !== "granted") return;
+      if (typeof window.TimestampTrigger !== "function") return;
+      navigator.serviceWorker.ready.then(function (reg) {
+        if (!reg || typeof reg.showNotification !== "function") return;
+        var tag = "jarvis-reminder-bg-" + String(when) + "-" + Math.random().toString(36).slice(2);
+        reg.showNotification("JARVIS Reminder", {
+          body: String(text),
+          tag: tag,
+          icon: "./jarvis-pwa-icon.svg",
+          badge: "./jarvis-pwa-icon.svg",
+          showTrigger: new TimestampTrigger(when),
+          data: { url: location.href, jarvisReminder: true }
+        }).catch(function () {});
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
+  function installReminderCommandLayer() {
+    if (typeof window.sendCommand !== "function" || window.sendCommand.__jarvisFlexibleReminderWrapped) return false;
+    var original = window.sendCommand;
+    var wrapped = function (command) {
+      if (reminderCommand(command)) return Promise.resolve();
+      return original.apply(this, arguments);
+    };
+    wrapped.__jarvisFlexibleReminderWrapped = true;
+    window.sendCommand = wrapped;
+    return true;
+  }
+
+  function initReminderLayer() {
+    installReminderCommandLayer();
+    var attempts = 0;
+    var retry = setInterval(function () {
+      if (installReminderCommandLayer() || ++attempts > 40) clearInterval(retry);
+    }, 250);
+    setTimeout(function () { clearInterval(retry); }, 12000);
+  }
+
   function init() {
     addStyle();
     ensureButton();
+    initReminderLayer();
     if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
       navigator.serviceWorker.register("./jarvis-reminders-sw.js", { scope: "./" }).catch(function () {});
     }
   }
 
-  window.JARVISShareControl = { version: "1.1.0", share: shareNative, openPanel: togglePanel };
+  window.JARVISShareControl = { version: "1.2.0", share: shareNative, openPanel: togglePanel };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
   else init();
   var attempts = 0;
