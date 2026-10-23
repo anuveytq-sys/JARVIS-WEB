@@ -264,10 +264,10 @@
 
   function parseDuration(value) {
     var source = String(value || "").toLowerCase().trim();
-    var pattern = /(\\d+(?:\\.\\d+)?)\\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d)\\b/gi;
+    var pattern = /(\d+(?:\.\d+)?)\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|hr|h|days?|day|d)\b/gi;
     var total = 0, last = 0, match;
     while ((match = pattern.exec(source))) {
-      var gap = source.slice(last, match.index).replace(/\\b(?:and|plus)\\b|[,]/gi, "").trim();
+      var gap = source.slice(last, match.index).replace(/\b(?:and|plus)\b|[,]/gi, "").trim();
       if (gap) return null;
       var n = Number(match[1]), unit = match[2].toLowerCase();
       if (!Number.isFinite(n) || n <= 0) return null;
@@ -275,7 +275,7 @@
       total += n * factor;
       last = pattern.lastIndex;
     }
-    if (!total || source.slice(last).replace(/\\b(?:and|plus)\\b|[,]/gi, "").trim()) return null;
+    if (!total || source.slice(last).replace(/\b(?:and|plus)\b|[,]/gi, "").trim()) return null;
     return total <= 365 * 86400000 ? total : null;
   }
 
