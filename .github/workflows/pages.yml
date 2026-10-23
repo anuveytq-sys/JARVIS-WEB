@@ -60,6 +60,8 @@ jobs:
           node --check docs/jarvis-power-modules.js
           node --check docs/jarvis-youtube-upload.js
           node --check docs/jarvis-beacon.js
+          node --check docs/jarvis-inferno.js
+          node --check docs/jarvis-inferno-v2.js
           node --check docs/jarvis-mission-control.js
           node --check docs/jarvis-share.js
           node --check docs/jarvis-reminders-sw.js
@@ -152,6 +154,8 @@ jobs:
           cp docs/jarvis-web.js _site/jarvis-web.js
           cp docs/jarvis-youtube-upload.js _site/jarvis-youtube-upload.js
           cp docs/jarvis-beacon.js _site/jarvis-beacon.js
+          cp docs/jarvis-inferno.js _site/jarvis-inferno.js
+          cp docs/jarvis-inferno-v2.js _site/jarvis-inferno-v2.js
           cp docs/jarvis-ui-patch.js _site/jarvis-ui-patch.js
           cp docs/jarvis-omni-skills.js _site/jarvis-omni-skills.js
           cp docs/jarvis-clap-snap-wake.js _site/jarvis-clap-snap-wake.js
@@ -217,6 +221,10 @@ jobs:
           grep -q "jarvis-calling.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-beacon.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           test -s _site/jarvis-beacon.js
+          test -s _site/jarvis-inferno.js
+          test -s _site/jarvis-inferno-v2.js
+          grep -q 'INFERNO PROTOCOL v1.0' _site/jarvis-inferno.js
+          grep -q 'INFERNO PROTOCOL v2.0' _site/jarvis-inferno-v2.js
           grep -q "JARVIS // BEACON PROTOCOL" _site/jarvis-beacon.js
           grep -q "jarvis-advanced-modules.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-power-modules.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
