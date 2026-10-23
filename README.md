@@ -517,8 +517,30 @@ For any capability below, say its name naturally or use one of these flexible fo
 - `Inferno`, `Hey Inferno`, `Hello Inferno`, `Hi Inferno`, `OK Inferno`, and `Okay Inferno` should follow the wake-only greeting path rather than being submitted to AI as a vague question.
 - If speech recognition is unsupported or microphone permission is blocked, use the typed Inferno command field. Browser wake listening is subject to device/browser support and foreground/permission restrictions.
 
+### Capability execution routing — important fix
+Inferno reads the same OpenRouter key and model slots used by the main JARVIS OpenRouter panel: `jarvisOpenRouterKey` and `jarvisOpenRouterModel` (including the current session fallback). It refreshes these values when each AI request starts, so a key configured elsewhere in JARVIS on the same site origin is recognized without copying it into Inferno Settings.
+
+| Work type | Execution owner | Key required? |
+|---|---|---|
+| Release greeting, speech synthesis, wake phrase handling | Browser-native Inferno code | No |
+| Browser diagnostics, page state, speech feature checks | Local browser APIs | No |
+| Website launch/navigation and supported browser commands | JARVIS Beacon, Omni, Universal Service Router | No, unless the requested destination itself requires login |
+| Mission checkpoints and mission lifecycle commands | JARVIS Mission Control | Usually no for local mission-state actions; AI-generated planning may use OpenRouter |
+| Reminders, supported live info, browser workflows | JARVIS Advanced Modules | Depends on the specific module; local reminders do not need OpenRouter |
+| Scenario calculations, browser-control preview, digital-twin simulation | JARVIS Power Modules | No for supported local operations |
+| Vision, OCR, camera and image inspection | Vision module + browser permissions / configured vision service | Depends on the image model/service; an OpenRouter text key alone does not grant camera or vision access |
+| Calling, WhatsApp and contact handoffs | JARVIS Calling + browser/device handoff | No OpenRouter key, but contact permissions, saved contacts, and user confirmation may be needed |
+| YouTube upload | YouTube Upload Operator + Google authorization | No OpenRouter key; Google OAuth and upload confirmation are required |
+| Research, writing, explanation, code review, planning, risk analysis and the other reasoning workflows | OpenRouter reasoning bridge | Yes, using the shared JARVIS key and selected model |
+
+### If a reasoning request still fails
+1. Open the main JARVIS OpenRouter panel and use its **Test OpenRouter** action.
+2. Check that the configured model ID is available to your account; the key may be valid while a particular model is unavailable or has no remaining quota.
+3. Reload the page once after the update and retry. The Inferno script cache version has been refreshed.
+4. Never paste the key into a public issue or GitHub file. A static website's browser storage is accessible to scripts running on that same origin; a private server-side proxy is safer for production.
+
 ### Requirements and limits
-- The 75 advanced additions are flexible AI-planning/diagnostic workflows routed through the Inferno reasoning bridge; they require a configured OpenRouter key for AI-generated results.
+- The 75 advanced additions use local handlers when a matching module exists; AI-generated planning and analysis use the shared OpenRouter reasoning bridge.
 - The greeting, local voice synthesis, built-in browser diagnostics, and existing direct browser launchers do not need an OpenRouter key.
 - Vision, OCR, deployment, calendar, gesture, and device-native actions still require the relevant existing JARVIS bridge, permissions, service, or external handoff. Inferno must not report an action as complete unless it is confirmed.
 
@@ -526,7 +548,7 @@ For any capability below, say its name naturally or use one of these flexible fo
 
 Inferno v2 includes an optional OpenRouter reasoning bridge. Never commit an API key to this repository. The browser UI can accept a user-provided key and keep it in local browser storage, but a production deployment should use a server-side proxy so the key is not exposed to client JavaScript. The model field is configurable in Inferno Settings.
 
-**Important:** OpenRouter is needed for cloud AI reasoning requests, not for activating Inferno or speaking the release greeting. The 125-item matrix below documents the named capability set; individual items may use existing JARVIS modules, browser/device handoffs, or bridges and are not a claim that every privileged capability works on every device without configuration.
+**Important:** OpenRouter is needed for cloud AI reasoning requests, not for activating Inferno or speaking the release greeting. The 200-item matrix below documents the named capability set. Inferno routes each request to a local browser handler, a connected JARVIS module, or OpenRouter reasoning as appropriate; capabilities that require an unavailable device API, account authorization, or external service must report that dependency instead of pretending it succeeded.
 
 ## Voice
 
