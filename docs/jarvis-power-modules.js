@@ -86,8 +86,9 @@
       {id:"store",name:"Local storage",deps:["mods"],risk:0.14},
       {id:"deploy",name:"Hosting / deployment",deps:["ui","cmd"],risk:0.20}
     ];
-    var issue=(c.match(/(?:simulate|model|twin|what if|failure|fail|break|disable|outage)\s+(?:a\s+)?(.+?)(?:\s+(?:failure|outage|fails|breaks|down))?$/i)||[])[1]||"network";
-    var target=comps.find(function(x){return (x.id+" "+x.name).toLowerCase().indexOf(issue.toLowerCase())>=0;})||comps.find(function(x){return (x.id+" "+x.name).toLowerCase().indexOf(lower.indexOf("voice")>=0?"voice":lower.indexOf("ui")>=0?"hud":lower.indexOf("storage")>=0?"storage":"network")>=0;});
+    var issue=(c.match(/(?:simulate|model|twin|what if|failure|fail|break|disable|outage)\\s+(?:a\\s+)?(.+?)(?:\\s+(?:failure|outage|fails|breaks|down))?$/i)||[])[1]||"";
+    if(/^(?:for|of|called|named)\\b/i.test(issue))issue="";
+    var target=issue?(comps.find(function(x){return (x.id+" "+x.name).toLowerCase().indexOf(issue.toLowerCase())>=0;})||comps.find(function(x){return (x.id+" "+x.name).toLowerCase().indexOf(lower.indexOf("voice")>=0?"voice":lower.indexOf("ui")>=0?"hud":lower.indexOf("storage")>=0?"storage":"network")>=0;})):null;
     if(/^(?:digital twin|open digital twin|show digital twin|build digital twin|create digital twin|simulate system)$/i.test(c))target=null;
     var impacted={};function mark(id){if(impacted[id])return;impacted[id]=true;comps.forEach(function(x){if(x.deps.indexOf(id)>=0)mark(x.id);});}
     if(target)mark(target.id);
