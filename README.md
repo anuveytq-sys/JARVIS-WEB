@@ -12,7 +12,16 @@ Inferno is the isolated high-power command mode. It is designed as an orchestrat
 - `Hey JARVIS, open Inferno`
 - `Hey JARVIS, activate Inferno`
 
-Inferno uses a minimal orange/red central core, lightning transition, bottom command console, settings access, diagnostic panels, and head/eye control hooks. `Return to JARVIS` restores the normal interface.
+Inferno uses a cinematic deep-space HUD with a layered nebula/starfield, parallax depth, a volumetric-looking plasma core, electrical arcs, a bottom command console, settings access, diagnostic panels, and head/eye control hooks. `Return to JARVIS` restores the normal interface.
+
+### Inferno wake word and voice greeting
+- After Inferno activates, it speaks: **“Inferno is released. What’s in your mind?”**
+- The greeting uses the browser's built-in speech synthesis and does **not** require an OpenRouter API key.
+- While Inferno is active, say **“Inferno,” “Hey Inferno,” “Hello Inferno,”** or **“Hi Inferno.”**
+- After saying the wake phrase by itself, speak your command in the next utterance. You can also say the wake phrase and command together, for example, **“Hey Inferno, explain this error.”**
+- Keep the page open and in the foreground, and grant microphone permission. Browser speech-recognition support and microphone permissions vary by device/browser; if recognition is unavailable, use the Inferno command field.
+- The wake listener pauses while the greeting is spoken so it does not mistake Inferno's own voice for a user command.
+
 
 ## Inferno capability matrix — 125 capabilities
 
@@ -145,6 +154,8 @@ Inferno uses a minimal orange/red central core, lightning transition, bottom com
 ## OpenRouter
 
 Inferno v2 includes an optional OpenRouter reasoning bridge. Never commit an API key to this repository. The browser UI can accept a user-provided key and keep it in local browser storage, but a production deployment should use a server-side proxy so the key is not exposed to client JavaScript. The model field is configurable in Inferno Settings.
+
+**Important:** OpenRouter is needed for cloud AI reasoning requests, not for activating Inferno or speaking the release greeting. The 125-item matrix below documents the named capability set; individual items may use existing JARVIS modules, browser/device handoffs, or bridges and are not a claim that every privileged capability works on every device without configuration.
 
 ## Voice
 
