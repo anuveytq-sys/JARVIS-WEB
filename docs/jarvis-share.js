@@ -10,6 +10,7 @@
   var installPrompt = null;
   var REMINDER_API = "https://jarvis-reminder-backend.vercel.app/api/reminders";
   var REMINDER_TOKEN_KEY = "jarvis-background-reminder-token-v1";
+  var REMINDER_SYNC_KEY = "jarvis-background-reminder-synced-v1";
   var reminderBackendReady = false;
 
   window.addEventListener("beforeinstallprompt", function (event) {
@@ -380,20 +381,56 @@
     });
   }
 
+  function reminderSyncMap() {
+    try { return JSON.parse(localStorage.getItem(REMINDER_SYNC_KEY) || "{}") || {}; } catch (_) { return {}; }
+  }
+
+  function reminderSyncKey(text, when) {
+    return String(Math.round(Number(when))) + "|" + String(text || "").trim().toLowerCase();
+  }
+
+  function markReminderSynced(text, when) {
+    try {
+      var map = reminderSyncMap();
+      map[reminderSyncKey(text, when)] = Date.now();
+      localStorage.setItem(REMINDER_SYNC_KEY, JSON.stringify(map));
+    } catch (_) {}
+  }
+
   function createServerReminder(text, when, repeat) {
     var token = getReminderToken();
     if (!token) return;
     apiRequest("create", { text: String(text).slice(0, 500), dueAt: when, repeat: repeat || "none" }, token)
-      .then(function () { announce("Reminder saved for background delivery."); })
+      .then(function () {
+        markReminderSynced(text, when);
+        announce("Reminder saved for background delivery.");
+      })
       .catch(function (error) {
         announce("Saved in JARVIS. Background delivery needs attention: " + String(error.message || error).slice(0, 90));
       });
   }
 
   function syncPendingReminders() {
-    /* Local reminder storage remains owned by the existing JARVIS module.
-       Future reminders created after push setup are synced immediately. */
-    announce("Background reminder notifications are enabled for this device.");
+    var token = getReminderToken();
+    var module = window.JARVISAdvancedModules;
+    if (!token || !module || typeof module.getReminders !== "function") {
+      announce("Background reminder notifications are enabled for this device.");
+      return;
+    }
+    var map = reminderSyncMap();
+    var pending = module.getReminders().filter(function (r) {
+      return r && !r.done && !r.cancelled && Number(r.when) > Date.now() &&
+        !map[reminderSyncKey(r.text, r.when)];
+    });
+    var jobs = pending.map(function (r) {
+      return apiRequest("create", { text: String(r.text || "").slice(0, 500), dueAt: Number(r.when), repeat: "none" }, token)
+        .then(function () { markReminderSynced(r.text, r.when); return true; })
+        .catch(function () { return false; });
+    });
+    Promise.all(jobs).then(function (results) {
+      var count = results.filter(Boolean).length;
+      announce("Background reminders enabled. " + count + " existing reminder(s) synced; new reminders will sync automatically.");
+    });
   }
 
   /* Best-effort device scheduling when a browser exposes a local scheduled-
