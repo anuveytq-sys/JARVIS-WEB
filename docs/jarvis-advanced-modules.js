@@ -1,7 +1,7 @@
 /* JARVIS Advanced Modules v1.2 — isolated add-on; reminder speech reliability fix. */
 (function(){
 "use strict";
-if(window.JARVISAdvancedModules&&window.JARVISAdvancedModules.version==="1.2.0")return;
+if(window.JARVISAdvancedModules&&window.JARVISAdvancedModules.version==="1.3.0")return;
 var KEY="jarvisAdvancedModulesV1",SW_URL="./jarvis-reminders-sw.js",swRegistration=null,DEFAULT_REPO="anuveytq-sys/JARVIS-WEB",state=read(),panel=null,timer=null;
 function read(){try{var x=JSON.parse(localStorage.getItem(KEY)||"{}");if(!Array.isArray(x.reminders))x.reminders=[];if(!Array.isArray(x.projects))x.projects=[];return x;}catch(_){return{reminders:[],projects:[]};}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));return true;}catch(_){return false;}}
