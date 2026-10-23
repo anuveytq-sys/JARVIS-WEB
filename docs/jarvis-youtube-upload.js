@@ -271,13 +271,7 @@
       var uploadUrl = start.headers.get("Location");
       if (!uploadUrl) throw new Error("YouTube did not return a resumable upload URL.");
       setStatus("Uploading video data… keep this page open until it finishes.");
-      var uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": selectedFile.type || "application/octet-stream" },
-        body: selectedFile
-      });
-      if (!uploadResponse.ok) throw await apiError(uploadResponse, "Video upload failed");
-      var result = await uploadResponse.json();
+      var result = await putFileWithProgress(uploadUrl, selectedFile);
       if (!result || !result.id) throw new Error("YouTube did not return a video ID. Check YouTube Studio before retrying to avoid duplicates.");
       progressEl.value = 100;
       var url = "https://www.youtube.com/watch?v=" + encodeURIComponent(result.id);
@@ -299,6 +293,36 @@
     var selects = section ? section.querySelectorAll("select") : [];
     return selects.length > 1 ? selects[0].value : "20";
   }
+  function putFileWithProgress(uploadUrl, file) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("PUT", uploadUrl, true);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.upload.onprogress = function (event) {
+        if (event.lengthComputable && progressEl) {
+          progressEl.value = Math.min(99, Math.round((event.loaded / event.total) * 100));
+          setStatus("Uploading video data… " + progressEl.value + "% sent. Keep this page open.");
+        }
+      };
+      xhr.onload = function () {
+        var data = {};
+        try { data = JSON.parse(xhr.responseText || "{}"); } catch (_) {}
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+        else {
+          var message = data && data.error && data.error.message;
+          if (xhr.status === 401) accessToken = "";
+          reject(new Error("Video upload failed (HTTP " + xhr.status + "): " +
+            (xhr.status === 401 ? "Google authorization expired; reconnect YouTube." :
+             xhr.status === 403 ? "Check API enablement, quota, channel permissions, OAuth consent, and API audit restrictions. " + (message || "") :
+             (message || "unknown API error"))));
+        }
+      };
+      xhr.onerror = function () { reject(new Error("Video upload network error. Check the connection and YouTube Studio before retrying.")); };
+      xhr.onabort = function () { reject(new Error("Video upload was cancelled.")); };
+      xhr.send(file);
+    });
+  }
+
   async function apiError(response, prefix) {
     var data = await response.json().catch(function () { return {}; });
     var message = data && data.error && data.error.message;
@@ -310,7 +334,7 @@
 
   function parseUploadCommand(raw) {
     var c = cleanCommand(raw), lower = c.toLowerCase();
-    if (!/(youtube|upload video|publish video|post video|video upload|herobrine)/i.test(c)) return false;
+    if (!/(youtube|upload.{0,45}video|video.{0,45}upload|publish.{0,35}video|post.{0,35}video|herobrine)/i.test(c)) return false;
     if (/(?:open|show|configure|settings).*(?:youtube|upload)/i.test(c) || /youtube.*(?:settings|upload operator)/i.test(c)) {
       openSettingsSection(); reply("Opening YouTube Upload Operator in Settings. Connect your channel and choose a video file from this device."); return true;
     }
