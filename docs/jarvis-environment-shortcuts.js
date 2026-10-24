@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-ultron-core4-20261024';
+  const VERSION = 'env-shortcuts-ultron-core5-20261024';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -25,7 +25,7 @@
   const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-20261024d')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
   const loadUltron=async()=>{
     try {
-      if (window.ULTRON?.version !== 'ultron-core-rebuild-4') { document.getElementById('jarvis-ultron-core-loader')?.remove(); await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-4'); }
+      if (window.ULTRON?.version !== 'ultron-core-rebuild-5') { document.getElementById('jarvis-ultron-core-loader')?.remove(); await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-5'); }
       if(typeof window.ULTRON?.open==='function') window.ULTRON.open();
       else throw new Error('ULTRON core entry point missing');
     } catch(error) {
