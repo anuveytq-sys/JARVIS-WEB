@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-15';
+  const VERSION = 'ultron-core-rebuild-16';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -148,7 +148,6 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
       const clearWorldBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
       worldFrame.onplaying=()=>{
         if(!worldCamLoading)return;
-        if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
         clearWorldBlackCheck();worldBrightSamples=0;worldCheckedSamples=0;
         // Only reveal the panel after checking decoded frames; skip streams that play black frames.
         const probe=document.createElement('canvas');probe.width=24;probe.height=14;
@@ -165,15 +164,14 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
             if(sum/(pixels.length/4)>16&&bright/(pixels.length/4)>.12)worldBrightSamples++;
             if(worldBrightSamples>=1){
               clearWorldBlackCheck();worldCamStarted=true;worldCamLoading=false;
+              if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
               worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
             }else if(worldCheckedSamples>=3){clearWorldBlackCheck();failWorldCam();}
           }catch(_){
-            // Some native HLS streams taint canvas even while video is playing correctly.
-            // Canvas inspection failure alone is not evidence of a black feed.
+            // A cross-origin canvas error cannot prove that the decoded picture is visible.
+            // Keep the panel hidden and let the watchdog skip this candidate rather than show black.
             clearWorldBlackCheck();
-            if(worldCamLoading&&worldFrame.readyState>=2&&worldFrame.videoWidth>0&&worldFrame.videoHeight>0){
-              worldCamStarted=true;worldCamLoading=false;worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
-            }else failWorldCam();
+            if(worldCamLoading)failWorldCam();
           }
         },650);
       };
