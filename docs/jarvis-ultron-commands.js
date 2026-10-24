@@ -42,7 +42,7 @@
           const existing = document.getElementById('jarvis-ultron-core-loader');
           if (existing) existing.remove();
           const script = document.createElement('script'); script.id = 'jarvis-ultron-core-loader';
-          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-8'; script.onload = resolve; script.onerror = reject; document.head.appendChild(script);
+          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-9'; script.onload = resolve; script.onerror = reject; document.head.appendChild(script);
         });
       }
       window.ULTRON?.open?.(); return true;
@@ -78,7 +78,7 @@
   }, 100);
 
   window.JARVIS_ULTRON_COMMANDS = {
-    version: 'ultron-commands-20261024h',
+    version: 'ultron-commands-20261024i',
     open: openUltron,
     close: closeUltron,
     handle,
