@@ -30,3 +30,7 @@
 #velve-root #velve-status{position:absolute;overflow:auto;padding:12px 36px 12px 10px;box-sizing:border-box}
 #velve-root #velve-status .velve-status-x{position:absolute!important;display:inline-flex!important;visibility:visible!important;opacity:1!important;right:6px!important;top:6px!important;z-index:100!important;width:22px!important;height:22px!important;align-items:center;justify-content:center;cursor:pointer}
 #velve-root #velve-status.panel-hidden{display:none!important}
+
+/* VELVE-only HUD cleanup: keep the global JARVIS controls available elsewhere. */
+body.velve-active #jarvis-wake-word-toggle,
+body.velve-active #jarvis-web-bridge-panel { display:none !important; visibility:hidden !important; pointer-events:none !important; }
