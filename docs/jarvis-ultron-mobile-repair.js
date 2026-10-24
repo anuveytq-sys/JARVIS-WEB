@@ -88,6 +88,33 @@ const autoScan=async key=>{
  if(key==='cameras'){const cam=root.querySelector('#uz-camera');if(cam)cam.innerHTML='<div class="uz-camera-head">PUBLIC WEBCAM FEEDS</div><div class="uz-camera-empty">Choose a public provider below to view its available live cameras.</div><button class="uz-source" data-url="https://www.earthcam.com/">EARTHCAM</button><button class="uz-source" data-url="https://www.windy.com/-Webcams/webcams">WINDY WEBCAMS</button><button class="uz-source" data-url="https://www.skylinewebcams.com/">SKYLINE WEBCAMS</button>';cam.querySelectorAll('.uz-source').forEach(x=>x.onclick=()=>window.open(x.dataset.url,'_blank','noopener,noreferrer'));}
  say('ULTRON public '+(titles[key]||key)+' scan is ready. Results are shown in the intelligence panel.');
 };
+const hideUltronBridge=()=>{
+ const active=!!document.getElementById('jarvis-ultron-root');
+ document.querySelectorAll('body *').forEach(el=>{
+  if(el.children.length>3)return;
+  const txt=(el.innerText||el.textContent||'').trim().toLowerCase();
+  const isBridge=txt.includes('jarvis web bridge')||txt.includes('web bridge loaded')||txt.includes('type “what time is it?” into the command box to test');
+  if(!isBridge)return;
+  if(active){
+   if(!el.hasAttribute('data-uz-bridge-display'))el.setAttribute('data-uz-bridge-display',el.style.display||'__default__');
+   el.style.setProperty('display','none','important');
+   let p=el.parentElement;
+   for(let n=0;p&&n<2;n++,p=p.parentElement){
+    const pt=(p.innerText||p.textContent||'').trim().toLowerCase();
+    if(pt.length<220&&(pt.includes('jarvis web bridge')||pt.includes('web bridge loaded'))){
+     if(!p.hasAttribute('data-uz-bridge-parent-display'))p.setAttribute('data-uz-bridge-parent-display',p.style.display||'__default__');
+     p.style.setProperty('display','none','important');
+    }
+   }
+  }else{
+   document.querySelectorAll('[data-uz-bridge-display]').forEach(node=>{const old=node.getAttribute('data-uz-bridge-display');if(old==='__default__')node.style.removeProperty('display');else node.style.display=old;node.removeAttribute('data-uz-bridge-display');});
+   document.querySelectorAll('[data-uz-bridge-parent-display]').forEach(node=>{const old=node.getAttribute('data-uz-bridge-parent-display');if(old==='__default__')node.style.removeProperty('display');else node.style.display=old;node.removeAttribute('data-uz-bridge-parent-display');});
+  }
+ });
+};
+hideUltronBridge();
+const bridgeObserver=new MutationObserver(()=>hideUltronBridge());
+bridgeObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
 const hideWake=()=>{document.querySelectorAll('button,[role="button"]').forEach(el=>{if(el.closest('#jarvis-ultron-root'))return;const t=(el.innerText||el.textContent||'').trim().toLowerCase();if(t.includes('enable wake word')||t==='wake word'){if(!el.hasAttribute('data-uz-old-display'))el.setAttribute('data-uz-old-display',el.style.display||'__default__');el.style.setProperty('display','none','important');}});};
 hideWake();
 const wakeObs=new MutationObserver(()=>{if(document.getElementById('jarvis-ultron-root'))hideWake();else{document.querySelectorAll('[data-uz-old-display]').forEach(el=>{const old=el.getAttribute('data-uz-old-display');if(old==='__default__')el.style.removeProperty('display');else el.style.display=old;el.removeAttribute('data-uz-old-display');});wakeObs.disconnect();}});
