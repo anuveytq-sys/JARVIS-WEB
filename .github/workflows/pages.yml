@@ -55,6 +55,9 @@ jobs:
           node --check docs/jarvis-vision-intelligence.js
           node --check docs/jarvis-vision-intelligence-enhancement.js
           node --check docs/jarvis-environment-shortcuts.js
+          node --check docs/jarvis-ultron.js
+          node --check docs/jarvis-ultron-commands.js
+          node --check docs/jarvis-ultron-enhancement.js
           node --check docs/jarvis-calling.js
           node --check docs/jarvis-advanced-modules.js
           node --check docs/jarvis-power-modules.js
@@ -183,6 +186,9 @@ jobs:
           cp docs/jarvis-vision-intelligence.js _site/jarvis-vision-intelligence.js
           cp docs/jarvis-vision-intelligence-enhancement.js _site/jarvis-vision-intelligence-enhancement.js
           cp docs/jarvis-environment-shortcuts.js _site/jarvis-environment-shortcuts.js
+          cp docs/jarvis-ultron.js _site/jarvis-ultron.js
+          cp docs/jarvis-ultron-commands.js _site/jarvis-ultron-commands.js
+          cp docs/jarvis-ultron-enhancement.js _site/jarvis-ultron-enhancement.js
           cp docs/jarvis-calling.js _site/jarvis-calling.js
           cp docs/jarvis-advanced-modules.js _site/jarvis-advanced-modules.js
           cp docs/jarvis-power-modules.js _site/jarvis-power-modules.js
@@ -206,7 +212,7 @@ jobs:
           s = s.replace(head_marker, style + head_marker, 1)
           marker = '</body>'
           injection = f'<script src="./jarvis-popup-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-omni-skills.js?v=pages-{version}"></script>\n<script src="./jarvis-advanced-modules.js?v=pages-{version}"></script>\n<script src="./jarvis-power-modules.js?v=pages-{version}"></script>\n<script src="./jarvis-share.js?v=pages-{version}"></script>\n<script src="./jarvis-calling.js?v=pages-{version}"></script>\\n<script src="./jarvis-beacon.js?v=pages-{version}"></script>\\n<script src="./jarvis-universal-service-router.js?v=pages-{version}"></script>\n<script src="./jarvis-camera-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-video-audio-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-github-access.js?v=pages-{version}"></script>\n<script src="./jarvis-platform-search.js?v=pages-{version}"></script>\n<script src="./jarvis-ui-patch.js?v=pages-{version}"></script>\n<script src="./jarvis-clap-snap-wake.js?v=pages-{version}"></script>\n<script src="./jarvis-hand-gestures.js?v=pages-{version}"></script>\n<script src="./jarvis-web.js?v=pages-{version}"></script>\n<script src="./jarvis-youtube-upload.js?v=pages-{version}"></script>\n<script src="./jarvis-music.js?v=pages-{version}"></script>\n<script src="./jarvis-focus-detector.js?v=pages-{version}"></script>\n<script src="./jarvis-superpowers.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-stability.js?v=pages-{version}"></script>\n<script src="./velve-static-satellite-feed.js?v=pages-{version}"></script>\n<script src="./velve-countries.js?v=pages-{version}"></script>\n<script src="./jarvis-velve.js?v=pages-{version}"></script>\n<script src="./jarvis-velve-fix.js?v=pages-{version}"></script>\n<script src="./velve-satellite-upgrade.js?v=pages-{version}"></script>\n<script src="./velve-voice-fix.js?v=pages-{version}"></script>\n<script src="./terranexus.js?v=pages-{version}"></script>\n<script src="./terranexus-ui-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-launcher-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-neon-nexus-command-fix.js?v=pages-{version}"></script>\n<script src="./jarvis-core-3d.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence.js?v=pages-{version}"></script>\n<script src="./jarvis-vision-intelligence-enhancement.js?v=pages-{version}"></script>\n<script src="./jarvis-environment-shortcuts.js?v=pages-{version}"></script>\n<script src="./jarvis-mission-control.js?v=pages-{version}"></script>\n'
-          for name in ['jarvis-popup-fix','jarvis-omni-skills','jarvis-advanced-modules','jarvis-power-modules','jarvis-share','jarvis-calling','jarvis-beacon','jarvis-camera-fix','jarvis-video-audio-fix','jarvis-universal-service-router','jarvis-github-access','jarvis-platform-search','jarvis-ui-patch','jarvis-clap-snap-wake','jarvis-hand-gestures','jarvis-web','jarvis-youtube-upload','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-static-satellite-feed','velve-countries','velve-satellite-upgrade','velve-voice-fix','terranexus','terranexus-ui-fix','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement','jarvis-environment-shortcuts','jarvis-mission-control']:
+          for name in ['jarvis-popup-fix','jarvis-omni-skills','jarvis-advanced-modules','jarvis-power-modules','jarvis-share','jarvis-calling','jarvis-beacon','jarvis-camera-fix','jarvis-video-audio-fix','jarvis-universal-service-router','jarvis-github-access','jarvis-platform-search','jarvis-ui-patch','jarvis-clap-snap-wake','jarvis-hand-gestures','jarvis-web','jarvis-youtube-upload','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','jarvis-velve','jarvis-velve-fix','velve-static-satellite-feed','velve-countries','velve-satellite-upgrade','velve-voice-fix','terranexus','terranexus-ui-fix','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement','jarvis-ultron-commands','jarvis-environment-shortcuts','jarvis-mission-control']:
               s = re.sub(rf'<script[^>]+{re.escape(name)}\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
           s = s.replace(marker, injection + marker, 1)
           p.write_text(s, encoding='utf-8')
@@ -243,7 +249,11 @@ jobs:
           grep -q "jarvis-vision-intelligence-enhancement.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "terranexus-ui-fix.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "velve-voice-fix.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q "jarvis-ultron-commands.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-environment-shortcuts.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          test -s _site/jarvis-ultron.js
+          test -s _site/jarvis-ultron-commands.js
+          test -s _site/jarvis-ultron-enhancement.js
           grep -q "jarvis-mission-control.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           test -s _site/jarvis-mission-control.js
 
