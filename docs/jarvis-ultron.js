@@ -368,7 +368,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       }
       if(typeof window.sendCommand!=='function'){setStatus('Command service is not ready yet.');return;}
       setStatus('Sending…'); voice.disabled=true;
-      try{await window.sendCommand(command);input.value='';setStatus('Command sent.');}
+      try{const commandResult=await window.sendCommand(command);if(detectedCategory&&commandResult!==undefined&&commandResult!==null&&commandResult!==false&&commandResult!==''){setTargetDetails({category:detectedCategory,target:command.replace(/^(hey jarvis[, ]*)?(please )?(scan|search|investigate|lookup|look up|check|find|recon|osint)\\s+/i,'').trim(),results:commandResult});}input.value='';setStatus('Command sent.');}
       catch(error){console.error('[ULTRON] command failed',error);setStatus('Command could not be sent.');}
       finally{voice.disabled=false;setTimeout(()=>{if(status.textContent==='Command sent.')setStatus('');},2200);}
     });
