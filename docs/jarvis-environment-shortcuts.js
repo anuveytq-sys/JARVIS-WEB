@@ -24,10 +24,14 @@
 
   const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-20261024d')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
   const loadUltron=async()=>{
-    const id='jarvis-ultron-placeholder';
-    let note=document.getElementById(id);
-    if(!note){note=document.createElement('div');note.id=id;note.textContent='ULTRON IS OFFLINE — ENVIRONMENT RESERVED FOR REBUILD';Object.assign(note.style,{position:'fixed',left:'50%',top:'18%',transform:'translateX(-50%)',zIndex:'99999',maxWidth:'80vw',padding:'10px 14px',background:'rgba(12,8,6,.96)',border:'1px solid #ff7a28',borderRadius:'6px',color:'#ffb36b',font:'600 10px/1.5 monospace',letterSpacing:'1px',textAlign:'center',boxShadow:'0 0 18px rgba(255,100,20,.25)'});document.body.appendChild(note);}
-    note.style.display='block';clearTimeout(note.__hideTimer);note.__hideTimer=setTimeout(()=>{note.style.display='none'},2800);
+    try {
+      await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-1');
+      if(typeof window.ULTRON?.open==='function') window.ULTRON.open();
+      else throw new Error('ULTRON core entry point missing');
+    } catch(error) {
+      console.error('[JARVIS] ULTRON core failed to load',error);
+      alert('ULTRON could not load. Check your internet connection and try again.');
+    }
   };
 
   const installDirectCommandHook=()=>{
