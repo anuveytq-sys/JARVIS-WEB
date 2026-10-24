@@ -25,7 +25,7 @@ const css=`
 #jarvis-ultron-commandbar input{flex:1;min-width:0;height:34px;background:#090507;border:1px solid rgba(255,91,46,.35);border-radius:5px;color:#ffe6dc;padding:0 9px;font-size:12px;outline:none}
 #jarvis-ultron-commandbar button{height:34px;min-width:36px;padding:0 9px;background:#35100b;border:1px solid #b83a20;border-radius:5px;color:#ffb18a;font-size:11px;font-weight:800}
 #jarvis-ultron-commandbar button:active{background:#79220f}
-#jarvis-ultron-bridge{display:none!important}
+#jarvis-ultron-root #jarvis-ultron-bridge{display:none!important}
 #jarvis-ultron-scan-modal{position:absolute;z-index:30;right:9px;top:54px;width:min(290px,calc(100% - 18px));max-height:55%;overflow:auto;padding:12px;border:1px solid rgba(255,91,45,.65);border-radius:8px;background:rgba(10,4,6,.98);box-shadow:0 0 30px rgba(255,45,20,.2);color:#ffd9ce}
 #jarvis-ultron-scan-modal label{display:block;font-size:9px;letter-spacing:1px;color:#ff947b;margin-bottom:7px}
 #jarvis-ultron-scan-modal input{width:100%;padding:9px;margin-bottom:8px;background:#030305;border:1px solid rgba(255,80,50,.45);border-radius:4px;color:white;font-size:12px}
@@ -49,7 +49,7 @@ const css=`
 #jarvis-ultron-commandbar{left:32%;right:6px;bottom:22px;height:44px;padding:4px}
 #jarvis-ultron-commandbar input{height:30px;font-size:11px}
 #jarvis-ultron-commandbar button{height:30px;min-width:31px;padding:0 7px}
-#jarvis-ultron-bridge{display:none!important}
+#jarvis-ultron-root #jarvis-ultron-bridge{display:none!important}
 #jarvis-ultron-root .uam-console{right:6px!important;left:auto!important;bottom:78px!important;max-height:21%!important;width:44%!important;transform:none!important}
 #jarvis-ultron-root .uam-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;max-height:calc(22vh - 28px)!important}
 }`;
