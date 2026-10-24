@@ -35,13 +35,20 @@
 
   const matches = (patterns, text) => patterns.some(pattern => pattern.test(text));
 
-  function showReservedNotice(){
-    let note=document.getElementById('jarvis-ultron-placeholder');
-    if(!note){note=document.createElement('div');note.id='jarvis-ultron-placeholder';note.textContent='ULTRON IS OFFLINE — ENVIRONMENT RESERVED FOR REBUILD';Object.assign(note.style,{position:'fixed',left:'50%',top:'18%',transform:'translateX(-50%)',zIndex:'99999',maxWidth:'80vw',padding:'10px 14px',background:'rgba(12,8,6,.96)',border:'1px solid #ff7a28',borderRadius:'6px',color:'#ffb36b',font:'600 10px/1.5 monospace',letterSpacing:'1px',textAlign:'center',boxShadow:'0 0 18px rgba(255,100,20,.25)'});document.body.appendChild(note);}
-    note.style.display='block';clearTimeout(note.__hideTimer);note.__hideTimer=setTimeout(()=>{note.style.display='none'},2800);return true;
+  async function openUltron(){
+    try {
+      if (!window.ULTRON) {
+        await new Promise((resolve, reject) => {
+          const existing = document.getElementById('jarvis-ultron-core-loader');
+          if (existing) { existing.addEventListener('load', resolve, { once: true }); existing.addEventListener('error', reject, { once: true }); return; }
+          const script = document.createElement('script'); script.id = 'jarvis-ultron-core-loader';
+          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-1'; script.onload = resolve; script.onerror = reject; document.head.appendChild(script);
+        });
+      }
+      window.ULTRON?.open?.(); return true;
+    } catch (error) { console.error('[JARVIS] ULTRON core failed to load', error); return false; }
   }
-  async function openUltron(){return showReservedNotice();}
-  function closeUltron(){const note=document.getElementById('jarvis-ultron-placeholder');if(note)note.style.display='none';return true;}
+  function closeUltron(){ window.ULTRON?.close?.(); document.getElementById('ultron-clean-core')?.remove(); return true; }
   async function handle(command){
     const text=normalize(command);
     if(!text)return false;
