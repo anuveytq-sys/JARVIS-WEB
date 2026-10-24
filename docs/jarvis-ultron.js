@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-13';
+  const VERSION = 'ultron-core-rebuild-14';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -139,7 +139,6 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
     const startWorldCam=()=>{
       if(!active||!worldFrame?.isConnected||worldCamLoading)return;
       worldCamLoading=true;worldCamStarted=false;worldAttempt++;
-      worldFrame.crossOrigin='anonymous';
       if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
       destroyWorldHls();
       try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load()}catch(_){}
@@ -169,8 +168,12 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
               worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
             }else if(worldCheckedSamples>=3){clearWorldBlackCheck();failWorldCam();}
           }catch(_){
-            // If the browser cannot inspect the decoded frame, don't expose a feed we cannot verify.
-            clearWorldBlackCheck();failWorldCam();
+            // Some native HLS streams taint canvas even while video is playing correctly.
+            // Canvas inspection failure alone is not evidence of a black feed.
+            clearWorldBlackCheck();
+            if(worldCamLoading&&worldFrame.readyState>=2&&worldFrame.videoWidth>0&&worldFrame.videoHeight>0){
+              worldCamStarted=true;worldCamLoading=false;worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
+            }else failWorldCam();
           }
         },650);
       };
