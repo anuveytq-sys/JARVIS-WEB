@@ -59,6 +59,13 @@
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
     const worldCams=[
+      {name:"Imphal India Discovery · INDIA",url:"https://prod.vodvideo.cbsnews.com/cbsnews/vr/hls/4458996_hls/master.m3u8"},
+      {name:"Seoul City · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge13/ch16.stream/playlist.m3u8"},
+      {name:"Seoul Traffic · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/sd1/ch34.stream/playlist.m3u8"},
+      {name:"Seoul Road View · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/sd2/ch66.stream/playlist.m3u8"},
+      {name:"Chon Buri · THAILAND",url:"https://camerai1.iticfoundation.org/hls/pty85.m3u8"},
+      {name:"Khon Kaen · THAILAND",url:"https://camerai1.iticfoundation.org/hls/kk12.m3u8"},
+
       {name:"BURLEIGH BEACH · AUSTRALIA",url:"https://d1nm4r8e5x1rwd.cloudfront.net/cw/burleighheadscamera.stream/playlist.m3u8"},
       {name:"CURRUMBIN BEACH · AUSTRALIA",url:"https://d1nm4r8e5x1rwd.cloudfront.net/cw/currumbincamera.stream/playlist.m3u8"},
       {name:"NARROWNECK · AUSTRALIA",url:"https://d1nm4r8e5x1rwd.cloudfront.net/cw/narrowneckhighcamera.stream/playlist.m3u8"},
