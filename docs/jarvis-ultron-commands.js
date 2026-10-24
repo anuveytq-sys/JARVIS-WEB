@@ -121,8 +121,18 @@
       const place = getPlace();
       if (place) {
         place.textContent = '';
-        place.style.display = 'none';
+        place.replaceChildren();
+        place.style.setProperty('display', 'none', 'important');
+        place.style.setProperty('visibility', 'hidden', 'important');
         place.setAttribute('aria-hidden', 'true');
+      }
+      /* The core's legacy status overlay must never appear, even while no source is playable. */
+      const panelStyle = document.getElementById('ultron-stable-world-feed-style');
+      if (!panelStyle) {
+        const style = document.createElement('style');
+        style.id = 'ultron-stable-world-feed-style';
+        style.textContent = '#ultron-clean-core .uc-worldcam-place{display:none!important;visibility:hidden!important;opacity:0!important} #ultron-clean-core .uc-worldcam-frame{background:transparent!important}';
+        document.head.appendChild(style);
       }
       const badge = getBadge();
       if (badge) {
@@ -412,7 +422,7 @@
           if (!/^https:\/\/[^\s]+\.m3u8(?:\?|$)/i.test(url)) return null;
           return [String(p.display_name || p.name || 'WORLD FEED').toUpperCase(), url];
         }).filter(Boolean);
-        if (usable.length) pool = usable.sort(() => Math.random() - 0.5).slice(0, 240);
+        if (usable.length) pool = usable.sort(() => Math.random() - 0.5).slice(0, 1000);
       } catch (_) {}
     };
 
