@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-8';
+  const VERSION = 'ultron-core-rebuild-9';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -37,7 +37,7 @@
   function buildOverlay() {
     let el = document.getElementById(overlayId); if (el) el.remove();
     el = document.createElement('section'); el.id = overlayId; el.setAttribute('role','application'); el.setAttribute('aria-label','ULTRON interactive neural core');
-    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><aside class="uc-worldcam" aria-label="Rotating public world camera feed"><div class="uc-worldcam-head"><span class="uc-worldcam-dot"></span><span>WORLD FEED</span><span class="uc-worldcam-live">LIVE</span></div><iframe class="uc-worldcam-frame" title="Public world camera feed" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" loading="eager"></iframe><div class="uc-worldcam-place">CONNECTING TO PUBLIC CAM</div></aside><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
+    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><aside class="uc-worldcam" aria-label="Rotating public world camera feed"><div class="uc-worldcam-head"><span class="uc-worldcam-dot"></span><span>WORLD FEED</span><span class="uc-worldcam-live">LIVE</span></div><video class="uc-worldcam-frame" title="Public world camera feed" autoplay muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen"></video><div class="uc-worldcam-place">CONNECTING TO PUBLIC CAM</div></aside><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
     const style = document.createElement('style'); style.id='ultron-clean-core-style'; style.textContent=`
       body.${scopedUiClass} #jarvis-wake-word-toggle,body.${scopedUiClass} #jarvis-hand-gesture-toggle,body.${scopedUiClass} #jarvis-hand-gesture-status,body.${scopedUiClass} #jarvis-web-bridge-panel{display:none!important;visibility:hidden!important;pointer-events:none!important}\n      #${overlayId}{position:fixed;inset:0;z-index:2147483000;background:#050302;color:#ff8a32;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;isolation:isolate;touch-action:none}
       #${overlayId} .uc-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
@@ -50,7 +50,7 @@
       #${overlayId} .uc-worldcam-head{height:20px;display:flex;align-items:center;gap:5px;padding:0 6px;color:#ffb37a;font:700 7px/1 Inter,system-ui,sans-serif;letter-spacing:.12em;background:rgba(255,105,33,.12)}
       #${overlayId} .uc-worldcam-dot{width:5px;height:5px;border-radius:50%;background:#ff572c;box-shadow:0 0 7px #ff572c;animation:ucCamPulse 1.2s infinite}
       #${overlayId} .uc-worldcam-live{margin-left:auto;color:#ff7958}
-      #${overlayId} .uc-worldcam-frame{display:block;width:100%;height:calc(100% - 20px);border:0;background:#090604}
+      #${overlayId} .uc-worldcam-frame{display:block;width:100%;height:calc(100% - 20px);border:0;background:#090604;object-fit:cover;pointer-events:none;visibility:hidden}
       #${overlayId} .uc-worldcam-place{position:absolute;left:4px;right:4px;bottom:4px;padding:3px 4px;background:rgba(0,0,0,.72);color:#ffd0ae;font:600 7px/1.3 Inter,system-ui,sans-serif;letter-spacing:.05em;text-align:center;pointer-events:none}
       @keyframes ucCamPulse{50%{opacity:.35}}
       @media(max-width:600px){#${overlayId} .uc-worldcam{top:64px;right:15px;width:104px}#${overlayId} .uc-worldcam-head{height:18px;font-size:6px}#${overlayId} .uc-worldcam-frame{height:calc(100% - 18px)}}
@@ -59,26 +59,66 @@
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
     const worldCams=[
-      {name:'MONTEREY BAY · SEA OTTERS',url:'https://www.youtube.com/embed/abbR-Ttd-cA?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'VENICE · GRAND CANAL',url:'https://www.youtube.com/embed/1-iS7LArMPA?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'KATMAI · ALASKA BEARS',url:'https://www.youtube.com/embed/J7ZrIDvqlic?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'TEMBE · SOUTH AFRICA',url:'https://www.youtube.com/embed/0P_LBKqVbfs?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'CHENGDU · GIANT PANDAS',url:'https://www.youtube.com/embed/SUXPnIEpbn4?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'MIAMI · CORAL CITY',url:'https://www.youtube.com/embed/7i8ARjIeM2k?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'CALIFORNIA · PENGUIN BEACH',url:'https://www.youtube.com/embed/GSxpCbXsvtI?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'GEORGIA · OCEAN VOYAGER',url:'https://www.youtube.com/embed/8WTFWvePutc?autoplay=1&mute=1&controls=0&playsinline=1'}
+      {name:'KRAKÓW · MAIN SQUARE',url:'https://hoktastream1.webcamera.pl/krakow_cam_da9ab3/krakow_cam_da9ab3.stream/playlist.m3u8',type:'hls'},
+      {name:'KRAKÓW · NOWA HUTA',url:'https://hoktastream4.webcamera.pl/krakow_cam_c4feaa/krakow_cam_c4feaa.stream/playlist.m3u8',type:'hls'},
+      {name:'KRAKÓW · ZABIERZÓW',url:'https://hoktastream2.webcamera.pl/krakow_cam_4c3e37/krakow_cam_4c3e37.stream/playlist.m3u8',type:'hls'}
     ];
-    let worldIndex=0;
-    const showWorldCam=()=>{
-      if(!active||!worldFrame?.isConnected)return;
-      const cam=worldCams[worldIndex%worldCams.length];
+    let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false;
+    const destroyWorldHls=()=>{if(worldHls){try{worldHls.destroy()}catch(_){}worldHls=null;}};
+    const nextWorldCam=()=>{
+      if(!active||!worldFrame?.isConnected||worldCamLoading)return;
+      worldCamLoading=true; worldCamStarted=false;
+      if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
+      destroyWorldHls();
+      try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load();}catch(_){}
+      const cam=worldCams[worldIndex%worldCams.length]; worldIndex=(worldIndex+1)%worldCams.length;
       worldPlace.textContent=cam.name;
-      worldFrame.src=cam.url;
-      worldIndex=(worldIndex+1)%worldCams.length;
+      worldFrame.style.visibility='hidden';
+      const failed=()=>{
+        if(!worldCamLoading)return;
+        worldCamLoading=false;
+        if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
+        worldFrame.style.visibility='hidden';
+        destroyWorldHls();
+        // Never leave a failed or white player visible; silently try the next public feed.
+        setTimeout(nextWorldCam,250);
+      };
+      const started=()=>{
+        if(!worldCamLoading)return;
+        worldCamStarted=true;worldCamLoading=false;
+        if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
+        worldFrame.style.visibility='visible';
+        worldPlace.textContent=cam.name;
+        try{const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}
+      };
+      worldFrame.onplaying=started;
+      worldFrame.onerror=failed;
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failed()},10000);
+      if(cam.type==='hls'){
+        if(worldFrame.canPlayType('application/vnd.apple.mpegurl')){
+          worldFrame.src=cam.url;worldFrame.load();
+          const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{});
+        }else{
+          const attachHls=()=>{
+            if(!window.Hls||!window.Hls.isSupported()){failed();return;}
+            worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:12});
+            worldHls.on(window.Hls.Events.ERROR,(_,data)=>{if(data?.fatal)failed()});
+            worldHls.on(window.Hls.Events.MANIFEST_PARSED,()=>{const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{});});
+            worldHls.loadSource(cam.url);worldHls.attachMedia(worldFrame);
+          };
+          if(window.Hls)attachHls();
+          else{
+            const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';loader.async=true;
+            loader.onload=attachHls;loader.onerror=failed;document.head.appendChild(loader);
+          }
+        }
+      }
     };
-    showWorldCam();
-    window.__ultronWorldCamTimer=setInterval(showWorldCam,30000);
-    el.querySelector('.uc-exit').addEventListener('click',()=>{if(window.__ultronWorldCamTimer){clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}});
+    // A successful feed stays visible for 30 seconds; failed feeds are skipped automatically.
+    nextWorldCam();
+    worldCamTimer=setInterval(()=>{if(!worldCamLoading)nextWorldCam()},30000);
+    window.__ultronWorldCamTimer=worldCamTimer;
+    el.querySelector('.uc-exit').addEventListener('click',()=>{if(worldCamTimer)clearInterval(worldCamTimer);if(worldCamWatchdog)clearTimeout(worldCamWatchdog);destroyWorldHls();window.__ultronWorldCamTimer=null;});
     const setStatus=message=>{status.textContent=message||'';};
     form.addEventListener('pointerdown',e=>e.stopPropagation());
     form.addEventListener('click',e=>e.stopPropagation());
