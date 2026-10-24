@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-20261024a';
+  const VERSION = 'env-shortcuts-20261024b';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -15,6 +15,7 @@
   ];
   const findVoiceAnalyzer=()=>Array.from(document.querySelectorAll('.panel-title')).find(t=>/VOICE\s+ANALYZER/i.test(t.textContent||''))?.closest('.panel')||null;
   const loadScript=(id,src)=>new Promise((resolve,reject)=>{if(document.getElementById(id)){resolve();return}const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
+  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron-commands.js')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
   const loadUltron=async()=>{
     if(typeof window.ULTRON?.open!=='function') await loadScript('jarvis-ultron-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron.js');
     window.ULTRON?.open?.();
@@ -51,6 +52,6 @@
     });
     oldPanel.parentNode.insertBefore(panel,oldPanel);
   };
-  const start=()=>{if(document.getElementById(PANEL_ID))return;let tries=0;const timer=setInterval(()=>{tries++;buildPanel();if(document.getElementById(PANEL_ID)||tries>=100)clearInterval(timer)},100)};
+  const start=async()=>{await loadUltronCommands();if(document.getElementById(PANEL_ID))return;let tries=0;const timer=setInterval(()=>{tries++;buildPanel();if(document.getElementById(PANEL_ID)||tries>=100)clearInterval(timer)},100)};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
