@@ -22,7 +22,7 @@
   const isUltronOpen=text=>/^(hey jarvis )?(please )?(open|launch|start|activate|engage|enable|boot|bring up|show|display|summon|release|unleash|deploy|initialize|power up|wake up) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(take me to|go to|enter|enter the) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(i want|i need) (the )?ultron( environment| mode| system)?$/.test(normalize(text));
   const isUltronClose=text=>/^(hey jarvis )?(please )?(close|exit|quit|dismiss|hide|shut|deactivate|disable|stop|terminate|end|leave) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(stand down|power down|put away|take down) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(return|go back|take me back) (from|out of) (the )?ultron$/.test(normalize(text)) || /^ultron (close|exit|quit|shutdown|shut down|offline|sleep)$/.test(normalize(text));
 
-  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-20261024p')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
+  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-ultron-core23-20261024')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
   const loadUltron=async()=>{
     try {
       if (window.ULTRON?.version !== 'ultron-core-rebuild-23') { document.getElementById('jarvis-ultron-core-loader')?.remove(); await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-23'); }
