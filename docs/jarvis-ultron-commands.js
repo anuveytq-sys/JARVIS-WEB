@@ -38,43 +38,85 @@
   function installFastWorldFeedFailover(){
     if(window.__ULTRON_FAST_WORLD_FEED_FAILOVER__)return;
     window.__ULTRON_FAST_WORLD_FEED_FAILOVER__=true;
-    let observer=null, poll=null, watchdog=null, lastVideo=null, lastState='';
+    let observer=null, poll=null, watchdog=null, stallTimer=null, lastVideo=null, lastState='', lastTime=-1, lastAdvanceAt=0;
     const MAX_CHECK_MS=2800;
+    const MAX_STALL_MS=2400;
+    const MAX_WAIT_MS=1800;
     const clearWatchdog=()=>{if(watchdog){clearTimeout(watchdog);watchdog=null;}};
+    const clearStall=()=>{if(stallTimer){clearTimeout(stallTimer);stallTimer=null;}};
+    const resetVideoState=(video)=>{
+      clearWatchdog();clearStall();lastVideo=video||null;lastState='';lastTime=Number(video?.currentTime)||0;lastAdvanceAt=Date.now();
+    };
     const stop=()=>{
-      clearWatchdog();
+      clearWatchdog();clearStall();
       if(poll){clearInterval(poll);poll=null;}
       if(observer){observer.disconnect();observer=null;}
-      lastVideo=null;lastState='';
+      resetVideoState(null);
+    };
+    const forceNext=(video)=>{
+      if(!video||!video.isConnected)return;
+      const panel=video.closest('.uc-worldcam');
+      const status=panel?.querySelector('.uc-worldcam-place')?.textContent||'';
+      if(/CHECKING LIVE FEED|SEARCHING FOR LIVE FEED|CONNECTING TO PUBLIC CAM|RECONNECTING/i.test(status)||video.readyState<2||video.style.visibility!=='visible'){
+        // The ULTRON core owns the real source list and its failover handler.
+        // Dispatching its existing media-error path keeps all existing UI/features intact.
+        try{video.dispatchEvent(new Event('error'));}catch(_){}
+      }else{
+        // A feed that was already LIVE but has stopped advancing must not hold the panel black.
+        try{video.dispatchEvent(new Event('error'));}catch(_){}
+      }
+      lastState='';
+      lastAdvanceAt=Date.now();
     };
     const arm=(video)=>{
       if(!video||!video.isConnected)return;
       if(video===lastVideo&&lastState==='armed')return;
-      clearWatchdog();lastVideo=video;lastState='armed';
+      clearWatchdog();clearStall();lastVideo=video;lastState='armed';lastTime=Number(video.currentTime)||0;lastAdvanceAt=Date.now();
       watchdog=setTimeout(()=>{
         watchdog=null;
         if(!video.isConnected||video.style.visibility==='visible')return;
         const panel=video.closest('.uc-worldcam');
         const status=panel?.querySelector('.uc-worldcam-place')?.textContent||'';
         if(/CHECKING LIVE FEED|SEARCHING FOR LIVE FEED|CONNECTING TO PUBLIC CAM|RECONNECTING/i.test(status)||video.readyState<2){
-          // The core's normal media-error handler advances to the next public feed.
-          // This guard only shortens a failed candidate's checking window to <3 seconds.
-          try{video.dispatchEvent(new Event('error'));}catch(_){}
+          forceNext(video);
         }
         lastState='';
       },MAX_CHECK_MS);
+    };
+    const armStall=(video,delay=MAX_STALL_MS)=>{
+      if(!video||!video.isConnected)return;
+      clearStall();
+      stallTimer=setTimeout(()=>{
+        stallTimer=null;
+        if(!video.isConnected)return;
+        const panel=video.closest('.uc-worldcam');
+        const status=panel?.querySelector('.uc-worldcam-place')?.textContent||'';
+        const now=Number(video.currentTime)||0;
+        const advancing=video.readyState>=2&&now>lastTime+0.08;
+        if(video.style.visibility==='visible'&&!/CHECKING LIVE FEED|SEARCHING FOR LIVE FEED|CONNECTING TO PUBLIC CAM|RECONNECTING/i.test(status)&&!advancing){
+          forceNext(video);
+        }
+      },delay);
     };
     const monitor=()=>{
       const panel=document.getElementById('ultron-clean-core')?.querySelector('.uc-worldcam');
       const video=panel?.querySelector('.uc-worldcam-frame');
       if(!video){stop();return;}
-      if(video!==lastVideo){clearWatchdog();lastVideo=video;lastState='';}
+      if(video!==lastVideo){resetVideoState(video);}
       const status=panel.querySelector('.uc-worldcam-place')?.textContent||'';
       const checking=/CHECKING LIVE FEED|SEARCHING FOR LIVE FEED|CONNECTING TO PUBLIC CAM|RECONNECTING/i.test(status);
-      if(video.style.visibility==='visible'&&!checking){clearWatchdog();lastState='live';return;}
-      if(checking)arm(video);else if(lastState==='armed'){clearWatchdog();lastState='';}
+      const now=Number(video.currentTime)||0;
+      if(video.readyState>=2&&now>lastTime+0.08){lastTime=now;lastAdvanceAt=Date.now();clearStall();}
+      if(video.style.visibility==='visible'&&!checking){
+        clearWatchdog();
+        lastState='live';
+        if(video.paused||video.readyState<2||Date.now()-lastAdvanceAt>MAX_STALL_MS)armStall(video,0);
+        return;
+      }
+      if(checking)arm(video);
+      else if(lastState==='armed'){clearWatchdog();lastState='';}
     };
-    poll=setInterval(monitor,200);
+    poll=setInterval(monitor,250);
     monitor();
     observer=new MutationObserver(monitor);
     observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','src']});
@@ -106,7 +148,7 @@
   }
 
   const install = () => {
-    if (typeof window.sendCommand !== 'function') return false;
+    if (typeof window.sendCommand!=='function') return false;
     if (window.sendCommand.__jarvisUltronFlexible) return true;
     const original = window.sendCommand;
     const wrapped = async function(command) {
@@ -126,7 +168,7 @@
   }, 100);
 
   window.JARVIS_ULTRON_COMMANDS = {
-    version: 'ultron-commands-20261024t',
+    version: 'ultron-commands-20261024u',
     open: openUltron,
     close: closeUltron,
     handle,
