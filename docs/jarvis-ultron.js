@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-14';
+  const VERSION = 'ultron-core-rebuild-15';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -178,7 +178,7 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
         },650);
       };
       worldFrame.onerror=failWorldCam;
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam()},8500);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam()},18000);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
@@ -197,11 +197,12 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
         }else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
         else failWorldCam();
       };
-      // Prefer hls.js where supported; native HLS is the fallback for Safari/iOS.
-      if(window.Hls)tryHls();
+      // Prefer native HLS on Safari/iOS; use hls.js where native HLS is unavailable.
+      if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
+      else if(window.Hls)tryHls();
       else{
         const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';loader.async=true;
-        loader.onload=tryHls;loader.onerror=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam()};
+        loader.onload=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else tryHls()};loader.onerror=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam()};
         document.head.appendChild(loader);
       }
     };
