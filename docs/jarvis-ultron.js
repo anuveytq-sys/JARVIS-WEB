@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-2';
+  const VERSION = 'ultron-core-rebuild-3';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -12,6 +12,7 @@
   let root, core, coreGlow, network, particles, ringGroup, active = false;
   let drag = false, lastX = 0, lastY = 0, rotX = 0, rotY = 0, targetX = 0, targetY = 0, zoom = 1;
   const overlayId = 'ultron-clean-core';
+  const scopedUiClass = 'jarvis-ultron-focused';
   const loadScript = (url) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = url; script.async = true; script.dataset.ultronThree = '1';
@@ -38,7 +39,7 @@
     el = document.createElement('section'); el.id = overlayId; el.setAttribute('role','application'); el.setAttribute('aria-label','ULTRON interactive neural core');
     el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>';
     const style = document.createElement('style'); style.id='ultron-clean-core-style'; style.textContent=`
-      #${overlayId}{position:fixed;inset:0;z-index:2147483000;background:#050302;color:#ff8a32;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;isolation:isolate;touch-action:none}
+      body.${scopedUiClass} #jarvis-wake-word-toggle,body.${scopedUiClass} #jarvis-hand-gesture-toggle,body.${scopedUiClass} #jarvis-hand-gesture-status,body.${scopedUiClass} #jarvis-web-bridge-panel{display:none!important;visibility:hidden!important;pointer-events:none!important}\n      #${overlayId}{position:fixed;inset:0;z-index:2147483000;background:#050302;color:#ff8a32;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;isolation:isolate;touch-action:none}
       #${overlayId} .uc-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
       #${overlayId} .uc-vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,.24) 66%,#030201 100%)}
       #${overlayId} .uc-mark{position:absolute;top:28px;left:32px;font-size:clamp(18px,2.4vw,30px);font-weight:800;letter-spacing:.34em;color:#ff8b35;text-shadow:0 0 24px #ff5c16}
@@ -63,14 +64,30 @@
     const links=[]; for(let i=0;i<N;i++){const candidates=[];for(let j=Math.max(0,i-10);j<Math.min(N,i+11);j++){if(i===j)continue;const d=nodes[i].distanceTo(nodes[j]);if(d<.52)candidates.push([d,j]);}candidates.sort((a,b)=>a[0]-b[0]);for(const [,j] of candidates.slice(0,5))if(j>i)links.push(nodes[i].x,nodes[i].y,nodes[i].z,nodes[j].x,nodes[j].y,nodes[j].z);}
     const lineGeo=new T.BufferGeometry();lineGeo.setAttribute('position',new T.Float32BufferAttribute(links,3));network=new T.LineSegments(lineGeo,new T.LineBasicMaterial({color:0xff641b,transparent:true,opacity:.22,blending:T.AdditiveBlending,depthWrite:false}));root.add(network);
     const pointGeo=new T.BufferGeometry();pointGeo.setAttribute('position',new T.Float32BufferAttribute(positions,3));particles=new T.Points(pointGeo,new T.PointsMaterial({color:0xffa15a,size:.035,transparent:true,opacity:.9,blending:T.AdditiveBlending,depthWrite:false,sizeAttenuation:true}));root.add(particles);
-    core=new T.Mesh(new T.IcosahedronGeometry(.82,5),new T.MeshPhysicalMaterial({color:0x8d2d0a,emissive:0xff4d0a,emissiveIntensity:1.5,roughness:.19,metalness:.35,clearcoat:1,clearcoatRoughness:.12,transmission:.08,transparent:true,opacity:.92}));root.add(core);
-    coreGlow=new T.Mesh(new T.SphereGeometry(.58,48,48),new T.MeshBasicMaterial({color:0xff7b22,transparent:true,opacity:.18,blending:T.AdditiveBlending,depthWrite:false}));root.add(coreGlow);
-    const nucleus=new T.Mesh(new T.IcosahedronGeometry(.36,4),new T.MeshStandardMaterial({color:0xffad55,emissive:0xff4c08,emissiveIntensity:3.2,roughness:.2,metalness:.25}));root.add(nucleus);
+    const coreGeo=new T.IcosahedronGeometry(.82,6);
+    const corePos=coreGeo.attributes.position;
+    for(let i=0;i<corePos.count;i++){
+      const x=corePos.getX(i),y=corePos.getY(i),z=corePos.getZ(i);
+      const n=1+.035*Math.sin(x*19+y*13)*Math.sin(z*17-y*11)+.018*Math.sin(x*37+z*23);
+      corePos.setXYZ(i,x*n,y*n,z*n);
+    }
+    coreGeo.computeVertexNormals();
+    core=new T.Mesh(coreGeo,new T.MeshPhysicalMaterial({color:0x541706,emissive:0xff3c08,emissiveIntensity:1.8,roughness:.24,metalness:.52,clearcoat:1,clearcoatRoughness:.08,transparent:true,opacity:.96}));root.add(core);
+    coreGlow=new T.Mesh(new T.SphereGeometry(.72,64,48),new T.MeshBasicMaterial({color:0xff5b12,transparent:true,opacity:.11,blending:T.AdditiveBlending,depthWrite:false,side:T.BackSide}));root.add(coreGlow);
+    const plasmaShell=new T.Mesh(new T.SphereGeometry(.64,64,48),new T.MeshPhysicalMaterial({color:0xff681c,emissive:0xff3d05,emissiveIntensity:2.6,roughness:.12,metalness:.18,transparent:true,opacity:.28,side:T.DoubleSide,blending:T.AdditiveBlending,depthWrite:false}));root.add(plasmaShell);
+    const nucleusGeo=new T.IcosahedronGeometry(.39,5);
+    const nucleusPos=nucleusGeo.attributes.position;
+    for(let i=0;i<nucleusPos.count;i++){const x=nucleusPos.getX(i),y=nucleusPos.getY(i),z=nucleusPos.getZ(i);const n=1+.075*Math.sin(x*27+z*18)*Math.cos(y*24-x*11);nucleusPos.setXYZ(i,x*n,y*n,z*n);}
+    nucleusGeo.computeVertexNormals();
+    const nucleus=new T.Mesh(nucleusGeo,new T.MeshStandardMaterial({color:0xffa64b,emissive:0xff4b08,emissiveIntensity:4.2,roughness:.16,metalness:.32}));root.add(nucleus);
+    const corona=new T.Group();root.add(corona);
+    for(let i=0;i<3;i++){const arc=new T.Mesh(new T.TorusGeometry(.73+i*.085,.012-i*.002,8,180,Math.PI*1.42),new T.MeshBasicMaterial({color:i===1?0xffb15b:0xff4b0b,transparent:true,opacity:.65,blending:T.AdditiveBlending,depthWrite:false}));arc.rotation.set(.7+i*.9,.35+i*.5,.2+i*.7);corona.add(arc);}
+    const coreLight=new T.PointLight(0xff4b0c,38,9);root.add(coreLight);
     ringGroup=new T.Group();root.add(ringGroup);for(let i=0;i<4;i++){const ring=new T.Mesh(new T.TorusGeometry(1.18+i*.18,.006+(i%2)*.003,6,220),new T.MeshBasicMaterial({color:i%2?0xff4d13:0xffa04b,transparent:true,opacity:.52,blending:T.AdditiveBlending,depthWrite:false}));ring.rotation.set(.7+i*.52,.3+i*.8,.2+i*.42);ringGroup.add(ring);}
     const halo=new T.Mesh(new T.SphereGeometry(2.5,32,24),new T.MeshBasicMaterial({color:0xff5a16,wireframe:true,transparent:true,opacity:.035,blending:T.AdditiveBlending,depthWrite:false}));root.add(halo);
   }
-  function cleanup(){active=false;cancelAnimationFrame(frame);if(resizeHandler)window.removeEventListener('resize',resizeHandler);const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){renderer.dispose();renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
+  function cleanup(){active=false;document.body.classList.remove(scopedUiClass);cancelAnimationFrame(frame);if(resizeHandler)window.removeEventListener('resize',resizeHandler);const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){renderer.dispose();renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
   function close(){cleanup();}
-  function open(){if(active)return;active=true;loadThree().then(()=>{if(!active)return;const el=buildOverlay();makeScene(el);const canvas=el.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.3,Math.min(1.3,targetX));lastX=e.clientX;lastY=e.clientY});const stopDrag=()=>{drag=false};canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);wheelHandler=e=>{e.preventDefault();zoom=Math.max(.68,Math.min(1.7,zoom+(e.deltaY>0?.06:-.06)))};canvas.addEventListener('wheel',wheelHandler,{passive:false});resizeHandler=()=>{if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8))};window.addEventListener('resize',resizeHandler);let t=0;const animate=()=>{if(!active||!renderer)return;frame=requestAnimationFrame(animate);t+=.004;rotX+=(targetX-rotX)*.045;rotY+=(targetY-rotY)*.045;root.rotation.x=rotX+Math.sin(t*.3)*.035;root.rotation.y=rotY+t*.11;root.rotation.z=Math.sin(t*.22)*.04;core.rotation.x=t*.18;core.rotation.y=-t*.23;coreGlow.scale.setScalar(1+Math.sin(t*2.1)*.055);ringGroup.rotation.y=-t*.12;ringGroup.rotation.x=Math.sin(t*.4)*.12;camera.position.z+=(11/zoom-camera.position.z)*.08;renderer.render(scene,camera)};animate();}).catch(error=>{active=false;console.error('[ULTRON] core startup failed',error);alert('ULTRON core could not load. Please check your connection, then reload JARVIS. If the problem continues, WebGL may be unavailable in this browser.');});}
+  function open(){if(active)return;active=true;document.body.classList.add(scopedUiClass);loadThree().then(()=>{if(!active)return;const el=buildOverlay();makeScene(el);const canvas=el.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.3,Math.min(1.3,targetX));lastX=e.clientX;lastY=e.clientY});const stopDrag=()=>{drag=false};canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);wheelHandler=e=>{e.preventDefault();zoom=Math.max(.68,Math.min(1.7,zoom+(e.deltaY>0?.06:-.06)))};canvas.addEventListener('wheel',wheelHandler,{passive:false});resizeHandler=()=>{if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8))};window.addEventListener('resize',resizeHandler);let t=0;const animate=()=>{if(!active||!renderer)return;frame=requestAnimationFrame(animate);t+=.004;rotX+=(targetX-rotX)*.045;rotY+=(targetY-rotY)*.045;root.rotation.x=rotX+Math.sin(t*.3)*.035;root.rotation.y=rotY+t*.11;root.rotation.z=Math.sin(t*.22)*.04;core.rotation.x=t*.18;core.rotation.y=-t*.23;coreGlow.scale.setScalar(1+Math.sin(t*2.1)*.055);ringGroup.rotation.y=-t*.12;ringGroup.rotation.x=Math.sin(t*.4)*.12;camera.position.z+=(11/zoom-camera.position.z)*.08;renderer.render(scene,camera)};animate();}).catch(error=>{active=false;document.body.classList.remove(scopedUiClass);console.error('[ULTRON] core startup failed',error);alert('ULTRON core could not load. Please check your connection, then reload JARVIS. If the problem continues, WebGL may be unavailable in this browser.');});}
   window.ULTRON={version:VERSION,open,close};
 })();
