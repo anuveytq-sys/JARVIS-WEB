@@ -40,9 +40,9 @@
       if (!window.ULTRON) {
         await new Promise((resolve, reject) => {
           const existing = document.getElementById('jarvis-ultron-core-loader');
-          if (existing) { existing.addEventListener('load', resolve, { once: true }); existing.addEventListener('error', reject, { once: true }); return; }
+          if (existing) existing.remove();
           const script = document.createElement('script'); script.id = 'jarvis-ultron-core-loader';
-          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-1'; script.onload = resolve; script.onerror = reject; document.head.appendChild(script);
+          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-2'; script.onload = resolve; script.onerror = reject; document.head.appendChild(script);
         });
       }
       window.ULTRON?.open?.(); return true;
@@ -78,7 +78,7 @@
   }, 100);
 
   window.JARVIS_ULTRON_COMMANDS = {
-    version: 'ultron-commands-20261024a',
+    version: 'ultron-commands-20261024b',
     open: openUltron,
     close: closeUltron,
     handle,
