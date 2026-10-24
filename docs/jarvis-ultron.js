@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-10';
+  const VERSION = 'ultron-core-rebuild-11';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -59,9 +59,53 @@
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
     const worldCams=[
-      {name:'KRAKÓW · MAIN SQUARE',url:'https://hoktastream1.webcamera.pl/krakow_cam_da9ab3/krakow_cam_da9ab3.stream/playlist.m3u8'},
-      {name:'KRAKÓW · NOWA HUTA',url:'https://hoktastream4.webcamera.pl/krakow_cam_c4feaa/krakow_cam_c4feaa.stream/playlist.m3u8'},
-      {name:'KRAKÓW · ZABIERZÓW',url:'https://hoktastream2.webcamera.pl/krakow_cam_4c3e37/krakow_cam_4c3e37.stream/playlist.m3u8'}
+      {name:"BURLEIGH BEACH · AUSTRALIA",url:"https://d1nm4r8e5x1rwd.cloudfront.net/cw/burleighheadscamera.stream/playlist.m3u8"},
+      {name:"CURRUMBIN BEACH · AUSTRALIA",url:"https://d1nm4r8e5x1rwd.cloudfront.net/cw/currumbincamera.stream/playlist.m3u8"},
+      {name:"NARROWNECK · AUSTRALIA",url:"https://d1nm4r8e5x1rwd.cloudfront.net/cw/narrowneckhighcamera.stream/playlist.m3u8"},
+      {name:"SURFERS PARADISE · AUSTRALIA",url:"https://d1nm4r8e5x1rwd.cloudfront.net/cw/surfersparadisecamera.stream/playlist.m3u8"},
+      {name:"CELEBRATION SQUARE · CANADA",url:"https://webvideo.mississauga.ca/StageWebcam/LiveStageWebcam.stream-audiodestin/playlist.m3u8"},
+      {name:"MISSISSAUGA · CANADA",url:"https://webvideo.mississauga.ca/BalconyWebcam/LiveWebcam.stream/chunklist_w1473770124.m3u8"},
+      {name:"BOŽÍ DAR · CZECHIA",url:"https://kamery3.wolfnet.cz/bozi_dar.m3u8"},
+      {name:"BOŽÍ DAR PANORAMA · CZECHIA",url:"https://kamery2.wolfnet.cz/bozi_vyhlidka1.m3u8"},
+      {name:"HORY · CZECHIA",url:"https://kamery.wolfnet.cz/185.73.102.35-lmk.m3u8"},
+      {name:"KARLOVY VARY · CZECHIA",url:"https://kamery2.wolfnet.cz/krusna.m3u8"},
+      {name:"KARLOVY VARY PANORAMA · CZECHIA",url:"https://kamery2.wolfnet.cz/panorama.m3u8"},
+      {name:"KLÍNOVEC · CZECHIA",url:"https://kamery2.wolfnet.cz/Klinovec_1.m3u8"},
+      {name:"THE GRÖMITZ COAST · GERMANY",url:"https://osl9.lvstrm.de/hls/stream.m3u8"},
+      {name:"ILLES BALEARS · SPAIN",url:"https://str2.eivotv.es/canal_y/index.m3u8"},
+      {name:"ILLES BALEARS COAST · SPAIN",url:"https://str2.eivotv.es/canal_r/index.m3u8"},
+      {name:"ILLES BALEARS VIEW · SPAIN",url:"https://str2.eivotv.es/canal_ai/index.m3u8"},
+      {name:"ILLES BALEARS HARBOUR · SPAIN",url:"https://str2.eivotv.es/canal_o/index.m3u8"},
+      {name:"COASTAL VIEW · SPAIN",url:"https://str4.strei.es/canal_s/index.m3u8"},
+      {name:"ISLAND PANORAMA · SPAIN",url:"https://str2.eivotv.es/canal_p/index.m3u8"},
+      {name:"ISLAND COAST · SPAIN",url:"https://str4.strei.es/canal_ao/index.m3u8"},
+      {name:"ISLAND VIEW · SPAIN",url:"https://str2.eivotv.es/canal_ah/index.m3u8"},
+      {name:"AETOLIA-ACARNANIA · GREECE",url:"https://livecameras.gr:30443/live/asta1/playlist.m3u8"},
+      {name:"GREEK COUNTRYSIDE · GREECE",url:"https://livecameras.gr:30443/live/gaval1/playlist.m3u8"},
+      {name:"ARCADIA · GREECE",url:"https://livecameras.gr:30443/live/trip1/playlist.m3u8"},
+      {name:"ATTICA MOUNTAIN VIEW · GREECE",url:"https://livecameras.gr:30443/live/parn1/playlist.m3u8"},
+      {name:"ATTICA · GREECE",url:"https://livecameras.gr:30443/live/dros1/playlist.m3u8"},
+      {name:"FYLI · GREECE",url:"https://livecameras.gr:30443/live/fyli1/playlist.m3u8"},
+      {name:"KIFISIA · GREECE",url:"https://livecameras.gr:30443/live/kifis1/playlist.m3u8"},
+      {name:"CINDERFORD · UNITED KINGDOM",url:"https://s159.ipcamlive.com/streams/9fsgtp29ruh6zek1f/stream.m3u8"},
+      {name:"TENBY HARBOUR · UNITED KINGDOM",url:"https://s74.ipcamlive.com/streams/4azcyiwhlasoszw6g/stream.m3u8"},
+      {name:"RIVER BURE · UNITED KINGDOM",url:"https://s101.ipcamlive.com/streams/65jrzbexkvsgqd4ci/stream.m3u8"},
+      {name:"CASTEL VOLTURNO · ITALY",url:"https://5e0add8153fcd.streamlock.net:1936/vedetta/castel-volturno.stream/playlist.m3u8"},
+      {name:"FLORENCE · ITALY",url:"https://5e0add8153fcd.streamlock.net:1936/vedetta/via-della-scala.stream/chunklist_w1359048502.m3u8"},
+      {name:"ANDRYCHÓW · POLAND",url:"https://hoktastream3.webcamera.pl/andrychow_cam_3aad9b/andrychow_cam_3aad9b.stream/playlist.m3u8"},
+      {name:"BUKOWINA TATRZAŃSKA · POLAND",url:"https://hoktastream1.webcamera.pl/bukovina_cam_7aa04f/bukovina_cam_7aa04f.stream/playlist.m3u8"},
+      {name:"KURUCOWY WIERCH · POLAND",url:"https://hoktastream1.webcamera.pl/skywind_cam_3c5be6/skywind_cam_3c5be6.stream/playlist.m3u8"},
+      {name:"WARSAW CASTLE SQUARE · POLAND",url:"https://hoktastream2.webcamera.pl/warszawa_cam_5f3b1a/warszawa_cam_5f3b1a.stream/chunks.m3u8"},
+      {name:"DZIWNÓW · POLAND",url:"https://hoktastream1.webcamera.pl/dziwnowum_cam_a4181f/dziwnowum_cam_a4181f.stream/playlist.m3u8"},
+      {name:"DĘBKI BEACH · POLAND",url:"https://hoktastream2.webcamera.pl/debki_cam_284a24/debki_cam_284a24.stream/playlist.m3u8"},
+      {name:"ALVOR · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/alvor/playlist.m3u8"},
+      {name:"APÚLIA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/bcapulia/playlist.m3u8"},
+      {name:"ARMAÇÃO DE PÊRA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/armacaodepera/playlist.m3u8"},
+      {name:"ARRIFANA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/arrifana/playlist.m3u8"},
+      {name:"CARCAVELOS · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/carcavelos/playlist.m3u8"},
+      {name:"COSTA DA CAPARICA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/costacaparicacds/playlist.m3u8"},
+      {name:"RIVIERA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/riviera/playlist.m3u8"},
+      {name:"TARQUINHO · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/bctarquinho/playlist.m3u8"}
     ];
     let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     const destroyWorldHls=()=>{if(worldHls){try{worldHls.destroy()}catch(_){}worldHls=null;}};
@@ -121,7 +165,7 @@
     };
     const nextWorldCam=()=>startWorldCam();
     startWorldCam();
-    worldCamTimer=setInterval(()=>{if(!worldCamLoading)startWorldCam()},30000);
+    worldCamTimer=setInterval(()=>{if(!worldCamLoading)startWorldCam()},20000);
     window.__ultronWorldCamTimer=worldCamTimer;
     el.querySelector('.uc-exit').addEventListener('click',()=>{if(worldCamTimer)clearInterval(worldCamTimer);if(worldCamWatchdog)clearTimeout(worldCamWatchdog);destroyWorldHls();worldFrame.onplaying=null;worldFrame.onerror=null;window.__ultronWorldCamTimer=null;});
     const setStatus=message=>{status.textContent=message||'';};
