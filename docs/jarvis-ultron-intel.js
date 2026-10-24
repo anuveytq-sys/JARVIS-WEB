@@ -1,0 +1,27 @@
+/* JARVIS // ULTRON INTELLIGENCE EXTENSION
+   Public/authorized OSINT only. No credential dumps, passwords, private records,
+   unauthorized cameras, or stolen datasets. Lazy-loaded by ULTRON.
+*/
+(()=>{'use strict';if(window.ULTRON_INTEL)return;const S={
+ email:[['XposedOrNot','https://xposedornot.com/'],['HIBP','https://haveibeenpwned.com/'],['Mozilla Monitor','https://monitor.mozilla.org/'],['GitHub Search','https://github.com/search?q=']],
+ username:[['Sherlock','https://github.com/sherlock-project/sherlock'],['Maigret','https://github.com/soxoj/maigret'],['WhatsMyName','https://whatsmyname.app/']],
+ phone:[['PhoneInfoga','https://github.com/sundowndev/phoneinfoga'],['Google public search','https://www.google.com/search?q='],['OpenStreetMap','https://www.openstreetmap.org/search?query=']],
+ domain:[['ICANN RDAP','https://lookup.icann.org/en/lookup'],['DNSViz','https://dnsviz.net/'],['crt.sh','https://crt.sh/?q='],['SecurityTrails','https://securitytrails.com/']],
+ ip:[['RIPEstat','https://stat.ripe.net/'],['ipinfo','https://ipinfo.io/'],['ARIN RDAP','https://search.arin.net/rdap/']],
+ breach:[['XposedOrNot','https://xposedornot.com/'],['HIBP','https://haveibeenpwned.com/'],['Mozilla Monitor','https://monitor.mozilla.org/']],
+ github:[['GitHub Search','https://github.com/search?q='],['GitHub API','https://api.github.com/'],['GitHub Archive','https://www.gharchive.org/']],
+ exposure:[['Shodan','https://www.shodan.io/'],['Censys','https://search.censys.io/'],['ZoomEye','https://www.zoomeye.org/'],['crt.sh','https://crt.sh/?q=']],
+ earth:[['NASA Earthdata','https://www.earthdata.nasa.gov/'],['NASA APIs','https://api.nasa.gov/'],['Copernicus','https://dataspace.copernicus.eu/']],
+ satellite:[['CelesTrak','https://celestrak.org/'],['Space-Track','https://www.space-track.org/'],['N2YO','https://www.n2yo.com/']],
+ news:[['GDELT','https://www.gdeltproject.org/'],['Wikidata','https://www.wikidata.org/'],['Internet Archive','https://web.archive.org/']],
+ maps:[['OpenStreetMap','https://www.openstreetmap.org/'],['Overpass Turbo','https://overpass-turbo.eu/'],['Nominatim','https://nominatim.openstreetmap.org/']],
+ cameras:[['EarthCam public webcams','https://www.earthcam.com/'],['Windy webcams','https://www.windy.com/-Webcams/webcams'],['OSM public data','https://www.openstreetmap.org/']],
+ aircraft:[['OpenSky Network','https://opensky-network.org/'],['ADSB.lol','https://adsb.lol/'],['OpenSky API','https://opensky-network.org/apidoc/']],
+ space:[['NASA','https://www.nasa.gov/'],['NASA APIs','https://api.nasa.gov/'],['Space-Track','https://www.space-track.org/']]
+};
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const enc=x=>encodeURIComponent(String(x||'').trim());
+function render(key,target){const b=document.getElementById('uz-results');if(!b)return;const q=enc(target);b.innerHTML=`<div class="uz-result"><div class="uz-result-title">ULTRON PUBLIC INTELLIGENCE ROUTES</div><div class="uz-result-note">${target?`Target normalized: <b>${esc(target)}</b>`:'Select a source to begin.'} Results are public-source leads, not proof.</div>${(S[key]||[]).map(([n,u])=>`<button class="uz-source" type="button" data-u="${esc(u+(q&&/[?=]$/.test(u)?q:''))}">${esc(n)}</button>`).join('')}</div>`;b.querySelectorAll('.uz-source').forEach(x=>x.onclick=()=>window.open(x.dataset.u,'_blank','noopener,noreferrer'));}
+async function github(t){const b=document.getElementById('uz-results');try{const r=await fetch(`https://api.github.com/search/users?q=${enc(t)}&per_page=6`);if(!r.ok)throw 0;const j=await r.json();b.innerHTML=`<div class="uz-result"><div class="uz-result-title">PUBLIC GITHUB IDENTITY RESULTS: ${j.total_count||0}</div>${(j.items||[]).map(x=>`<div class="uz-result-note"><b>${esc(x.login)}</b><br><button class="uz-source" data-u="${esc(x.html_url)}">OPEN PROFILE</button></div>`).join('')}</div>`;b.querySelectorAll('.uz-source').forEach(x=>x.onclick=()=>window.open(x.dataset.u,'_blank','noopener,noreferrer'));}catch(e){render('github',t)}}
+async function nasa(t){const b=document.getElementById('uz-results');try{const r=await fetch(`https://images-api.nasa.gov/search?q=${enc(t)}&media_type=image&page_size=6`);if(!r.ok)throw 0;const j=await r.json(),a=j.collection?.items||[];b.innerHTML=`<div class="uz-result"><div class="uz-result-title">NASA PUBLIC IMAGERY: ${a.length}</div>${a.map(x=>{let d=x.data?.[0]||{},u=x.links?.[0]?.href||'';return `<div class="uz-result-note"><b>${esc(d.title||'NASA image')}</b><br>${esc((d.description||'').slice(0,160))}<br><button class="uz-source" data-i="${esc(u)}" data-u="${esc(u)}">VIEW</button></div>`}).join('')}</div>`;b.querySelectorAll('.uz-source').forEach(x=>x.onclick=()=>{const c=document.getElementById('uz-camera');if(c&&x.dataset.i)c.innerHTML=`<div class="uz-camera-head">NASA PUBLIC IMAGE</div><img src="${esc(x.dataset.i)}" alt="Public NASA image" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'uz-camera-empty',textContent:'IMAGE UNAVAILABLE'}))">`;window.open(x.dataset.u,'_blank','noopener,noreferrer')});}catch(e){render('earth',t)}}
+window.ULTRON_INTEL={sources:S,run:(key,target)=>{if(key==='github')return github(target);if(key==='earth'||key==='space')return nasa(target);render(key,target)},version:'1.1-public'};
+})();
