@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-19';
+  const VERSION = 'ultron-core-rebuild-20';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -141,38 +141,75 @@
       {name:"WHISTLER VILLAGE · CANADA",url:"https://streamer6.brownrice.com/whistlervillagefitz/whistlervillagefitz.stream/main_playlist.m3u8"}
     ];
 let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
+    let worldBlackCheckTimer=null, worldPlaybackMonitor=null, worldRetryTimer=null, worldActiveCam=null;
+    const worldFailedCams=new Set();
+    const worldLiveBadge=el.querySelector('.uc-worldcam-live');
     const destroyWorldHls=()=>{if(worldHls){try{worldHls.destroy()}catch(_){}worldHls=null;}};
-    const failWorldCam=()=>{
-      if(!worldCamLoading)return;
-      worldCamLoading=false;
-      if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
-      worldFrame.onplaying=null;worldFrame.onerror=null;
+    const clearWorldTimers=()=>{
+      if(worldCamWatchdog){clearTimeout(worldCamWatchdog);worldCamWatchdog=null;}
+      if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}
+      if(worldPlaybackMonitor){clearInterval(worldPlaybackMonitor);worldPlaybackMonitor=null;}
+      if(worldRetryTimer){clearTimeout(worldRetryTimer);worldRetryTimer=null;}
+    };
+    const resetWorldVideo=()=>{
+      worldFrame.onplaying=null;worldFrame.onerror=null;worldFrame.onwaiting=null;worldFrame.onstalled=null;
       destroyWorldHls();
       try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load()}catch(_){}
       worldFrame.style.visibility='hidden';
-      worldPlace.textContent='SEARCHING LIVE FEED';
-      // Retry the next candidate without exposing a broken player or an error page.
-      setTimeout(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},180);
+    };
+    const failWorldCam=(reason)=>{
+      if(!worldCamLoading&&!worldCamStarted)return;
+      const failed=worldActiveCam;
+      worldCamLoading=false;worldCamStarted=false;
+      clearWorldTimers();
+      if(failed)worldFailedCams.add(failed.url);
+      resetWorldVideo();
+      worldLiveBadge.textContent='RECONNECTING';
+      worldLiveBadge.style.opacity='.8';
+      worldPlace.textContent='SEARCHING FOR LIVE FEED';
+      worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},250);
+    };
+    const markWorldCamLive=(cam)=>{
+      if(!worldCamLoading||!worldFrame.isConnected)return;
+      worldCamStarted=true;worldCamLoading=false;
+      if(worldCamWatchdog){clearTimeout(worldCamWatchdog);worldCamWatchdog=null;}
+      if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}
+      worldFrame.style.visibility='visible';
+      worldPlace.textContent=cam.name;
+      worldLiveBadge.textContent='LIVE';
+      worldLiveBadge.style.opacity='1';
+      let lastTime=Number(worldFrame.currentTime)||0;
+      let lastAdvanceAt=Date.now();
+      if(worldPlaybackMonitor)clearInterval(worldPlaybackMonitor);
+      worldPlaybackMonitor=setInterval(()=>{
+        if(!active||!worldFrame.isConnected){if(worldPlaybackMonitor)clearInterval(worldPlaybackMonitor);worldPlaybackMonitor=null;return;}
+        const nowTime=Number(worldFrame.currentTime)||0;
+        if(!worldFrame.paused&&worldFrame.readyState>=2&&nowTime>lastTime+0.12){lastTime=nowTime;lastAdvanceAt=Date.now();}
+        else if(Date.now()-lastAdvanceAt>9000)failWorldCam('playback stalled');
+      },1500);
     };
     const startWorldCam=()=>{
-      if(!active||!worldFrame?.isConnected||worldCamLoading)return;
-      worldCamLoading=true;worldCamStarted=false;worldAttempt++;
-      if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
-      destroyWorldHls();
-      try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load()}catch(_){}
-      const cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;
-      worldPlace.textContent=cam.name;worldFrame.style.visibility='hidden';
-      let worldBlackCheckTimer=null, worldBrightSamples=0, worldCheckedSamples=0;
-      let lastCrossOriginTime=-1, crossOriginAdvancingSamples=0;
-      const clearWorldBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
+      if(!active||!worldFrame?.isConnected||worldCamLoading||worldCamStarted)return;
+      clearWorldTimers();resetWorldVideo();
+      let cam=null;
+      for(let checked=0;checked<worldCams.length;checked++){
+        const candidate=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;
+        if(!worldFailedCams.has(candidate.url)){cam=candidate;break;}
+      }
+      if(!cam){worldFailedCams.clear();cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;}
+      if(!cam)return;
+      worldActiveCam=cam;worldCamLoading=true;worldCamStarted=false;worldAttempt++;
+      worldPlace.textContent='CHECKING LIVE FEED';worldLiveBadge.textContent='CONNECTING';worldLiveBadge.style.opacity='.75';
+      let worldBrightSamples=0, worldCheckedSamples=0, lastCrossOriginTime=-1, crossOriginAdvancingSamples=0;
+      const clearBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
       worldFrame.onplaying=()=>{
         if(!worldCamLoading)return;
-        clearWorldBlackCheck();worldBrightSamples=0;worldCheckedSamples=0;
-        // Only reveal the panel after checking decoded frames; skip streams that play black frames.
+        clearBlackCheck();worldBrightSamples=0;worldCheckedSamples=0;
         const probe=document.createElement('canvas');probe.width=24;probe.height=14;
         const ctx=probe.getContext('2d',{willReadFrequently:true});
+        if(!ctx){markWorldCamLive(cam);return;}
         worldBlackCheckTimer=setInterval(()=>{
-          if(!worldCamLoading||!worldFrame.isConnected){clearWorldBlackCheck();return;}
+          if(!worldCamLoading||!worldFrame.isConnected){clearBlackCheck();return;}
           if(worldFrame.readyState<2||!worldFrame.videoWidth||!worldFrame.videoHeight)return;
           try{
             ctx.drawImage(worldFrame,0,0,probe.width,probe.height);
@@ -181,34 +218,21 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
             for(let i=0;i<pixels.length;i+=4){const l=.2126*pixels[i]+.7152*pixels[i+1]+.0722*pixels[i+2];sum+=l;if(l>24)bright++;}
             worldCheckedSamples++;
             if(sum/(pixels.length/4)>16&&bright/(pixels.length/4)>.12)worldBrightSamples++;
-            if(worldBrightSamples>=1){
-              clearWorldBlackCheck();worldCamStarted=true;worldCamLoading=false;
-              if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
-              worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
-            }else if(worldCheckedSamples>=3){clearWorldBlackCheck();failWorldCam();}
+            if(worldBrightSamples>=1)markWorldCamLive(cam);
+            else if(worldCheckedSamples>=4)failWorldCam('black frames');
           }catch(_){
-            // Many legitimate public HLS operators disable canvas pixel access (CORS).
-            // In that case, require advancing decoded video before revealing the feed.
-            // This avoids rejecting every cross-origin feed; stalled streams still time out.
             const now=Number(worldFrame.currentTime)||0;
-            if(worldFrame.readyState>=2&&worldFrame.videoWidth>0&&worldFrame.videoHeight>0&&now>lastCrossOriginTime+0.08){
-              crossOriginAdvancingSamples++;
-              lastCrossOriginTime=now;
-            }
-            if(crossOriginAdvancingSamples>=2){
-              clearWorldBlackCheck();worldCamStarted=true;worldCamLoading=false;
-              if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
-              worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
-            }else if(worldCheckedSamples>=3){
-              clearWorldBlackCheck();
-              // Keep trying while the playback clock is moving; the next samples may prove it.
-              if(!worldCamLoading)return;
-            }
+            if(worldFrame.readyState>=2&&worldFrame.videoWidth>0&&worldFrame.videoHeight>0&&now>lastCrossOriginTime+0.08){crossOriginAdvancingSamples++;lastCrossOriginTime=now;}
+            worldCheckedSamples++;
+            if(crossOriginAdvancingSamples>=3)markWorldCamLive(cam);
+            else if(worldCheckedSamples>=8&&crossOriginAdvancingSamples===0)failWorldCam('no advancing frames');
           }
-        },650);
+        },600);
       };
-      worldFrame.onerror=failWorldCam;
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam()},18000);
+      worldFrame.onerror=()=>failWorldCam('media error');
+      worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
+      worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},16000);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
@@ -217,30 +241,34 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
       const tryHls=()=>{
         if(!worldCamLoading)return;
         if(window.Hls&&window.Hls.isSupported()){
-          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:8,manifestLoadingTimeOut:5000,levelLoadingTimeOut:5000});
+          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:8,manifestLoadingTimeOut:6000,levelLoadingTimeOut:6000});
           worldHls.on(window.Hls.Events.ERROR,(_,data)=>{
             if(!data?.fatal)return;
+            if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR){try{worldHls.startLoad();return}catch(_){}}
             if(worldHls){destroyWorldHls();tryNative()}
           });
           worldHls.on(window.Hls.Events.MANIFEST_PARSED,()=>{try{const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{})}catch(_){}});
           worldHls.loadSource(cam.url);worldHls.attachMedia(worldFrame);
         }else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
-        else failWorldCam();
+        else failWorldCam('HLS unsupported');
       };
-      // Prefer native HLS on Safari/iOS; use hls.js where native HLS is unavailable.
       if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
       else if(window.Hls)tryHls();
       else{
         const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';loader.async=true;
-        loader.onload=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else tryHls()};loader.onerror=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam()};
+        loader.onload=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else tryHls()};
+        loader.onerror=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam('player library unavailable')};
         document.head.appendChild(loader);
       }
     };
-    const nextWorldCam=()=>startWorldCam();
+    const nextWorldCam=()=>{clearWorldTimers();worldCamLoading=false;worldCamStarted=false;resetWorldVideo();startWorldCam();};
     startWorldCam();
-    worldCamTimer=setInterval(()=>{if(!worldCamLoading)startWorldCam()},20000);
+    worldCamTimer=setInterval(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},20000);
     window.__ultronWorldCamTimer=worldCamTimer;
-    el.querySelector('.uc-exit').addEventListener('click',()=>{if(worldCamTimer)clearInterval(worldCamTimer);if(worldCamWatchdog)clearTimeout(worldCamWatchdog);destroyWorldHls();worldFrame.onplaying=null;worldFrame.onerror=null;window.__ultronWorldCamTimer=null;});
+    el.querySelector('.uc-exit').addEventListener('click',()=>{
+      if(worldCamTimer)clearInterval(worldCamTimer);
+      clearWorldTimers();destroyWorldHls();resetWorldVideo();window.__ultronWorldCamTimer=null;
+    });
     const setStatus=message=>{status.textContent=message||'';};
     form.addEventListener('pointerdown',e=>e.stopPropagation());
     form.addEventListener('click',e=>e.stopPropagation());
