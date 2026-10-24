@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-21';
+  const VERSION = 'ultron-core-rebuild-23';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -37,7 +37,7 @@
   function buildOverlay() {
     let el = document.getElementById(overlayId); if (el) el.remove();
     el = document.createElement('section'); el.id = overlayId; el.setAttribute('role','application'); el.setAttribute('aria-label','ULTRON interactive neural core');
-    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><aside class="uc-worldcam" role="button" tabindex="0" aria-expanded="false" aria-label="World camera feed. Tap to enlarge or restore size"><div class="uc-worldcam-head"><span class="uc-worldcam-dot"></span><span>WORLD FEED</span><span class="uc-worldcam-live">LIVE</span></div><video class="uc-worldcam-frame" title="Public world camera feed" autoplay muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen"></video><div class="uc-worldcam-place">CONNECTING TO PUBLIC CAM</div></aside><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
+    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><aside class="uc-worldcam" role="button" tabindex="0" aria-expanded="false" aria-label="World camera feed. Tap to enlarge or restore size"><div class="uc-worldcam-head"><span class="uc-worldcam-dot"></span><span>WORLD FEED</span><span class="uc-worldcam-live">LIVE</span></div><video class="uc-worldcam-frame" title="Public world camera feed" autoplay muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen"></video><div class="uc-worldcam-place">CONNECTING TO PUBLIC CAM</div></aside><aside class="uc-target-details" aria-label="Target Details Panel"><div class="uc-target-head"><span class="uc-target-dot"></span><span>TARGET DETAILS</span><button type="button" class="uc-target-clear" aria-label="Clear target details" title="Clear results">×</button></div><div class="uc-target-meta">NO SCAN SELECTED</div><div class="uc-target-content" aria-live="polite"><div class="uc-target-empty">SCAN RESULTS WILL APPEAR HERE</div></div></aside><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
     const style = document.createElement('style'); style.id='ultron-clean-core-style'; style.textContent=`
       body.${scopedUiClass} #jarvis-wake-word-toggle,body.${scopedUiClass} #jarvis-hand-gesture-toggle,body.${scopedUiClass} #jarvis-hand-gesture-status,body.${scopedUiClass} #jarvis-web-bridge-panel{display:none!important;visibility:hidden!important;pointer-events:none!important}\n      #${overlayId}{position:fixed;inset:0;z-index:2147483000;background:#050302;color:#ff8a32;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;isolation:isolate;touch-action:none}
       #${overlayId} .uc-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
@@ -47,6 +47,19 @@
       #${overlayId} .uc-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.22em;color:rgba(255,155,83,.62);white-space:nowrap}
       #${overlayId} .uc-command{position:absolute;z-index:5;left:50%;bottom:54px;transform:translateX(-50%);width:min(560px,calc(100% - 32px));height:44px;display:flex;align-items:stretch;gap:7px;padding:4px;border:1px solid rgba(255,125,48,.55);border-radius:12px;background:rgba(15,7,3,.88);box-shadow:0 0 22px rgba(255,86,20,.12);backdrop-filter:blur(12px);touch-action:auto}\n      #${overlayId} .uc-command-input{flex:1;min-width:0;height:100%;padding:0 10px;border:0;outline:0;background:transparent;color:#ffe0c6;font:13px Inter,ui-sans-serif,system-ui,sans-serif;touch-action:auto}\n      #${overlayId} .uc-command-input::placeholder{color:rgba(255,174,121,.56)}\n      #${overlayId} .uc-send,#${overlayId} .uc-voice{flex:0 0 36px;width:36px;height:34px;border:1px solid rgba(255,135,61,.36);border-radius:8px;background:rgba(255,104,28,.13);color:#ffb16e;font-size:17px;cursor:pointer;touch-action:manipulation}\n      #${overlayId} .uc-send:hover,#${overlayId} .uc-voice:hover{background:rgba(255,104,28,.28)}\n      #${overlayId} .uc-voice.is-listening{border-color:#ffb15b;background:rgba(255,70,20,.38);box-shadow:0 0 12px rgba(255,90,20,.35)}\n      #${overlayId} .uc-command-status{position:absolute;left:7px;bottom:calc(100% + 5px);font-size:10px;color:rgba(255,177,110,.9);pointer-events:none}\n      #${overlayId} .uc-exit{position:absolute;top:24px;right:26px;width:42px;height:42px;border:1px solid rgba(255,124,42,.38);border-radius:50%;background:rgba(20,8,2,.45);color:#ff9a50;font-size:25px;cursor:pointer}
       #${overlayId} .uc-worldcam{position:absolute;z-index:4;top:76px;right:26px;width:clamp(116px,15vw,160px);aspect-ratio:1/1;overflow:hidden;border:1px solid rgba(255,133,62,.78);border-radius:7px;background:rgba(8,5,3,.94);box-shadow:0 0 18px rgba(255,92,24,.2);pointer-events:auto}
+      #${overlayId} .uc-target-details{position:absolute;z-index:4;right:26px;bottom:112px;width:clamp(116px,15vw,160px);height:clamp(116px,15vw,160px);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,133,62,.65);border-radius:7px;background:rgba(8,5,3,.94);box-shadow:0 0 18px rgba(255,92,24,.14);pointer-events:auto;touch-action:pan-y}
+      #${overlayId} .uc-target-head{height:20px;flex:0 0 20px;display:flex;align-items:center;gap:5px;padding:0 5px;background:rgba(255,105,33,.12);color:#ffb37a;font:700 6px/1 Inter,system-ui,sans-serif;letter-spacing:.06em;white-space:nowrap}
+      #${overlayId} .uc-target-dot{width:4px;height:4px;flex:0 0 4px;border-radius:50%;background:#ff8a32;box-shadow:0 0 5px #ff572c}
+      #${overlayId} .uc-target-clear{margin-left:auto;width:16px;height:16px;flex:0 0 16px;padding:0;border:1px solid rgba(255,135,61,.28);border-radius:3px;background:rgba(255,104,28,.12);color:#ffb16e;font:12px/1 sans-serif;cursor:pointer;touch-action:manipulation}
+      #${overlayId} .uc-target-meta{padding:4px 5px 3px;border-bottom:1px solid rgba(255,125,48,.18);color:#d88a56;font:600 5.5px/1.35 ui-monospace,SFMono-Regular,monospace;letter-spacing:.04em;overflow-wrap:anywhere}
+      #${overlayId} .uc-target-content{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:5px;color:#ffd9bf;font:6.5px/1.45 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;overflow-wrap:anywhere;scrollbar-width:thin;scrollbar-color:rgba(255,125,48,.55) rgba(30,10,2,.4);touch-action:pan-y;overscroll-behavior:contain}
+      #${overlayId} .uc-target-content::-webkit-scrollbar{width:3px}#${overlayId} .uc-target-content::-webkit-scrollbar-thumb{background:rgba(255,125,48,.55);border-radius:4px}
+      #${overlayId} .uc-target-empty{color:rgba(255,174,121,.62);font:600 6px/1.5 Inter,system-ui,sans-serif;letter-spacing:.06em}
+      #${overlayId} .uc-target-entry{padding:0 0 5px;margin:0 0 5px;border-bottom:1px solid rgba(255,125,48,.15)}
+      #${overlayId} .uc-target-label{color:#ff9b50;font-weight:700}
+      #${overlayId} .uc-target-link{color:#ffc18c;text-decoration:underline;overflow-wrap:anywhere}
+      @media(max-width:600px){#${overlayId} .uc-target-details{right:15px;bottom:94px;width:104px;height:104px}#${overlayId} .uc-target-head{height:18px;flex-basis:18px;font-size:5px;padding:0 4px}#${overlayId} .uc-target-meta{font-size:5px}#${overlayId} .uc-target-content{font-size:6px;padding:4px}}
+
       #${overlayId} .uc-worldcam{cursor:zoom-in;transform-origin:top right;transition:width .42s cubic-bezier(.2,.8,.2,1),height .42s cubic-bezier(.2,.8,.2,1),top .42s cubic-bezier(.2,.8,.2,1),right .42s cubic-bezier(.2,.8,.2,1),left .42s cubic-bezier(.2,.8,.2,1),transform .42s cubic-bezier(.2,.8,.2,1),box-shadow .42s ease,border-radius .42s ease}
       #${overlayId} .uc-worldcam.is-expanded{top:50%;right:auto;left:50%;width:min(72vw,72vh);height:min(72vw,72vh);aspect-ratio:1/1;transform:translate(-50%,-50%);z-index:30;cursor:zoom-out;box-shadow:0 0 38px rgba(255,92,24,.38);border-radius:12px}
       #${overlayId} .uc-worldcam.is-expanded .uc-worldcam-head{height:30px;font-size:9px;padding:0 10px}
@@ -66,6 +79,60 @@
     `; document.head.appendChild(style); document.body.appendChild(el); el.querySelector('.uc-exit').addEventListener('click',close);
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
+    const targetPanel=el.querySelector('.uc-target-details');
+    const targetMeta=el.querySelector('.uc-target-meta');
+    const targetContent=el.querySelector('.uc-target-content');
+    let activeScanTarget='';
+    const scanCategory=value=>{
+      const s=String(value||'').toLowerCase();
+      if(/e-?mail/.test(s))return 'EMAIL';
+      if(/phone|mobile|telephone|\bnumber\b/.test(s))return 'PHONE';
+      if(/username|user name|handle/.test(s))return 'USERNAME';
+      if(/\bip\b|ip address/.test(s))return 'IP ADDRESS';
+      if(/domain|website|url|hostname/.test(s))return 'DOMAIN / WEBSITE';
+      if(/hash|malware|threat/.test(s))return 'THREAT INTELLIGENCE';
+      if(/location|geo|country|city/.test(s))return 'LOCATION / GEO';
+      if(/scan|search|investigat|osint|lookup|recon/.test(s))return 'GENERAL INTELLIGENCE';
+      return '';
+    };
+    const setTargetDetails=(payload,opts={})=>{
+      const data=typeof payload==='string'?{text:payload}:payload&&typeof payload==='object'?payload:{text:String(payload??'')};
+      if(opts.reset!==false){targetContent.replaceChildren();}
+      const category=String(data.category||opts.category||activeScanTarget||'SCAN RESULTS').toUpperCase();
+      const target=String(data.target||opts.target||'').slice(0,220);
+      targetMeta.textContent=[category,target].filter(Boolean).join(' · ')||'SCAN RESULTS';
+      const value=data.results??data.text??data.message??data;
+      const items=Array.isArray(value)?value:[value];
+      items.forEach(item=>{
+        const entry=document.createElement('div');entry.className='uc-target-entry';
+        if(item&&typeof item==='object'){
+          Object.entries(item).forEach(([key,val])=>{
+            if(val===undefined||val===null||typeof val==='object'&& !Array.isArray(val))return;
+            const row=document.createElement('div');const label=document.createElement('span');label.className='uc-target-label';label.textContent=String(key)+': ';
+            row.append(label,document.createTextNode(Array.isArray(val)?val.join(', '):String(val)));entry.appendChild(row);
+          });
+          if(!entry.childNodes.length)entry.textContent=JSON.stringify(item,null,2);
+        }else entry.textContent=String(item??'');
+        targetContent.appendChild(entry);
+      });
+      if(!targetContent.childNodes.length)targetContent.innerHTML='<div class="uc-target-empty">NO RESULTS RETURNED</div>';
+      targetContent.scrollTop=0;
+    };
+    const resetTargetDetails=(category,target)=>{
+      activeScanTarget=category||'';
+      setTargetDetails({category:activeScanTarget||'READY',target:target||'',text:activeScanTarget?'Scan started. Waiting for results…':'Scan results will appear here.'});
+    };
+    targetPanel.addEventListener('pointerdown',e=>e.stopPropagation());
+    targetPanel.addEventListener('click',e=>e.stopPropagation());
+    targetPanel.querySelector('.uc-target-clear').addEventListener('click',()=>resetTargetDetails('',''));
+    window.ULTRON_TARGET_DETAILS={
+      set:setTargetDetails,
+      reset:resetTargetDetails,
+      getTarget:()=>activeScanTarget
+    };
+    window.addEventListener('jarvis:scan-results',event=>setTargetDetails(event.detail||{}));
+    window.addEventListener('ultron:scan-results',event=>setTargetDetails(event.detail||{}));
+
     const worldCamPanel=el.querySelector('.uc-worldcam');
     const toggleWorldCamSize=()=>{
       const expanded=worldCamPanel.classList.toggle('is-expanded');
@@ -294,6 +361,11 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     form.addEventListener('submit',async e=>{
       e.preventDefault(); e.stopPropagation();
       const command=input.value.trim(); if(!command)return;
+      const detectedCategory=scanCategory(command);
+      if(detectedCategory){
+        const target=command.replace(/^(hey jarvis[, ]*)?(please )?(scan|search|investigate|lookup|look up|check|find|recon|osint)\s+/i,'').trim();
+        resetTargetDetails(detectedCategory,target);
+      }
       if(typeof window.sendCommand!=='function'){setStatus('Command service is not ready yet.');return;}
       setStatus('Sending…'); voice.disabled=true;
       try{await window.sendCommand(command);input.value='';setStatus('Command sent.');}
@@ -350,7 +422,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     ringGroup=new T.Group();root.add(ringGroup);for(let i=0;i<4;i++){const ring=new T.Mesh(new T.TorusGeometry((1.18+i*.18)*.93,(.006+(i%2)*.003)*.93,6,220),new T.MeshBasicMaterial({color:i%2?0xff4d13:0xffa04b,transparent:true,opacity:.52,blending:T.AdditiveBlending,depthWrite:false}));ring.rotation.set(.7+i*.52,.3+i*.8,.2+i*.42);ringGroup.add(ring);}
     const halo=new T.Mesh(new T.SphereGeometry(2.5,32,24),new T.MeshBasicMaterial({color:0xff5a16,wireframe:true,transparent:true,opacity:.035,blending:T.AdditiveBlending,depthWrite:false}));root.add(halo);
   }
-  function cleanup(){active=false;if(window.__ultronWorldCamTimer){clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}document.body.classList.remove(scopedUiClass);cancelAnimationFrame(frame);if(resizeHandler)window.removeEventListener('resize',resizeHandler);const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){renderer.dispose();renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
+  function cleanup(){if(window.ULTRON_TARGET_DETAILS)delete window.ULTRON_TARGET_DETAILS;active=false;if(window.__ultronWorldCamTimer){clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}document.body.classList.remove(scopedUiClass);cancelAnimationFrame(frame);if(resizeHandler)window.removeEventListener('resize',resizeHandler);const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){renderer.dispose();renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
   function close(){cleanup();}
   function open(){if(active)return;active=true;document.body.classList.add(scopedUiClass);loadThree().then(()=>{if(!active)return;const el=buildOverlay();makeScene(el);const canvas=el.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.3,Math.min(1.3,targetX));lastX=e.clientX;lastY=e.clientY});const stopDrag=()=>{drag=false};canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);wheelHandler=e=>{e.preventDefault();zoom=Math.max(.68,Math.min(1.7,zoom+(e.deltaY>0?.06:-.06)))};canvas.addEventListener('wheel',wheelHandler,{passive:false});resizeHandler=()=>{if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8))};window.addEventListener('resize',resizeHandler);let t=0;const animate=()=>{if(!active||!renderer)return;frame=requestAnimationFrame(animate);t+=.004;rotX+=(targetX-rotX)*.045;rotY+=(targetY-rotY)*.045;root.rotation.x=rotX+Math.sin(t*.3)*.035;root.rotation.y=rotY+t*.11;root.rotation.z=Math.sin(t*.22)*.04;core.rotation.x=t*.18;core.rotation.y=-t*.23;coreGlow.scale.setScalar(1+Math.sin(t*2.1)*.055);ringGroup.rotation.y=-t*.12;ringGroup.rotation.x=Math.sin(t*.4)*.12;camera.position.z+=(11/zoom-camera.position.z)*.08;renderer.render(scene,camera)};animate();}).catch(error=>{active=false;document.body.classList.remove(scopedUiClass);console.error('[ULTRON] core startup failed',error);alert('ULTRON core could not load. Please check your connection, then reload JARVIS. If the problem continues, WebGL may be unavailable in this browser.');});}
   window.ULTRON={version:VERSION,open,close};
