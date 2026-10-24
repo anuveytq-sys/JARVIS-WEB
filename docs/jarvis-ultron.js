@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-20';
+  const VERSION = 'ultron-core-rebuild-21';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -37,7 +37,7 @@
   function buildOverlay() {
     let el = document.getElementById(overlayId); if (el) el.remove();
     el = document.createElement('section'); el.id = overlayId; el.setAttribute('role','application'); el.setAttribute('aria-label','ULTRON interactive neural core');
-    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><aside class="uc-worldcam" aria-label="Rotating public world camera feed"><div class="uc-worldcam-head"><span class="uc-worldcam-dot"></span><span>WORLD FEED</span><span class="uc-worldcam-live">LIVE</span></div><video class="uc-worldcam-frame" title="Public world camera feed" autoplay muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen"></video><div class="uc-worldcam-place">CONNECTING TO PUBLIC CAM</div></aside><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
+    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><aside class="uc-worldcam" role="button" tabindex="0" aria-expanded="false" aria-label="World camera feed. Tap to enlarge or restore size"><div class="uc-worldcam-head"><span class="uc-worldcam-dot"></span><span>WORLD FEED</span><span class="uc-worldcam-live">LIVE</span></div><video class="uc-worldcam-frame" title="Public world camera feed" autoplay muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen"></video><div class="uc-worldcam-place">CONNECTING TO PUBLIC CAM</div></aside><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
     const style = document.createElement('style'); style.id='ultron-clean-core-style'; style.textContent=`
       body.${scopedUiClass} #jarvis-wake-word-toggle,body.${scopedUiClass} #jarvis-hand-gesture-toggle,body.${scopedUiClass} #jarvis-hand-gesture-status,body.${scopedUiClass} #jarvis-web-bridge-panel{display:none!important;visibility:hidden!important;pointer-events:none!important}\n      #${overlayId}{position:fixed;inset:0;z-index:2147483000;background:#050302;color:#ff8a32;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;isolation:isolate;touch-action:none}
       #${overlayId} .uc-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
@@ -47,6 +47,14 @@
       #${overlayId} .uc-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.22em;color:rgba(255,155,83,.62);white-space:nowrap}
       #${overlayId} .uc-command{position:absolute;z-index:5;left:50%;bottom:54px;transform:translateX(-50%);width:min(560px,calc(100% - 32px));height:44px;display:flex;align-items:stretch;gap:7px;padding:4px;border:1px solid rgba(255,125,48,.55);border-radius:12px;background:rgba(15,7,3,.88);box-shadow:0 0 22px rgba(255,86,20,.12);backdrop-filter:blur(12px);touch-action:auto}\n      #${overlayId} .uc-command-input{flex:1;min-width:0;height:100%;padding:0 10px;border:0;outline:0;background:transparent;color:#ffe0c6;font:13px Inter,ui-sans-serif,system-ui,sans-serif;touch-action:auto}\n      #${overlayId} .uc-command-input::placeholder{color:rgba(255,174,121,.56)}\n      #${overlayId} .uc-send,#${overlayId} .uc-voice{flex:0 0 36px;width:36px;height:34px;border:1px solid rgba(255,135,61,.36);border-radius:8px;background:rgba(255,104,28,.13);color:#ffb16e;font-size:17px;cursor:pointer;touch-action:manipulation}\n      #${overlayId} .uc-send:hover,#${overlayId} .uc-voice:hover{background:rgba(255,104,28,.28)}\n      #${overlayId} .uc-voice.is-listening{border-color:#ffb15b;background:rgba(255,70,20,.38);box-shadow:0 0 12px rgba(255,90,20,.35)}\n      #${overlayId} .uc-command-status{position:absolute;left:7px;bottom:calc(100% + 5px);font-size:10px;color:rgba(255,177,110,.9);pointer-events:none}\n      #${overlayId} .uc-exit{position:absolute;top:24px;right:26px;width:42px;height:42px;border:1px solid rgba(255,124,42,.38);border-radius:50%;background:rgba(20,8,2,.45);color:#ff9a50;font-size:25px;cursor:pointer}
       #${overlayId} .uc-worldcam{position:absolute;z-index:4;top:76px;right:26px;width:clamp(116px,15vw,160px);aspect-ratio:1/1;overflow:hidden;border:1px solid rgba(255,133,62,.78);border-radius:7px;background:rgba(8,5,3,.94);box-shadow:0 0 18px rgba(255,92,24,.2);pointer-events:auto}
+      #${overlayId} .uc-worldcam{cursor:zoom-in;transform-origin:top right;transition:width .42s cubic-bezier(.2,.8,.2,1),height .42s cubic-bezier(.2,.8,.2,1),top .42s cubic-bezier(.2,.8,.2,1),right .42s cubic-bezier(.2,.8,.2,1),left .42s cubic-bezier(.2,.8,.2,1),transform .42s cubic-bezier(.2,.8,.2,1),box-shadow .42s ease,border-radius .42s ease}
+      #${overlayId} .uc-worldcam.is-expanded{top:50%;right:auto;left:50%;width:min(72vw,72vh);height:min(72vw,72vh);aspect-ratio:1/1;transform:translate(-50%,-50%);z-index:30;cursor:zoom-out;box-shadow:0 0 38px rgba(255,92,24,.38);border-radius:12px}
+      #${overlayId} .uc-worldcam.is-expanded .uc-worldcam-head{height:30px;font-size:9px;padding:0 10px}
+      #${overlayId} .uc-worldcam.is-expanded .uc-worldcam-frame{height:calc(100% - 30px)}
+      #${overlayId} .uc-worldcam.is-expanded .uc-worldcam-place{font-size:11px;padding:6px}
+      #${overlayId} .uc-worldcam:focus-visible{outline:2px solid #ff9a50;outline-offset:3px}
+      @media(max-width:600px){#${overlayId} .uc-worldcam.is-expanded{top:50%;left:50%;right:auto;width:min(88vw,72vh);height:min(88vw,72vh);transform:translate(-50%,-50%)}#${overlayId} .uc-worldcam.is-expanded .uc-worldcam-head{height:24px;font-size:7px}#${overlayId} .uc-worldcam.is-expanded .uc-worldcam-frame{height:calc(100% - 24px)}} 
+      @media(prefers-reduced-motion:reduce){#${overlayId} .uc-worldcam{transition:none}}
       #${overlayId} .uc-worldcam-head{height:20px;display:flex;align-items:center;gap:5px;padding:0 6px;color:#ffb37a;font:700 7px/1 Inter,system-ui,sans-serif;letter-spacing:.12em;background:rgba(255,105,33,.12)}
       #${overlayId} .uc-worldcam-dot{width:5px;height:5px;border-radius:50%;background:#ff572c;box-shadow:0 0 7px #ff572c;animation:ucCamPulse 1.2s infinite}
       #${overlayId} .uc-worldcam-live{margin-left:auto;color:#ff7958}
@@ -58,6 +66,17 @@
     `; document.head.appendChild(style); document.body.appendChild(el); el.querySelector('.uc-exit').addEventListener('click',close);
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
+    const worldCamPanel=el.querySelector('.uc-worldcam');
+    const toggleWorldCamSize=()=>{
+      const expanded=worldCamPanel.classList.toggle('is-expanded');
+      worldCamPanel.setAttribute('aria-expanded',String(expanded));
+      worldCamPanel.setAttribute('aria-label',expanded?'World camera feed. Tap to restore original size':'World camera feed. Tap to enlarge');
+    };
+    worldCamPanel.addEventListener('click',event=>{event.stopPropagation();toggleWorldCamSize();});
+    worldCamPanel.addEventListener('keydown',event=>{
+      if(event.target!==worldCamPanel)return;
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();toggleWorldCamSize();}
+    });
     const worldCams=[
       {name:"Imphal India Discovery · INDIA",url:"https://prod.vodvideo.cbsnews.com/cbsnews/vr/hls/4458996_hls/master.m3u8"},
       {name:"Seoul City · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge13/ch16.stream/playlist.m3u8"},
