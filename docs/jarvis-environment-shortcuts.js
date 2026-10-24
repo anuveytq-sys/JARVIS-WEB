@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-20261024c';
+  const VERSION = 'env-shortcuts-20261024d';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -22,11 +22,11 @@
   const isUltronOpen=text=>/^(hey jarvis )?(please )?(open|launch|start|activate|engage|enable|boot|bring up|show|display|summon|release|unleash|deploy|initialize|power up|wake up) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(take me to|go to|enter|enter the) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(i want|i need) (the )?ultron( environment| mode| system)?$/.test(normalize(text));
   const isUltronClose=text=>/^(hey jarvis )?(please )?(close|exit|quit|dismiss|hide|shut|deactivate|disable|stop|terminate|end|leave) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(stand down|power down|put away|take down) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(return|go back|take me back) (from|out of) (the )?ultron$/.test(normalize(text)) || /^ultron (close|exit|quit|shutdown|shut down|offline|sleep)$/.test(normalize(text));
 
-  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron-commands.js')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
+  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-20261024d')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
   const loadUltron=async()=>{
-    if(typeof window.ULTRON?.open!=='function') await loadScript('jarvis-ultron-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron.js');
+    if(typeof window.ULTRON?.open!=='function') await loadScript('jarvis-ultron-loader','./jarvis-ultron.js?v=env-shortcuts-20261024d');
     window.ULTRON?.open?.();
-    try{await loadScript('jarvis-ultron-enhancement-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron-enhancement.js');window.ULTRON_ENHANCEMENT?.start?.()}catch(e){console.warn('[JARVIS] ULTRON enhancement unavailable',e)}
+    try{await loadScript('jarvis-ultron-enhancement-loader','./jarvis-ultron-enhancement.js?v=env-shortcuts-20261024d');window.ULTRON_ENHANCEMENT?.start?.()}catch(e){console.warn('[JARVIS] ULTRON enhancement unavailable',e)}
   };
 
   const installDirectCommandHook=()=>{
