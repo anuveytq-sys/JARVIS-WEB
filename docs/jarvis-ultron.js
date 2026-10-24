@@ -65,7 +65,7 @@
       {name:'WILDLIFE · AFRICA',url:'https://www.youtube.com/embed/live_stream?channel=UC-2KSeUU5SMCX6XLRD-AEvw&autoplay=1&mute=1&controls=0'},
       {name:'CITY VIEW · TOKYO',url:'https://www.youtube.com/embed/5qap5aO4i9A?autoplay=1&mute=1&controls=0&playsinline=1'}
     ];
-    let worldIndex=0, worldTimer=null;
+    let worldIndex=0;
     const showWorldCam=()=>{
       if(!active||!worldFrame?.isConnected)return;
       const cam=worldCams[worldIndex%worldCams.length];
@@ -74,8 +74,8 @@
       worldIndex=(worldIndex+1)%worldCams.length;
     };
     showWorldCam();
-    worldTimer=setInterval(showWorldCam,5000);
-    el.querySelector('.uc-exit').addEventListener('click',()=>{if(worldTimer)clearInterval(worldTimer);});
+    window.__ultronWorldCamTimer=setInterval(showWorldCam,5000);
+    el.querySelector('.uc-exit').addEventListener('click',()=>{if(window.__ultronWorldCamTimer){clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}});
     const setStatus=message=>{status.textContent=message||'';};
     form.addEventListener('pointerdown',e=>e.stopPropagation());
     form.addEventListener('click',e=>e.stopPropagation());
@@ -138,7 +138,7 @@
     ringGroup=new T.Group();root.add(ringGroup);for(let i=0;i<4;i++){const ring=new T.Mesh(new T.TorusGeometry((1.18+i*.18)*.93,(.006+(i%2)*.003)*.93,6,220),new T.MeshBasicMaterial({color:i%2?0xff4d13:0xffa04b,transparent:true,opacity:.52,blending:T.AdditiveBlending,depthWrite:false}));ring.rotation.set(.7+i*.52,.3+i*.8,.2+i*.42);ringGroup.add(ring);}
     const halo=new T.Mesh(new T.SphereGeometry(2.5,32,24),new T.MeshBasicMaterial({color:0xff5a16,wireframe:true,transparent:true,opacity:.035,blending:T.AdditiveBlending,depthWrite:false}));root.add(halo);
   }
-  function cleanup(){active=false;document.body.classList.remove(scopedUiClass);cancelAnimationFrame(frame);if(resizeHandler)window.removeEventListener('resize',resizeHandler);const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){renderer.dispose();renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
+  function cleanup(){active=false;if(window.__ultronWorldCamTimer){clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}document.body.classList.remove(scopedUiClass);cancelAnimationFrame(frame);if(resizeHandler)window.removeEventListener('resize',resizeHandler);const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){renderer.dispose();renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
   function close(){cleanup();}
   function open(){if(active)return;active=true;document.body.classList.add(scopedUiClass);loadThree().then(()=>{if(!active)return;const el=buildOverlay();makeScene(el);const canvas=el.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.3,Math.min(1.3,targetX));lastX=e.clientX;lastY=e.clientY});const stopDrag=()=>{drag=false};canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);wheelHandler=e=>{e.preventDefault();zoom=Math.max(.68,Math.min(1.7,zoom+(e.deltaY>0?.06:-.06)))};canvas.addEventListener('wheel',wheelHandler,{passive:false});resizeHandler=()=>{if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8))};window.addEventListener('resize',resizeHandler);let t=0;const animate=()=>{if(!active||!renderer)return;frame=requestAnimationFrame(animate);t+=.004;rotX+=(targetX-rotX)*.045;rotY+=(targetY-rotY)*.045;root.rotation.x=rotX+Math.sin(t*.3)*.035;root.rotation.y=rotY+t*.11;root.rotation.z=Math.sin(t*.22)*.04;core.rotation.x=t*.18;core.rotation.y=-t*.23;coreGlow.scale.setScalar(1+Math.sin(t*2.1)*.055);ringGroup.rotation.y=-t*.12;ringGroup.rotation.x=Math.sin(t*.4)*.12;camera.position.z+=(11/zoom-camera.position.z)*.08;renderer.render(scene,camera)};animate();}).catch(error=>{active=false;document.body.classList.remove(scopedUiClass);console.error('[ULTRON] core startup failed',error);alert('ULTRON core could not load. Please check your connection, then reload JARVIS. If the problem continues, WebGL may be unavailable in this browser.');});}
   window.ULTRON={version:VERSION,open,close};
