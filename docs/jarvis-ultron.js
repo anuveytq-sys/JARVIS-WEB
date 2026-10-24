@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-3';
+  const VERSION = 'ultron-core-rebuild-4';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -37,7 +37,7 @@
   function buildOverlay() {
     let el = document.getElementById(overlayId); if (el) el.remove();
     el = document.createElement('section'); el.id = overlayId; el.setAttribute('role','application'); el.setAttribute('aria-label','ULTRON interactive neural core');
-    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>';
+    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
     const style = document.createElement('style'); style.id='ultron-clean-core-style'; style.textContent=`
       body.${scopedUiClass} #jarvis-wake-word-toggle,body.${scopedUiClass} #jarvis-hand-gesture-toggle,body.${scopedUiClass} #jarvis-hand-gesture-status,body.${scopedUiClass} #jarvis-web-bridge-panel{display:none!important;visibility:hidden!important;pointer-events:none!important}\n      #${overlayId}{position:fixed;inset:0;z-index:2147483000;background:#050302;color:#ff8a32;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;isolation:isolate;touch-action:none}
       #${overlayId} .uc-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
@@ -45,9 +45,34 @@
       #${overlayId} .uc-mark{position:absolute;top:28px;left:32px;font-size:clamp(18px,2.4vw,30px);font-weight:800;letter-spacing:.34em;color:#ff8b35;text-shadow:0 0 24px #ff5c16}
       #${overlayId} .uc-sub{position:absolute;top:66px;left:34px;font-size:9px;letter-spacing:.38em;color:#b55b28}
       #${overlayId} .uc-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.22em;color:rgba(255,155,83,.62);white-space:nowrap}
-      #${overlayId} .uc-exit{position:absolute;top:24px;right:26px;width:42px;height:42px;border:1px solid rgba(255,124,42,.38);border-radius:50%;background:rgba(20,8,2,.45);color:#ff9a50;font-size:25px;cursor:pointer}
-      @media(max-width:600px){#${overlayId} .uc-mark{top:20px;left:18px}#${overlayId} .uc-sub{top:51px;left:20px}#${overlayId} .uc-exit{top:15px;right:15px}#${overlayId} .uc-hint{bottom:18px;font-size:7px;letter-spacing:.14em}}
-    `; document.head.appendChild(style); document.body.appendChild(el); el.querySelector('.uc-exit').addEventListener('click',close); return el;
+      #${overlayId} .uc-command{position:absolute;z-index:5;left:50%;bottom:54px;transform:translateX(-50%);width:min(560px,calc(100% - 32px));height:44px;display:flex;align-items:stretch;gap:7px;padding:4px;border:1px solid rgba(255,125,48,.55);border-radius:12px;background:rgba(15,7,3,.88);box-shadow:0 0 22px rgba(255,86,20,.12);backdrop-filter:blur(12px);touch-action:auto}\n      #${overlayId} .uc-command-input{flex:1;min-width:0;height:100%;padding:0 10px;border:0;outline:0;background:transparent;color:#ffe0c6;font:13px Inter,ui-sans-serif,system-ui,sans-serif;touch-action:auto}\n      #${overlayId} .uc-command-input::placeholder{color:rgba(255,174,121,.56)}\n      #${overlayId} .uc-send,#${overlayId} .uc-voice{flex:0 0 36px;width:36px;height:34px;border:1px solid rgba(255,135,61,.36);border-radius:8px;background:rgba(255,104,28,.13);color:#ffb16e;font-size:17px;cursor:pointer;touch-action:manipulation}\n      #${overlayId} .uc-send:hover,#${overlayId} .uc-voice:hover{background:rgba(255,104,28,.28)}\n      #${overlayId} .uc-voice.is-listening{border-color:#ffb15b;background:rgba(255,70,20,.38);box-shadow:0 0 12px rgba(255,90,20,.35)}\n      #${overlayId} .uc-command-status{position:absolute;left:7px;bottom:calc(100% + 5px);font-size:10px;color:rgba(255,177,110,.9);pointer-events:none}\n      #${overlayId} .uc-exit{position:absolute;top:24px;right:26px;width:42px;height:42px;border:1px solid rgba(255,124,42,.38);border-radius:50%;background:rgba(20,8,2,.45);color:#ff9a50;font-size:25px;cursor:pointer}
+      @media(max-width:600px){#${overlayId} .uc-mark{top:20px;left:18px}#${overlayId} .uc-sub{top:51px;left:20px}#${overlayId} .uc-exit{top:15px;right:15px}#${overlayId} .uc-hint{bottom:108px;font-size:7px;letter-spacing:.14em}#${overlayId} .uc-command{bottom:26px;height:42px;width:calc(100% - 28px)}#${overlayId} .uc-send,#${overlayId} .uc-voice{flex-basis:34px;width:34px;height:32px}}
+    `; document.head.appendChild(style); document.body.appendChild(el); el.querySelector('.uc-exit').addEventListener('click',close);
+    const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
+    const setStatus=message=>{status.textContent=message||'';};
+    form.addEventListener('pointerdown',e=>e.stopPropagation());
+    form.addEventListener('click',e=>e.stopPropagation());
+    form.addEventListener('submit',async e=>{
+      e.preventDefault(); e.stopPropagation();
+      const command=input.value.trim(); if(!command)return;
+      if(typeof window.sendCommand!=='function'){setStatus('Command service is not ready yet.');return;}
+      setStatus('Sending…'); voice.disabled=true;
+      try{await window.sendCommand(command);input.value='';setStatus('Command sent.');}
+      catch(error){console.error('[ULTRON] command failed',error);setStatus('Command could not be sent.');}
+      finally{voice.disabled=false;setTimeout(()=>{if(status.textContent==='Command sent.')setStatus('');},2200);}
+    });
+    const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!Recognition){voice.disabled=true;voice.title='Voice input is not supported in this browser';voice.setAttribute('aria-label','Voice input not supported');}
+    else voice.addEventListener('click',()=>{
+      if(voice.classList.contains('is-listening'))return;
+      const recognition=new Recognition();recognition.lang=navigator.language||'en-US';recognition.interimResults=false;recognition.maxAlternatives=1;
+      voice.classList.add('is-listening');setStatus('Listening…');
+      recognition.onresult=event=>{const transcript=event.results?.[0]?.[0]?.transcript?.trim();if(transcript){input.value=transcript;setStatus('Recognized. Sending…');form.requestSubmit?form.requestSubmit():form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}else setStatus('No speech detected.');};
+      recognition.onerror=event=>setStatus(event.error==='not-allowed'?'Microphone permission denied.':'Voice input failed. Try again.');
+      recognition.onend=()=>{voice.classList.remove('is-listening');setTimeout(()=>{if(status.textContent==='Listening…')setStatus('');},1800);};
+      try{recognition.start();}catch(error){voice.classList.remove('is-listening');setStatus('Could not start microphone.');}
+    });
+    return el;
   }
   function makeScene(el) {
     const T=window.THREE, canvas=el.querySelector('canvas');
