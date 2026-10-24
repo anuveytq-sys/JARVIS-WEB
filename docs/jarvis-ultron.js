@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-7';
+  const VERSION = 'ultron-core-rebuild-8';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -59,14 +59,14 @@
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
     const worldCams=[
-      {name:'MONTEREY BAY · SEA OTTERS',url:'https://www.youtube-nocookie.com/embed/abbR-Ttd-cA?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'VENICE · GRAND CANAL',url:'https://www.youtube-nocookie.com/embed/1-iS7LArMPA?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'KATMAI · ALASKA BEARS',url:'https://www.youtube-nocookie.com/embed/J7ZrIDvqlic?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'TEMBE · SOUTH AFRICA',url:'https://www.youtube-nocookie.com/embed/0P_LBKqVbfs?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'CHENGDU · GIANT PANDAS',url:'https://www.youtube-nocookie.com/embed/SUXPnIEpbn4?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'MIAMI · CORAL CITY',url:'https://www.youtube-nocookie.com/embed/7i8ARjIeM2k?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'CALIFORNIA · PENGUIN BEACH',url:'https://www.youtube-nocookie.com/embed/GSxpCbXsvtI?autoplay=1&mute=1&controls=0&playsinline=1'},
-      {name:'GEORGIA · OCEAN VOYAGER',url:'https://www.youtube-nocookie.com/embed/8WTFWvePutc?autoplay=1&mute=1&controls=0&playsinline=1'}
+      {name:'MONTEREY BAY · SEA OTTERS',url:'https://www.youtube.com/embed/abbR-Ttd-cA?autoplay=1&mute=1&controls=0&playsinline=1'},
+      {name:'VENICE · GRAND CANAL',url:'https://www.youtube.com/embed/1-iS7LArMPA?autoplay=1&mute=1&controls=0&playsinline=1'},
+      {name:'KATMAI · ALASKA BEARS',url:'https://www.youtube.com/embed/J7ZrIDvqlic?autoplay=1&mute=1&controls=0&playsinline=1'},
+      {name:'TEMBE · SOUTH AFRICA',url:'https://www.youtube.com/embed/0P_LBKqVbfs?autoplay=1&mute=1&controls=0&playsinline=1'},
+      {name:'CHENGDU · GIANT PANDAS',url:'https://www.youtube.com/embed/SUXPnIEpbn4?autoplay=1&mute=1&controls=0&playsinline=1'},
+      {name:'MIAMI · CORAL CITY',url:'https://www.youtube.com/embed/7i8ARjIeM2k?autoplay=1&mute=1&controls=0&playsinline=1'},
+      {name:'CALIFORNIA · PENGUIN BEACH',url:'https://www.youtube.com/embed/GSxpCbXsvtI?autoplay=1&mute=1&controls=0&playsinline=1'},
+      {name:'GEORGIA · OCEAN VOYAGER',url:'https://www.youtube.com/embed/8WTFWvePutc?autoplay=1&mute=1&controls=0&playsinline=1'}
     ];
     let worldIndex=0;
     const showWorldCam=()=>{
@@ -77,7 +77,7 @@
       worldIndex=(worldIndex+1)%worldCams.length;
     };
     showWorldCam();
-    window.__ultronWorldCamTimer=setInterval(showWorldCam,5000);
+    window.__ultronWorldCamTimer=setInterval(showWorldCam,30000);
     el.querySelector('.uc-exit').addEventListener('click',()=>{if(window.__ultronWorldCamTimer){clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}});
     const setStatus=message=>{status.textContent=message||'';};
     form.addEventListener('pointerdown',e=>e.stopPropagation());
