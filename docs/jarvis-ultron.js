@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-12';
+  const VERSION = 'ultron-core-rebuild-13';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -105,9 +105,24 @@
       {name:"CARCAVELOS · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/carcavelos/playlist.m3u8"},
       {name:"COSTA DA CAPARICA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/costacaparicacds/playlist.m3u8"},
       {name:"RIVIERA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/riviera/playlist.m3u8"},
-      {name:"TARQUINHO · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/bctarquinho/playlist.m3u8"}
+      {name:"TARQUINHO · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/bctarquinho/playlist.m3u8"},
+      {name:"BRASOV · ROMANIA",url:"https://digilive.rcs-rds.ro/digilivedge/poiana_brasov_desktop.stream/index.m3u8"},
+      {name:"GALATI · ROMANIA",url:"https://digilive.rcs-rds.ro/digilivedge/galati2_desktop.stream/index.m3u8"},
+      {name:"PRAHOVA · ROMANIA",url:"https://digilive.rcs-rds.ro/digilivedge/azuga_desktop.stream/index.m3u8"},
+      {name:"BUSTENI GARA · ROMANIA",url:"https://digilive.rcs-rds.ro/digilivedge/busteni_gara_desktop.stream/index.m3u8"},
+      {name:"SINAIA · ROMANIA",url:"https://digilive.rcs-rds.ro/digilivedge/sinaia_desktop.stream/index.m3u8"},
+      {name:"RAMNICU VALCEA · ROMANIA",url:"https://digilive.rcs-rds.ro/digilivedge/ramnicu_valcea_desktop.stream/index.m3u8"},
+      {name:"FOCSANI · ROMANIA",url:"https://digilive.rcs-rds.ro/digilivedge/focsani_desktop.stream/index.m3u8"},
+      {name:"CHACHOENGSAO · THAILAND",url:"https://camera1.iticfoundation.org/hls/10.8.0.24_8554.m3u8"},
+      {name:"BANTEN · INDONESIA",url:"https://info.serbaraja-tollroad.co.id:20443/LiveApp/streams/10019.m3u8"},
+      {name:"BANTEN HIGHWAY · INDONESIA",url:"https://info.serbaraja-tollroad.co.id:20443/LiveApp/streams/10003.m3u8"},
+      {name:"SEOUL · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge6/ch138.stream/playlist.m3u8"},
+      {name:"SEOUL · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge6/ch101.stream/playlist.m3u8"},
+      {name:"SÃO PAULO HIGHWAY · BRAZIL",url:"https://34.104.32.249.nip.io/SP055-KM193/stream.m3u8"},
+      {name:"SÃO PAULO HIGHWAY · BRAZIL",url:"https://34.104.32.249.nip.io/SP055-KM211A/stream.m3u8"},
+      {name:"SÃO PAULO HIGHWAY · BRAZIL",url:"https://34.104.32.249.nip.io/SP008-KM095/stream.m3u8"}
     ];
-    let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
+let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     const destroyWorldHls=()=>{if(worldHls){try{worldHls.destroy()}catch(_){}worldHls=null;}};
     const failWorldCam=()=>{
       if(!worldCamLoading)return;
@@ -124,16 +139,40 @@
     const startWorldCam=()=>{
       if(!active||!worldFrame?.isConnected||worldCamLoading)return;
       worldCamLoading=true;worldCamStarted=false;worldAttempt++;
+      worldFrame.crossOrigin='anonymous';
       if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
       destroyWorldHls();
       try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load()}catch(_){}
       const cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;
       worldPlace.textContent=cam.name;worldFrame.style.visibility='hidden';
+      let worldBlackCheckTimer=null, worldBrightSamples=0, worldCheckedSamples=0;
+      const clearWorldBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
       worldFrame.onplaying=()=>{
         if(!worldCamLoading)return;
-        worldCamStarted=true;worldCamLoading=false;
         if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
-        worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
+        clearWorldBlackCheck();worldBrightSamples=0;worldCheckedSamples=0;
+        // Only reveal the panel after checking decoded frames; skip streams that play black frames.
+        const probe=document.createElement('canvas');probe.width=24;probe.height=14;
+        const ctx=probe.getContext('2d',{willReadFrequently:true});
+        worldBlackCheckTimer=setInterval(()=>{
+          if(!worldCamLoading||!worldFrame.isConnected){clearWorldBlackCheck();return;}
+          if(worldFrame.readyState<2||!worldFrame.videoWidth||!worldFrame.videoHeight)return;
+          try{
+            ctx.drawImage(worldFrame,0,0,probe.width,probe.height);
+            const pixels=ctx.getImageData(0,0,probe.width,probe.height).data;
+            let sum=0,bright=0;
+            for(let i=0;i<pixels.length;i+=4){const l=.2126*pixels[i]+.7152*pixels[i+1]+.0722*pixels[i+2];sum+=l;if(l>24)bright++;}
+            worldCheckedSamples++;
+            if(sum/(pixels.length/4)>16&&bright/(pixels.length/4)>.12)worldBrightSamples++;
+            if(worldBrightSamples>=1){
+              clearWorldBlackCheck();worldCamStarted=true;worldCamLoading=false;
+              worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
+            }else if(worldCheckedSamples>=3){clearWorldBlackCheck();failWorldCam();}
+          }catch(_){
+            // If the browser cannot inspect the decoded frame, don't expose a feed we cannot verify.
+            clearWorldBlackCheck();failWorldCam();
+          }
+        },650);
       };
       worldFrame.onerror=failWorldCam;
       worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam()},8500);
