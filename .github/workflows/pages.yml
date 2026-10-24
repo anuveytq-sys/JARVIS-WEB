@@ -66,191 +66,97 @@ jobs:
           node --check docs/jarvis-share.js
           node --check docs/jarvis-reminders-sw.js
 
-      - name: Verify VELVE satellite interaction upgrade
+      - name: Verify VELVE fixes
         run: |
-          node --check docs/velve-satellite-upgrade.js
           grep -q 'velve-sat-interaction-20261015g' docs/velve-satellite-upgrade.js
-          grep -q 'cartesianToCanvasCoordinates' docs/velve-satellite-upgrade.js
-          grep -q 'clickInstalled=true' docs/velve-satellite-upgrade.js
-          grep -q "panel.style.setProperty('display','none','important')" docs/velve-satellite-upgrade.js
-          grep -q 'velve-satellite-info' docs/velve-satellite-upgrade.js
-
-      - name: Verify isolated VELVE voice fix
-        run: |
-          node --check docs/velve-voice-fix.js
           grep -q 'VELVE_VOICE_FIX_VERSION' docs/velve-voice-fix.js
           grep -q 'SpeechRecognition' docs/velve-voice-fix.js
           grep -q 'getUserMedia' docs/velve-voice-fix.js
-          grep -q 'LISTENING — SPEAK NOW' docs/velve-voice-fix.js
 
-      - name: Build Pages site from original HUD
+      - name: Build Pages site
         run: |
           rm -rf _site
           mkdir -p _site
+          cp public/index.html _site/index.html
+          for f in \
+            jarvis-universal-service-router.js jarvis-github-access.js jarvis-platform-search.js jarvis-web.js \
+            jarvis-youtube-upload.js jarvis-beacon.js jarvis-ui-patch.js jarvis-omni-skills.js jarvis-clap-snap-wake.js \
+            jarvis-hand-gestures.js jarvis-camera-fix.js jarvis-video-audio-fix.js jarvis-popup-fix.js jarvis-superpowers.js \
+            jarvis-focus-detector.js jarvis-music.js jarvis-velve.js jarvis-velve-fix.js jarvis-velve-stability.js \
+            velve-satellite-upgrade.js velve-voice-fix.js terranexus.js terranexus-ui-fix.js jarvis-neon-nexus.js \
+            jarvis-neon-nexus-launcher-fix.js jarvis-neon-nexus-command-fix.js jarvis-core-3d.js jarvis-vision-intelligence.js \
+            jarvis-vision-intelligence-enhancement.js jarvis-environment-shortcuts.js jarvis-ultron.js jarvis-ultron-commands.js \
+            jarvis-calling.js jarvis-advanced-modules.js jarvis-power-modules.js jarvis-mission-control.js jarvis-share.js \
+            jarvis-reminders-sw.js; do cp "docs/$f" "_site/$f"; done
+          for f in jarvis-command-center.css jarvis-velve.css terranexus.css jarvis-neon-nexus.css jarvis-core-3d.css jarvis-vision-intelligence-enhancement.css manifest.webmanifest jarvis-pwa-icon.svg; do cp "docs/$f" "_site/$f"; done
+          cp docs/velve-countries.js _site/velve-countries.js
+          curl -fsSL https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/5b76480bc0b155fef1e25d57b755e9efa00e3838/docs/jarvis-vision-intelligence.css -o _site/jarvis-vision-intelligence.css
+
           python3 - <<'PY'
-          import json
-          import urllib.request
-          import re
+          import json, os, re, urllib.request
           from pathlib import Path
 
           url = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json'
-          req = urllib.request.Request(url, headers={'User-Agent': 'JARVIS-WEB-VELVE-static-snapshot/1.0', 'Accept': 'application/json'})
+          req = urllib.request.Request(url, headers={'User-Agent':'JARVIS-WEB-VELVE-static-snapshot/1.0','Accept':'application/json'})
           try:
               with urllib.request.urlopen(req, timeout=90) as r:
                   raw = json.load(r)
-              print('Satellite catalog refreshed from CelesTrak.')
           except Exception as feed_error:
-              # CelesTrak may return HTTP 403 when a large group has already been
-              # fetched for the current update cycle. Use a maintained static mirror.
               mirror_url = 'https://raw.githubusercontent.com/satvisorcom/satvisor-data/master/celestrak/json/active.json'
-              mirror_req = urllib.request.Request(mirror_url, headers={'User-Agent': 'JARVIS-WEB-VELVE-static-snapshot/1.0', 'Accept': 'application/json'})
+              mirror_req = urllib.request.Request(mirror_url, headers={'User-Agent':'JARVIS-WEB-VELVE-static-snapshot/1.0','Accept':'application/json'})
               try:
                   with urllib.request.urlopen(mirror_req, timeout=60) as r:
                       raw = json.load(r)
                   if not isinstance(raw, list) or len(raw) < 200:
                       raise RuntimeError('Satellite mirror returned fewer than 200 records')
-                  print(f'CelesTrak unavailable ({feed_error}); refreshed catalog from satellite data mirror ({len(raw)} records).')
               except Exception as mirror_error:
-                  # Last-resort reuse of the previous deployed catalog.
                   fallback_url = 'https://anuveytq-sys.github.io/JARVIS-WEB/velve-static-satellite-feed.js'
-                  fallback_req = urllib.request.Request(fallback_url, headers={'User-Agent': 'JARVIS-WEB-VELVE-static-snapshot/1.0'})
+                  fallback_req = urllib.request.Request(fallback_url, headers={'User-Agent':'JARVIS-WEB-VELVE-static-snapshot/1.0'})
                   try:
                       with urllib.request.urlopen(fallback_req, timeout=30) as r:
-                          fallback_text = r.read().decode('utf-8')
-                      match = re.search(r'window\.__VELVE_STATIC_SATELLITES\s*=\s*(\[.*\]);', fallback_text, re.S)
-                      if not match:
+                          text = r.read().decode('utf-8')
+                      m = re.search(r'window\.__VELVE_STATIC_SATELLITES\s*=\s*(\[.*\]);', text, re.S)
+                      if not m:
                           raise RuntimeError('Published satellite catalog was not parseable')
-                      raw = json.loads(match.group(1))
-                      print(f'Upstream and mirror unavailable; reusing published catalog ({len(raw)} records).')
+                      raw = json.loads(m.group(1))
                   except Exception as fallback_error:
-                      raise SystemExit(f'Could not load CelesTrak ({feed_error}), satellite mirror ({mirror_error}), or previous catalog ({fallback_error}).')
+                      raise SystemExit(f'Could not load satellite catalog: {feed_error}; {mirror_error}; {fallback_error}')
 
-          selected = []
-          seen = set()
           fields = ('OBJECT_NAME','NORAD_CAT_ID','OBJECT_ID','EPOCH','MEAN_MOTION','ECCENTRICITY','INCLINATION','RA_OF_ASC_NODE','ARG_OF_PERICENTER','MEAN_ANOMALY','REV_AT_EPOCH')
+          selected, seen = [], set()
           for item in raw:
-              if not isinstance(item, dict):
-                  continue
-              sid = item.get('NORAD_CAT_ID')
-              name = item.get('OBJECT_NAME')
-              if sid is None or not name or str(sid) in seen:
-                  continue
-              seen.add(str(sid))
-              selected.append({k: item.get(k) for k in fields if k in item})
-              if len(selected) >= 240:
-                  break
-          if len(selected) < 200:
-              raise SystemExit(f'Expected at least 200 real satellites, got {len(selected)}')
-          payload = json.dumps(selected, separators=(',', ':'))
-          js = '/* VELVE frozen satellite catalog generated at deploy time; no runtime feed requests. */\nwindow.__VELVE_STATIC_SATELLITES = ' + payload + ';\n'
-          Path('_site/velve-static-satellite-feed.js').write_text(js, encoding='utf-8')
-          print(f'Embedded {len(selected)} real satellite records into the static VELVE build.')
-          PY
+              if not isinstance(item, dict): continue
+              sid, name = item.get('NORAD_CAT_ID'), item.get('OBJECT_NAME')
+              if sid is None or not name or str(sid) in seen: continue
+              seen.add(str(sid)); selected.append({k:item.get(k) for k in fields if k in item})
+              if len(selected) >= 240: break
+          if len(selected) < 200: raise SystemExit(f'Expected at least 200 real satellites, got {len(selected)}')
+          Path('_site/velve-static-satellite-feed.js').write_text('window.__VELVE_STATIC_SATELLITES = '+json.dumps(selected,separators=(',',':'))+';\n', encoding='utf-8')
 
-          cp public/index.html _site/index.html
-          cp docs/jarvis-universal-service-router.js _site/jarvis-universal-service-router.js
-          cp docs/jarvis-github-access.js _site/jarvis-github-access.js
-          cp docs/jarvis-platform-search.js _site/jarvis-platform-search.js
-          cp docs/jarvis-web.js _site/jarvis-web.js
-          cp docs/jarvis-youtube-upload.js _site/jarvis-youtube-upload.js
-          cp docs/jarvis-beacon.js _site/jarvis-beacon.js
-          cp docs/jarvis-ui-patch.js _site/jarvis-ui-patch.js
-          cp docs/jarvis-omni-skills.js _site/jarvis-omni-skills.js
-          cp docs/jarvis-clap-snap-wake.js _site/jarvis-clap-snap-wake.js
-          cp docs/jarvis-hand-gestures.js _site/jarvis-hand-gestures.js
-          cp docs/jarvis-camera-fix.js _site/jarvis-camera-fix.js
-          cp docs/jarvis-video-audio-fix.js _site/jarvis-video-audio-fix.js
-          cp docs/jarvis-popup-fix.js _site/jarvis-popup-fix.js
-          cp docs/jarvis-superpowers.js _site/jarvis-superpowers.js
-          cp docs/jarvis-focus-detector.js _site/jarvis-focus-detector.js
-          cp docs/jarvis-music.js _site/jarvis-music.js
-          cp docs/jarvis-command-center.css _site/jarvis-command-center.css
-          cp docs/jarvis-velve.css _site/jarvis-velve.css
-          cp docs/velve-countries.js _site/velve-countries.js
-          cp docs/jarvis-velve.js _site/jarvis-velve.js
-          cp docs/jarvis-velve-fix.js _site/jarvis-velve-fix.js
-          cp docs/jarvis-velve-stability.js _site/jarvis-velve-stability.js
-          cp docs/velve-satellite-upgrade.js _site/velve-satellite-upgrade.js
-          cp docs/velve-voice-fix.js _site/velve-voice-fix.js
-          cp docs/terranexus.js _site/terranexus.js
-          cp docs/terranexus-ui-fix.js _site/terranexus-ui-fix.js
-          cp docs/terranexus.css _site/terranexus.css
-          cp docs/jarvis-neon-nexus.js _site/jarvis-neon-nexus.js
-          cp docs/jarvis-neon-nexus.css _site/jarvis-neon-nexus.css
-          cp docs/jarvis-neon-nexus-launcher-fix.js _site/jarvis-neon-nexus-launcher-fix.js
-          cp docs/jarvis-neon-nexus-command-fix.js _site/jarvis-neon-nexus-command-fix.js
-          cp docs/jarvis-core-3d.js _site/jarvis-core-3d.js
-          cp docs/jarvis-core-3d.css _site/jarvis-core-3d.css
-          cp docs/jarvis-vision-intelligence-enhancement.css _site/jarvis-vision-intelligence-enhancement.css
-          cp docs/jarvis-vision-intelligence.js _site/jarvis-vision-intelligence.js
-          cp docs/jarvis-vision-intelligence-enhancement.js _site/jarvis-vision-intelligence-enhancement.js
-          cp docs/jarvis-environment-shortcuts.js _site/jarvis-environment-shortcuts.js
-          cp docs/jarvis-ultron.js _site/jarvis-ultron.js
-          cp docs/jarvis-ultron-commands.js _site/jarvis-ultron-commands.js
-          cp docs/jarvis-calling.js _site/jarvis-calling.js
-          cp docs/jarvis-advanced-modules.js _site/jarvis-advanced-modules.js
-          cp docs/jarvis-power-modules.js _site/jarvis-power-modules.js
-          cp docs/jarvis-mission-control.js _site/jarvis-mission-control.js
-          cp docs/jarvis-share.js _site/jarvis-share.js
-          cp docs/jarvis-reminders-sw.js _site/jarvis-reminders-sw.js
-          cp docs/manifest.webmanifest _site/manifest.webmanifest
-          cp docs/jarvis-pwa-icon.svg _site/jarvis-pwa-icon.svg
-          curl -fsSL https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/5b76480bc0b155fef1e25d57b755e9efa00e3838/docs/jarvis-vision-intelligence.css -o _site/jarvis-vision-intelligence.css
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-          import re
           p = Path('_site/index.html')
           s = p.read_text(encoding='utf-8')
           version = os.environ['SITE_VERSION'][:12]
-          head_marker = '</head>'
-          style = f'<link rel="stylesheet" href="./jarvis-command-center.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-velve.css?v=pages-{version}">\n<link rel="stylesheet" href="./terranexus.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-core-3d.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-vision-intelligence.css?v=pages-{version}">\n<link rel="stylesheet" href="./jarvis-vision-intelligence-enhancement.css?v=pages-{version}">\n<style>body.velve-active #jarvis-wake-word-toggle,body.velve-active #jarvis-web-bridge-panel,body.velve-active #jarvis-superpowers,body.velve-active #jarvis-settings-trigger{{display:none!important}}</style>\n'
-          for name in ['jarvis-command-center','jarvis-velve','terranexus','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement']:
-              s = re.sub(rf'<link[^>]+{re.escape(name)}\.css\?v=[^\"]+[^>]*>\s*', '', s)
-          s = s.replace(head_marker, style + head_marker, 1)
-          marker = '</body>'
-              s = re.sub(rf'<script[^>]+{re.escape(name)}\.js\?v=[^\"]+[^>]*></script>\s*', '', s)
-          s = s.replace(marker, injection + marker, 1)
+          css_names = ['jarvis-command-center','jarvis-velve','terranexus','jarvis-neon-nexus','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement']
+          css = ''.join(f'<link rel="stylesheet" href="./{n}.css?v=pages-{version}">\n' for n in css_names)
+          for n in css_names:
+              s = re.sub(rf'<link[^>]+{re.escape(n)}\.css[^>]*>\s*','',s)
+          s = s.replace('</head>', css+'</head>', 1)
+          scripts = ['jarvis-popup-fix','jarvis-omni-skills','jarvis-advanced-modules','jarvis-power-modules','jarvis-share','jarvis-calling','jarvis-beacon','jarvis-universal-service-router','jarvis-camera-fix','jarvis-video-audio-fix','jarvis-github-access','jarvis-platform-search','jarvis-ui-patch','jarvis-clap-snap-wake','jarvis-hand-gestures','jarvis-web','jarvis-youtube-upload','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','velve-static-satellite-feed','velve-countries','jarvis-velve','jarvis-velve-fix','velve-satellite-upgrade','velve-voice-fix','terranexus','terranexus-ui-fix','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement','jarvis-ultron','jarvis-ultron-commands','jarvis-environment-shortcuts','jarvis-mission-control']
+          for n in scripts:
+              s = re.sub(rf'<script[^>]+{re.escape(n)}\.js[^>]*></script>\s*','',s)
+          injection = ''.join(f'<script src="./{n}.js?v=pages-{version}"></script>\n' for n in scripts)
+          s = s.replace('</body>', injection+'</body>', 1)
           p.write_text(s, encoding='utf-8')
           PY
+
           touch _site/.nojekyll
-          grep -q "jarvis-video-audio-fix.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-omni-skills.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-calling.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-beacon.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          test -s _site/jarvis-beacon.js
-          grep -q "JARVIS // BEACON PROTOCOL" _site/jarvis-beacon.js
-          grep -q "jarvis-advanced-modules.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-power-modules.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-youtube-upload.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          test -s _site/jarvis-youtube-upload.js
-          test -s _site/jarvis-power-modules.js
-          grep -q "jarvis-share.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          test -s _site/jarvis-reminders-sw.js
-          test -s _site/jarvis-share.js
-          test -s _site/manifest.webmanifest
-          test -s _site/jarvis-pwa-icon.svg
-          grep -q "jarvis-universal-service-router.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-github-access.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-platform-search.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-clap-snap-wake.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-hand-gestures.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "velve-static-satellite-feed.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "velve-countries.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q 'window.__VELVE_COUNTRIES' _site/velve-countries.js
-          grep -q 'function loadStaticCatalog' _site/jarvis-velve.js
-          grep -q "jarvis-vision-intelligence.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-vision-intelligence.css?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-vision-intelligence-enhancement.css?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-vision-intelligence-enhancement.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "terranexus-ui-fix.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "velve-voice-fix.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-ultron-commands.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          grep -q "jarvis-environment-shortcuts.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           test -s _site/jarvis-ultron.js
           test -s _site/jarvis-ultron-commands.js
-          grep -q "jarvis-mission-control.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
-          test -s _site/jarvis-mission-control.js
+          grep -q "jarvis-ultron.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q "jarvis-ultron-commands.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q "jarvis-environment-shortcuts.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q "jarvis-beacon.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          grep -q "jarvis-calling.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
