@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-9';
+  const VERSION = 'ultron-core-rebuild-10';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -59,66 +59,71 @@
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
     const worldCams=[
-      {name:'KRAKÓW · MAIN SQUARE',url:'https://hoktastream1.webcamera.pl/krakow_cam_da9ab3/krakow_cam_da9ab3.stream/playlist.m3u8',type:'hls'},
-      {name:'KRAKÓW · NOWA HUTA',url:'https://hoktastream4.webcamera.pl/krakow_cam_c4feaa/krakow_cam_c4feaa.stream/playlist.m3u8',type:'hls'},
-      {name:'KRAKÓW · ZABIERZÓW',url:'https://hoktastream2.webcamera.pl/krakow_cam_4c3e37/krakow_cam_4c3e37.stream/playlist.m3u8',type:'hls'}
+      {name:'KRAKÓW · MAIN SQUARE',url:'https://hoktastream1.webcamera.pl/krakow_cam_da9ab3/krakow_cam_da9ab3.stream/playlist.m3u8'},
+      {name:'KRAKÓW · NOWA HUTA',url:'https://hoktastream4.webcamera.pl/krakow_cam_c4feaa/krakow_cam_c4feaa.stream/playlist.m3u8'},
+      {name:'KRAKÓW · ZABIERZÓW',url:'https://hoktastream2.webcamera.pl/krakow_cam_4c3e37/krakow_cam_4c3e37.stream/playlist.m3u8'}
     ];
-    let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false;
+    let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     const destroyWorldHls=()=>{if(worldHls){try{worldHls.destroy()}catch(_){}worldHls=null;}};
-    const nextWorldCam=()=>{
+    const failWorldCam=()=>{
+      if(!worldCamLoading)return;
+      worldCamLoading=false;
+      if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
+      worldFrame.onplaying=null;worldFrame.onerror=null;
+      destroyWorldHls();
+      try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load()}catch(_){}
+      worldFrame.style.visibility='hidden';
+      worldPlace.textContent='SEARCHING LIVE FEED';
+      // Retry the next candidate without exposing a broken player or an error page.
+      setTimeout(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},180);
+    };
+    const startWorldCam=()=>{
       if(!active||!worldFrame?.isConnected||worldCamLoading)return;
-      worldCamLoading=true; worldCamStarted=false;
+      worldCamLoading=true;worldCamStarted=false;worldAttempt++;
       if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
       destroyWorldHls();
-      try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load();}catch(_){}
-      const cam=worldCams[worldIndex%worldCams.length]; worldIndex=(worldIndex+1)%worldCams.length;
-      worldPlace.textContent=cam.name;
-      worldFrame.style.visibility='hidden';
-      const failed=()=>{
-        if(!worldCamLoading)return;
-        worldCamLoading=false;
-        if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
-        worldFrame.style.visibility='hidden';
-        destroyWorldHls();
-        // Never leave a failed or white player visible; silently try the next public feed.
-        setTimeout(nextWorldCam,250);
-      };
-      const started=()=>{
+      try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load()}catch(_){}
+      const cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;
+      worldPlace.textContent=cam.name;worldFrame.style.visibility='hidden';
+      worldFrame.onplaying=()=>{
         if(!worldCamLoading)return;
         worldCamStarted=true;worldCamLoading=false;
         if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
-        worldFrame.style.visibility='visible';
-        worldPlace.textContent=cam.name;
-        try{const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}
+        worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
       };
-      worldFrame.onplaying=started;
-      worldFrame.onerror=failed;
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failed()},10000);
-      if(cam.type==='hls'){
-        if(worldFrame.canPlayType('application/vnd.apple.mpegurl')){
-          worldFrame.src=cam.url;worldFrame.load();
-          const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{});
-        }else{
-          const attachHls=()=>{
-            if(!window.Hls||!window.Hls.isSupported()){failed();return;}
-            worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:12});
-            worldHls.on(window.Hls.Events.ERROR,(_,data)=>{if(data?.fatal)failed()});
-            worldHls.on(window.Hls.Events.MANIFEST_PARSED,()=>{const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{});});
-            worldHls.loadSource(cam.url);worldHls.attachMedia(worldFrame);
-          };
-          if(window.Hls)attachHls();
-          else{
-            const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';loader.async=true;
-            loader.onload=attachHls;loader.onerror=failed;document.head.appendChild(loader);
-          }
-        }
+      worldFrame.onerror=failWorldCam;
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam()},8500);
+      const tryNative=()=>{
+        if(!worldCamLoading)return;
+        destroyWorldHls();
+        try{worldFrame.src=cam.url;worldFrame.load();const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{})}catch(_){}
+      };
+      const tryHls=()=>{
+        if(!worldCamLoading)return;
+        if(window.Hls&&window.Hls.isSupported()){
+          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:8,manifestLoadingTimeOut:5000,levelLoadingTimeOut:5000});
+          worldHls.on(window.Hls.Events.ERROR,(_,data)=>{
+            if(!data?.fatal)return;
+            if(worldHls){destroyWorldHls();tryNative()}
+          });
+          worldHls.on(window.Hls.Events.MANIFEST_PARSED,()=>{try{const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{})}catch(_){}});
+          worldHls.loadSource(cam.url);worldHls.attachMedia(worldFrame);
+        }else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
+        else failWorldCam();
+      };
+      // Prefer hls.js where supported; native HLS is the fallback for Safari/iOS.
+      if(window.Hls)tryHls();
+      else{
+        const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';loader.async=true;
+        loader.onload=tryHls;loader.onerror=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam()};
+        document.head.appendChild(loader);
       }
     };
-    // A successful feed stays visible for 30 seconds; failed feeds are skipped automatically.
-    nextWorldCam();
-    worldCamTimer=setInterval(()=>{if(!worldCamLoading)nextWorldCam()},30000);
+    const nextWorldCam=()=>startWorldCam();
+    startWorldCam();
+    worldCamTimer=setInterval(()=>{if(!worldCamLoading)startWorldCam()},30000);
     window.__ultronWorldCamTimer=worldCamTimer;
-    el.querySelector('.uc-exit').addEventListener('click',()=>{if(worldCamTimer)clearInterval(worldCamTimer);if(worldCamWatchdog)clearTimeout(worldCamWatchdog);destroyWorldHls();window.__ultronWorldCamTimer=null;});
+    el.querySelector('.uc-exit').addEventListener('click',()=>{if(worldCamTimer)clearInterval(worldCamTimer);if(worldCamWatchdog)clearTimeout(worldCamWatchdog);destroyWorldHls();worldFrame.onplaying=null;worldFrame.onerror=null;window.__ultronWorldCamTimer=null;});
     const setStatus=message=>{status.textContent=message||'';};
     form.addEventListener('pointerdown',e=>e.stopPropagation());
     form.addEventListener('click',e=>e.stopPropagation());
