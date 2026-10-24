@@ -78,7 +78,7 @@
       if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();toggleWorldCamSize();}
     });
     const worldCams=[
-      {name:"Imphal India Discovery · INDIA",url:"https://prod.vodvideo.cbsnews.com/cbsnews/vr/hls/4458996_hls/master.m3u8"},
+      // Prerecorded CBS VOD clip removed: a playing HLS file is not proof of a live camera.
       {name:"Seoul City · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge13/ch16.stream/playlist.m3u8"},
       {name:"Seoul Traffic · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/sd1/ch34.stream/playlist.m3u8"},
       {name:"Seoul Road View · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/sd2/ch66.stream/playlist.m3u8"},
@@ -159,7 +159,7 @@
       {name:"TARQUINHO BEACH · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/bctarquinho/playlist.m3u8"},
       {name:"WHISTLER VILLAGE · CANADA",url:"https://streamer6.brownrice.com/whistlervillagefitz/whistlervillagefitz.stream/main_playlist.m3u8"}
     ];
-let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
+let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     let worldBlackCheckTimer=null, worldPlaybackMonitor=null, worldRetryTimer=null, worldActiveCam=null;
     const worldFailedCams=new Set();
     const worldLiveBadge=el.querySelector('.uc-worldcam-live');
