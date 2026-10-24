@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-16';
+  const VERSION = 'ultron-core-rebuild-17';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -145,6 +145,7 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
       const cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;
       worldPlace.textContent=cam.name;worldFrame.style.visibility='hidden';
       let worldBlackCheckTimer=null, worldBrightSamples=0, worldCheckedSamples=0;
+      let lastCrossOriginTime=-1, crossOriginAdvancingSamples=0;
       const clearWorldBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
       worldFrame.onplaying=()=>{
         if(!worldCamLoading)return;
@@ -168,10 +169,23 @@ let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worl
               worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
             }else if(worldCheckedSamples>=3){clearWorldBlackCheck();failWorldCam();}
           }catch(_){
-            // A cross-origin canvas error cannot prove that the decoded picture is visible.
-            // Keep the panel hidden and let the watchdog skip this candidate rather than show black.
-            clearWorldBlackCheck();
-            if(worldCamLoading)failWorldCam();
+            // Many legitimate public HLS operators disable canvas pixel access (CORS).
+            // In that case, require advancing decoded video before revealing the feed.
+            // This avoids rejecting every cross-origin feed; stalled streams still time out.
+            const now=Number(worldFrame.currentTime)||0;
+            if(worldFrame.readyState>=2&&worldFrame.videoWidth>0&&worldFrame.videoHeight>0&&now>lastCrossOriginTime+0.08){
+              crossOriginAdvancingSamples++;
+              lastCrossOriginTime=now;
+            }
+            if(crossOriginAdvancingSamples>=2){
+              clearWorldBlackCheck();worldCamStarted=true;worldCamLoading=false;
+              if(worldCamWatchdog)clearTimeout(worldCamWatchdog);
+              worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;
+            }else if(worldCheckedSamples>=3){
+              clearWorldBlackCheck();
+              // Keep trying while the playback clock is moving; the next samples may prove it.
+              if(!worldCamLoading)return;
+            }
           }
         },650);
       };
