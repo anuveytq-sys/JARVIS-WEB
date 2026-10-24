@@ -55,6 +55,7 @@ jobs:
           node --check docs/jarvis-vision-intelligence.js
           node --check docs/jarvis-vision-intelligence-enhancement.js
           node --check docs/jarvis-environment-shortcuts.js
+          node --check docs/jarvis-ultron.js
           node --check docs/jarvis-ultron-commands.js
           node --check docs/jarvis-calling.js
           node --check docs/jarvis-advanced-modules.js
@@ -184,6 +185,7 @@ jobs:
           cp docs/jarvis-vision-intelligence.js _site/jarvis-vision-intelligence.js
           cp docs/jarvis-vision-intelligence-enhancement.js _site/jarvis-vision-intelligence-enhancement.js
           cp docs/jarvis-environment-shortcuts.js _site/jarvis-environment-shortcuts.js
+          cp docs/jarvis-ultron.js _site/jarvis-ultron.js
           cp docs/jarvis-ultron-commands.js _site/jarvis-ultron-commands.js
           cp docs/jarvis-calling.js _site/jarvis-calling.js
           cp docs/jarvis-advanced-modules.js _site/jarvis-advanced-modules.js
@@ -245,6 +247,7 @@ jobs:
           grep -q "velve-voice-fix.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-ultron-commands.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-environment-shortcuts.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
+          test -s _site/jarvis-ultron.js
           test -s _site/jarvis-ultron-commands.js
           grep -q "jarvis-mission-control.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           test -s _site/jarvis-mission-control.js
