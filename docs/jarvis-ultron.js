@@ -84,6 +84,16 @@
       #${overlayId} .uc-worldcam.is-expanded .uc-worldcam-head{height:30px;font-size:9px;padding:0 10px}
       #${overlayId} .uc-worldcam.is-expanded .uc-worldcam-frame{height:calc(100% - 30px)}
       #${overlayId} .uc-worldcam.is-expanded .uc-worldcam-place{font-size:11px;padding:6px}
+       #${overlayId} .uc-target-details,#${overlayId} .uc-earth-panel{transform-origin:center;transition:width .42s cubic-bezier(.2,.8,.2,1),height .42s cubic-bezier(.2,.8,.2,1),top .42s cubic-bezier(.2,.8,.2,1),right .42s cubic-bezier(.2,.8,.2,1),bottom .42s cubic-bezier(.2,.8,.2,1),left .42s cubic-bezier(.2,.8,.2,1),transform .42s cubic-bezier(.2,.8,.2,1),box-shadow .42s ease,border-radius .42s ease;cursor:zoom-in}
+       #${overlayId} .uc-target-details.is-expanded,#${overlayId} .uc-earth-panel.is-expanded{top:50%;right:auto;bottom:auto;left:50%;width:min(72vw,72vh);height:min(72vw,72vh);transform:translate(-50%,-50%);z-index:30;cursor:zoom-out;box-shadow:0 0 38px rgba(255,92,24,.38);border-radius:12px}
+       #${overlayId} .uc-target-details.is-expanded .uc-target-head,#${overlayId} .uc-earth-panel.is-expanded .uc-earth-head{height:30px;flex:0 0 30px;font-size:9px;padding:0 10px}
+       #${overlayId} .uc-target-details.is-expanded .uc-target-meta{font-size:8px;padding:6px 10px}
+       #${overlayId} .uc-target-details.is-expanded .uc-target-content,#${overlayId} .uc-earth-panel.is-expanded .uc-earth-content{font-size:10px;padding:10px;line-height:1.55}
+       #${overlayId} .uc-target-details.is-expanded .uc-target-empty{font-size:10px}
+       #${overlayId} .uc-target-details:focus-visible,#${overlayId} .uc-earth-panel:focus-visible{outline:2px solid #ff9a50;outline-offset:3px}
+       @media(max-width:600px){#${overlayId} .uc-target-details.is-expanded,#${overlayId} .uc-earth-panel.is-expanded{top:50%;left:50%;right:auto;bottom:auto;width:min(88vw,72vh);height:min(88vw,72vh);transform:translate(-50%,-50%)}#${overlayId} .uc-target-details.is-expanded .uc-target-content,#${overlayId} .uc-earth-panel.is-expanded .uc-earth-content{font-size:8px;padding:7px}#${overlayId} .uc-target-details.is-expanded .uc-target-meta{font-size:7px}}
+       @media(prefers-reduced-motion:reduce){#${overlayId} .uc-target-details,#${overlayId} .uc-earth-panel{transition:none}}
+
       #${overlayId} .uc-worldcam:focus-visible{outline:2px solid #ff9a50;outline-offset:3px}
       @media(max-width:600px){#${overlayId} .uc-worldcam.is-expanded{top:50%;left:50%;right:auto;width:min(88vw,72vh);height:min(88vw,72vh);transform:translate(-50%,-50%)}#${overlayId} .uc-worldcam.is-expanded .uc-worldcam-head{height:24px;font-size:7px}#${overlayId} .uc-worldcam.is-expanded .uc-worldcam-frame{height:calc(100% - 24px)}} 
       @media(prefers-reduced-motion:reduce){#${overlayId} .uc-worldcam{transition:none}}
@@ -113,6 +123,11 @@
     earthPanel.addEventListener('pointerdown',e=>e.stopPropagation());earthPanel.addEventListener('click',e=>e.stopPropagation());earthRenderTelemetry();earthLoadCatalog();earthRefreshTimer=setInterval(()=>{earthRenderTelemetry();if(Date.now()-earthLastCatalogAt>10*60*1000)earthLoadCatalog();},3500);
 
     const earthPanel=el.querySelector('.uc-earth-panel');
+    earthPanel.setAttribute('role','button');earthPanel.setAttribute('tabindex','0');earthPanel.setAttribute('aria-expanded','false');
+    earthPanel.addEventListener('pointerdown',e=>e.stopPropagation());
+    earthPanel.addEventListener('click',e=>{e.stopPropagation();togglePanelSize(earthPanel);});
+    earthPanel.addEventListener('keydown',e=>{if(e.target!==earthPanel)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();togglePanelSize(earthPanel);}});
+
     const earthSummary=earthPanel.querySelector('.uc-earth-summary');
     const earthList=earthPanel.querySelector('.uc-earth-list');
     const earthStatus=earthPanel.querySelector('.uc-earth-status');
@@ -195,9 +210,16 @@
       activeScanTarget=category||'';
       setTargetDetails({category:activeScanTarget||'READY',target:target||'',text:activeScanTarget?'Scan started. Waiting for results…':'Scan results will appear here.'});
     };
+    const togglePanelSize=panel=>{
+      const expanded=panel.classList.toggle('is-expanded');
+      panel.setAttribute('aria-expanded',String(expanded));
+      panel.setAttribute('aria-label',(panel===targetPanel?'Target Details panel':'Earth and satellite data panel')+(expanded?'. Tap to restore original size':'. Tap to enlarge'));
+    };
+    targetPanel.setAttribute('role','button');targetPanel.setAttribute('tabindex','0');targetPanel.setAttribute('aria-expanded','false');
     targetPanel.addEventListener('pointerdown',e=>e.stopPropagation());
-    targetPanel.addEventListener('click',e=>e.stopPropagation());
-    targetPanel.querySelector('.uc-target-clear').addEventListener('click',()=>resetTargetDetails('',''));
+    targetPanel.addEventListener('click',e=>{e.stopPropagation();if(e.target.closest('.uc-target-clear'))return;togglePanelSize(targetPanel);});
+    targetPanel.addEventListener('keydown',e=>{if(e.target!==targetPanel)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();togglePanelSize(targetPanel);}});
+    targetPanel.querySelector('.uc-target-clear').addEventListener('click',e=>{e.stopPropagation();resetTargetDetails('','');});
     window.ULTRON_TARGET_DETAILS={
       set:setTargetDetails,
       reset:resetTargetDetails,
