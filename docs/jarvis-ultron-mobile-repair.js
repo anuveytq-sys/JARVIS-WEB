@@ -3,11 +3,11 @@
 const ID='jarvis-ultron-mobile-repair';
 const css=`
 #jarvis-ultron-root{--uz-red:#ff4026;--uz-orange:#ff8b25}
-#jarvis-ultron-root .uz-layout{height:calc(100% - 104px)!important;grid-template-columns:minmax(112px,22%) minmax(0,1fr) minmax(0,32%)!important;gap:7px!important;padding:8px!important;padding-bottom:8px!important}
+#jarvis-ultron-root .uz-layout{height:calc(100% - 75px)!important;grid-template-columns:minmax(100px,24%) minmax(0,1fr)!important;gap:6px!important;padding:7px!important}
 #jarvis-ultron-root .uz-categories{min-width:0}
 #jarvis-ultron-root .uz-category-list{overflow-y:auto!important;overscroll-behavior:contain}
 #jarvis-ultron-root .uz-cat{padding:5px 3px!important;grid-template-columns:15px minmax(0,1fr)!important}
-#jarvis-ultron-root .uz-cat b{font-size:6px!important}
+#jarvis-ultron-root .uz-cat b{font-size:6px!important;line-height:1.2!important}
 #jarvis-ultron-root .uz-cat small{font-size:5px!important}
 #jarvis-ultron-root .uz-data{display:flex!important;min-width:0;transform:none!important;position:absolute!important;right:7px!important;left:auto!important;bottom:72px!important;top:auto!important;width:min(43%,250px)!important;height:23%!important;max-height:160px!important;overflow:hidden!important;z-index:15!important}
 #jarvis-ultron-root .uz-results{overflow-y:auto!important;min-height:0!important;overscroll-behavior:contain;flex:1 1 auto!important}
@@ -25,7 +25,7 @@ const css=`
 #jarvis-ultron-commandbar input{flex:1;min-width:0;height:34px;background:#090507;border:1px solid rgba(255,91,46,.35);border-radius:5px;color:#ffe6dc;padding:0 9px;font-size:12px;outline:none}
 #jarvis-ultron-commandbar button{height:34px;min-width:36px;padding:0 9px;background:#35100b;border:1px solid #b83a20;border-radius:5px;color:#ffb18a;font-size:11px;font-weight:800}
 #jarvis-ultron-commandbar button:active{background:#79220f}
-#jarvis-ultron-bridge{position:absolute;z-index:21;left:auto;right:7px;top:49px;bottom:auto;max-width:110px;padding:5px 7px;border:1px solid rgba(255,68,35,.55);border-radius:6px;background:rgba(24,5,5,.94);color:#ff9b80;font-size:7px;line-height:1.35;box-shadow:0 0 12px rgba(255,40,20,.12)}
+#jarvis-ultron-bridge{display:none!important}
 #jarvis-ultron-scan-modal{position:absolute;z-index:30;right:9px;top:54px;width:min(290px,calc(100% - 18px));max-height:55%;overflow:auto;padding:12px;border:1px solid rgba(255,91,45,.65);border-radius:8px;background:rgba(10,4,6,.98);box-shadow:0 0 30px rgba(255,45,20,.2);color:#ffd9ce}
 #jarvis-ultron-scan-modal label{display:block;font-size:9px;letter-spacing:1px;color:#ff947b;margin-bottom:7px}
 #jarvis-ultron-scan-modal input{width:100%;padding:9px;margin-bottom:8px;background:#030305;border:1px solid rgba(255,80,50,.45);border-radius:4px;color:white;font-size:12px}
@@ -34,7 +34,7 @@ const css=`
 #jarvis-ultron-root .uam-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;max-height:calc(29vh - 28px)!important;overflow-y:auto!important;overscroll-behavior:contain}
 @media(max-width:650px){
 #jarvis-ultron-root .uz-topbar{height:42px!important}
-#jarvis-ultron-root .uz-layout{height:calc(100% - 125px)!important;grid-template-columns: minmax(105px,34%) minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;gap:6px!important;padding:6px!important}
+#jarvis-ultron-root .uz-layout{height:calc(100% - 68px)!important;grid-template-columns:minmax(100px,34%) minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;gap:5px!important;padding:6px!important}
 #jarvis-ultron-root .uz-categories{grid-column:1;grid-row:1}
 #jarvis-ultron-root .uz-core{grid-column:2;grid-row:1;min-height:0}
 #jarvis-ultron-root .uz-data{position:absolute!important;left:auto!important;right:6px!important;bottom:78px!important;top:auto!important;width:44%!important;height:21%!important;min-height:82px!important;max-height:145px!important;z-index:15!important;display:flex!important;flex-direction:column!important;background:rgba(8,3,5,.97)!important;border-color:rgba(255,65,35,.45)!important}
@@ -46,10 +46,10 @@ const css=`
 #jarvis-ultron-root .uz-core-dot{width:56px!important;height:56px!important;background:radial-gradient(circle at 34% 28%,#fff9cf 0%,#ffd06b 8%,#ff8b24 23%,#c62c0b 47%,#401007 67%,#080204 78%)!important;box-shadow:inset -8px -9px 18px #1c0303,inset 5px 5px 13px #fff0a2,0 0 22px #ff6a1c,0 0 55px #e4380c,0 0 100px #9e220b!important}
 #jarvis-ultron-root .uz-status{bottom:40%!important;white-space:normal!important;text-align:center!important;font-size:5px!important}
 #jarvis-ultron-root .uz-footer{height:23px!important}
-#jarvis-ultron-commandbar{bottom:23px;height:48px;left:32%;right:6px;bottom:22px;height:46px;padding:4px}
+#jarvis-ultron-commandbar{left:32%;right:6px;bottom:22px;height:44px;padding:4px}
 #jarvis-ultron-commandbar input{height:30px;font-size:11px}
 #jarvis-ultron-commandbar button{height:30px;min-width:31px;padding:0 7px}
-#jarvis-ultron-bridge{top:49px;right:7px;bottom:auto;max-width:110px;font-size:5px}
+#jarvis-ultron-bridge{display:none!important}
 #jarvis-ultron-root .uam-console{right:6px!important;left:auto!important;bottom:78px!important;max-height:21%!important;width:44%!important;transform:none!important}
 #jarvis-ultron-root .uam-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;max-height:calc(22vh - 28px)!important}
 }`;
