@@ -1,10 +1,12 @@
 /* JARVIS ENVIRONMENT SHORTCUTS
    Compact, scrollable launcher. Existing environments remain unchanged.
    ULTRON is lazy-loaded only when selected, keeping idle JARVIS lightweight.
+   ULTRON command aliases are also wired directly to the main command input/form
+   so typed commands work even if another command layer replaces sendCommand.
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-20261024b';
+  const VERSION = 'env-shortcuts-20261024c';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -15,12 +17,37 @@
   ];
   const findVoiceAnalyzer=()=>Array.from(document.querySelectorAll('.panel-title')).find(t=>/VOICE\s+ANALYZER/i.test(t.textContent||''))?.closest('.panel')||null;
   const loadScript=(id,src)=>new Promise((resolve,reject)=>{if(document.getElementById(id)){resolve();return}const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
+
+  const normalize=value=>String(value||'').toLowerCase().replace(/[’'`]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  const isUltronOpen=text=>/^(hey jarvis )?(please )?(open|launch|start|activate|engage|enable|boot|bring up|show|display|summon|release|unleash|deploy|initialize|power up|wake up) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(take me to|go to|enter|enter the) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(i want|i need) (the )?ultron( environment| mode| system)?$/.test(normalize(text));
+  const isUltronClose=text=>/^(hey jarvis )?(please )?(close|exit|quit|dismiss|hide|shut|deactivate|disable|stop|terminate|end|leave) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(stand down|power down|put away|take down) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(return|go back|take me back) (from|out of) (the )?ultron$/.test(normalize(text)) || /^ultron (close|exit|quit|shutdown|shut down|offline|sleep)$/.test(normalize(text));
+
   const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron-commands.js')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
   const loadUltron=async()=>{
     if(typeof window.ULTRON?.open!=='function') await loadScript('jarvis-ultron-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron.js');
     window.ULTRON?.open?.();
     try{await loadScript('jarvis-ultron-enhancement-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron-enhancement.js');window.ULTRON_ENHANCEMENT?.start?.()}catch(e){console.warn('[JARVIS] ULTRON enhancement unavailable',e)}
   };
+
+  const installDirectCommandHook=()=>{
+    if(document.__jarvisUltronInputHook)return true;
+    const input=document.getElementById('commandInput')||document.getElementById('command');
+    const form=document.getElementById('commandForm');
+    if(!input)return false;
+    const intercept=async event=>{
+      const value=input.value||'';
+      if(!isUltronOpen(value)&&!isUltronClose(value))return;
+      event.preventDefault();event.stopImmediatePropagation();
+      if(event.stopPropagation)event.stopPropagation();
+      if(isUltronOpen(value)) await loadUltron(); else if(typeof window.ULTRON?.close==='function') window.ULTRON.close(); else document.getElementById('jarvis-ultron-root')?.remove();
+      input.value='';
+    };
+    input.addEventListener('keydown',e=>{if(e.key==='Enter')intercept(e)},true);
+    if(form)form.addEventListener('submit',intercept,true);
+    document.__jarvisUltronInputHook=true;
+    return true;
+  };
+
   const buildPanel=()=>{
     if(document.getElementById(PANEL_ID)) return;
     const oldPanel=findVoiceAnalyzer(); if(!oldPanel) return;
@@ -52,6 +79,6 @@
     });
     oldPanel.parentNode.insertBefore(panel,oldPanel);
   };
-  const start=async()=>{await loadUltronCommands();if(document.getElementById(PANEL_ID))return;let tries=0;const timer=setInterval(()=>{tries++;buildPanel();if(document.getElementById(PANEL_ID)||tries>=100)clearInterval(timer)},100)};
+  const start=async()=>{await loadUltronCommands();let tries=0;const timer=setInterval(()=>{tries++;installDirectCommandHook();buildPanel();if(document.getElementById(PANEL_ID)||tries>=100)clearInterval(timer)},100)};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
