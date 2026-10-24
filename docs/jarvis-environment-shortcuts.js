@@ -4,7 +4,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-20261023b';
+  const VERSION = 'env-shortcuts-20261024a';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -14,13 +14,11 @@
     { name:'ULTRON', subtitle:'PUBLIC INTELLIGENCE MATRIX', command:'open ULTRON environment' }
   ];
   const findVoiceAnalyzer=()=>Array.from(document.querySelectorAll('.panel-title')).find(t=>/VOICE\s+ANALYZER/i.test(t.textContent||''))?.closest('.panel')||null;
+  const loadScript=(id,src)=>new Promise((resolve,reject)=>{if(document.getElementById(id)){resolve();return}const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
   const loadUltron=async()=>{
-    if(typeof window.ULTRON?.open==='function'){ window.ULTRON.open(); return; }
-    if(document.getElementById('jarvis-ultron-loader')) return;
-    const s=document.createElement('script'); s.id='jarvis-ultron-loader';
-    s.src='https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron.js';
-    s.async=true; s.onload=()=>window.ULTRON?.open?.();
-    s.onerror=()=>console.error('[JARVIS] ULTRON module failed to load'); document.head.appendChild(s);
+    if(typeof window.ULTRON?.open!=='function') await loadScript('jarvis-ultron-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron.js');
+    window.ULTRON?.open?.();
+    try{await loadScript('jarvis-ultron-enhancement-loader','https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron-enhancement.js');window.ULTRON_ENHANCEMENT?.start?.()}catch(e){console.warn('[JARVIS] ULTRON enhancement unavailable',e)}
   };
   const buildPanel=()=>{
     if(document.getElementById(PANEL_ID)) return;
