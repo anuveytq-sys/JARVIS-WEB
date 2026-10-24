@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-25';
+  const VERSION = 'ultron-core-rebuild-26';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -318,7 +318,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldFrame.onerror=()=>failWorldCam('media error');
       worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},3000);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},8000);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
@@ -327,7 +327,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       const tryHls=()=>{
         if(!worldCamLoading)return;
         if(window.Hls&&window.Hls.isSupported()){
-          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:8,manifestLoadingTimeOut:2200,levelLoadingTimeOut:2200});
+          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:8,manifestLoadingTimeOut:6000,levelLoadingTimeOut:6000});
           worldHls.on(window.Hls.Events.ERROR,(_,data)=>{
             if(!data?.fatal)return;
             destroyWorldHls();
@@ -338,11 +338,13 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         }else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
         else failWorldCam('HLS unsupported');
       };
-      if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
-      else if(window.Hls)tryHls();
+      // Prefer hls.js where Media Source Extensions are available; canPlayType() can
+      // return a misleading "maybe" on browsers that cannot actually play this HLS stream.
+      if(window.Hls&&window.Hls.isSupported())tryHls();
+      else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
       else{
         const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';loader.async=true;
-        loader.onload=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else tryHls()};
+        loader.onload=()=>{if(window.Hls&&window.Hls.isSupported())tryHls();else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam('HLS playback unsupported')};
         loader.onerror=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam('player library unavailable')};
         document.head.appendChild(loader);
       }
