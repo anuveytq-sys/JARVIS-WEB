@@ -35,60 +35,18 @@
 
   const matches = (patterns, text) => patterns.some(pattern => pattern.test(text));
 
-  async function ensureUltron() {
-    if (typeof window.ULTRON?.open === 'function') return true;
-    const existing = document.getElementById('jarvis-ultron-command-loader');
-    if (existing) {
-      await new Promise(resolve => {
-        const done = () => resolve();
-        existing.addEventListener('load', done, {once:true});
-        existing.addEventListener('error', done, {once:true});
-      });
-      return typeof window.ULTRON?.open === 'function';
-    }
-    return await new Promise(resolve => {
-      const script = document.createElement('script');
-      script.id = 'jarvis-ultron-command-loader';
-      script.src = 'https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron.js';
-      script.async = true;
-      script.onload = () => resolve(typeof window.ULTRON?.open === 'function');
-      script.onerror = () => resolve(false);
-      document.head.appendChild(script);
-    });
+  function showReservedNotice(){
+    let note=document.getElementById('jarvis-ultron-placeholder');
+    if(!note){note=document.createElement('div');note.id='jarvis-ultron-placeholder';note.textContent='ULTRON IS OFFLINE — ENVIRONMENT RESERVED FOR REBUILD';Object.assign(note.style,{position:'fixed',left:'50%',top:'18%',transform:'translateX(-50%)',zIndex:'99999',maxWidth:'80vw',padding:'10px 14px',background:'rgba(12,8,6,.96)',border:'1px solid #ff7a28',borderRadius:'6px',color:'#ffb36b',font:'600 10px/1.5 monospace',letterSpacing:'1px',textAlign:'center',boxShadow:'0 0 18px rgba(255,100,20,.25)'});document.body.appendChild(note);}
+    note.style.display='block';clearTimeout(note.__hideTimer);note.__hideTimer=setTimeout(()=>{note.style.display='none'},2800);return true;
   }
-
-  async function openUltron() {
-    const ready = await ensureUltron();
-    if (!ready) return false;
-    window.ULTRON.open();
-    try {
-      if (typeof window.ULTRON_ENHANCEMENT?.start === 'function') window.ULTRON_ENHANCEMENT.start();
-      else {
-        const id = 'jarvis-ultron-command-enhancement-loader';
-        if (!document.getElementById(id)) {
-          const s = document.createElement('script');
-          s.id = id;
-          s.src = 'https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/main/docs/jarvis-ultron-enhancement.js';
-          s.async = true;
-          s.onload = () => window.ULTRON_ENHANCEMENT?.start?.();
-          document.head.appendChild(s);
-        }
-      }
-    } catch (_) {}
-    return true;
-  }
-
-  function closeUltron() {
-    if (typeof window.ULTRON?.close === 'function') window.ULTRON.close();
-    else document.getElementById('jarvis-ultron-root')?.remove();
-    return true;
-  }
-
-  async function handle(command) {
-    const text = normalize(command);
-    if (!text) return false;
-    if (matches(OPEN_PATTERNS, text)) return openUltron();
-    if (matches(CLOSE_PATTERNS, text)) return closeUltron();
+  async function openUltron(){return showReservedNotice();}
+  function closeUltron(){const note=document.getElementById('jarvis-ultron-placeholder');if(note)note.style.display='none';return true;}
+  async function handle(command){
+    const text=normalize(command);
+    if(!text)return false;
+    if(matches(OPEN_PATTERNS,text))return openUltron();
+    if(matches(CLOSE_PATTERNS,text))return closeUltron();
     return false;
   }
 
