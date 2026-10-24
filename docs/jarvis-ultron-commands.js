@@ -41,7 +41,6 @@
     let observer=null, poll=null, watchdog=null, stallTimer=null, lastVideo=null, lastState='', lastTime=-1, lastAdvanceAt=0;
     const MAX_CHECK_MS=2800;
     const MAX_STALL_MS=2400;
-    const MAX_WAIT_MS=1800;
     const clearWatchdog=()=>{if(watchdog){clearTimeout(watchdog);watchdog=null;}};
     const clearStall=()=>{if(stallTimer){clearTimeout(stallTimer);stallTimer=null;}};
     const resetVideoState=(video)=>{
@@ -53,20 +52,28 @@
       if(observer){observer.disconnect();observer=null;}
       resetVideoState(null);
     };
+    const invokeCoreError=(video)=>{
+      if(!video||!video.isConnected)return false;
+      let invoked=false;
+      // Call the core's existing handler directly first. This avoids relying on
+      // browser dispatch behavior when an HLS player has already replaced media state.
+      try{
+        if(typeof video.onerror==='function'){
+          video.onerror(new Event('error'));
+          invoked=true;
+        }
+      }catch(_){}
+      // Also dispatch the normal DOM media error path for handlers registered with addEventListener.
+      try{video.dispatchEvent(new Event('error'));invoked=true;}catch(_){}
+      return invoked;
+    };
     const forceNext=(video)=>{
       if(!video||!video.isConnected)return;
-      const panel=video.closest('.uc-worldcam');
-      const status=panel?.querySelector('.uc-worldcam-place')?.textContent||'';
-      if(/CHECKING LIVE FEED|SEARCHING FOR LIVE FEED|CONNECTING TO PUBLIC CAM|RECONNECTING/i.test(status)||video.readyState<2||video.style.visibility!=='visible'){
-        // The ULTRON core owns the real source list and its failover handler.
-        // Dispatching its existing media-error path keeps all existing UI/features intact.
-        try{video.dispatchEvent(new Event('error'));}catch(_){}
-      }else{
-        // A feed that was already LIVE but has stopped advancing must not hold the panel black.
-        try{video.dispatchEvent(new Event('error'));}catch(_){}
-      }
+      invokeCoreError(video);
       lastState='';
+      lastTime=Number(video.currentTime)||0;
       lastAdvanceAt=Date.now();
+      clearWatchdog();clearStall();
     };
     const arm=(video)=>{
       if(!video||!video.isConnected)return;
@@ -168,7 +175,7 @@
   }, 100);
 
   window.JARVIS_ULTRON_COMMANDS = {
-    version: 'ultron-commands-20261024u',
+    version: 'ultron-commands-20261024v',
     open: openUltron,
     close: closeUltron,
     handle,
