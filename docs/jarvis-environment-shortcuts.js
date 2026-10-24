@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-ultron-core10-20261024';
+  const VERSION = 'env-shortcuts-ultron-core11-20261024';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -22,10 +22,10 @@
   const isUltronOpen=text=>/^(hey jarvis )?(please )?(open|launch|start|activate|engage|enable|boot|bring up|show|display|summon|release|unleash|deploy|initialize|power up|wake up) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(take me to|go to|enter|enter the) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(i want|i need) (the )?ultron( environment| mode| system)?$/.test(normalize(text));
   const isUltronClose=text=>/^(hey jarvis )?(please )?(close|exit|quit|dismiss|hide|shut|deactivate|disable|stop|terminate|end|leave) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(stand down|power down|put away|take down) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(return|go back|take me back) (from|out of) (the )?ultron$/.test(normalize(text)) || /^ultron (close|exit|quit|shutdown|shut down|offline|sleep)$/.test(normalize(text));
 
-  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-20261024g')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
+  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-20261024h')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
   const loadUltron=async()=>{
     try {
-      if (window.ULTRON?.version !== 'ultron-core-rebuild-10') { document.getElementById('jarvis-ultron-core-loader')?.remove(); await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-10'); }
+      if (window.ULTRON?.version !== 'ultron-core-rebuild-11') { document.getElementById('jarvis-ultron-core-loader')?.remove(); await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-11'); }
       if(typeof window.ULTRON?.open==='function') window.ULTRON.open();
       else throw new Error('ULTRON core entry point missing');
     } catch(error) {
