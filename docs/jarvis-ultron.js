@@ -330,8 +330,8 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
           worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:8,manifestLoadingTimeOut:2200,levelLoadingTimeOut:2200});
           worldHls.on(window.Hls.Events.ERROR,(_,data)=>{
             if(!data?.fatal)return;
-            if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR){try{worldHls.startLoad();return}catch(_){}}
-            if(worldHls){destroyWorldHls();tryNative()}
+            destroyWorldHls();
+            failWorldCam('HLS '+(data.type===window.Hls.ErrorTypes.NETWORK_ERROR?'network error':'stream error'));
           });
           worldHls.on(window.Hls.Events.MANIFEST_PARSED,()=>{try{const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{})}catch(_){}});
           worldHls.loadSource(cam.url);worldHls.attachMedia(worldFrame);
