@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-17';
+  const VERSION = 'ultron-core-rebuild-18';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -120,7 +120,18 @@
       {name:"SEOUL · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge6/ch101.stream/playlist.m3u8"},
       {name:"SÃO PAULO HIGHWAY · BRAZIL",url:"https://34.104.32.249.nip.io/SP055-KM193/stream.m3u8"},
       {name:"SÃO PAULO HIGHWAY · BRAZIL",url:"https://34.104.32.249.nip.io/SP055-KM211A/stream.m3u8"},
-      {name:"SÃO PAULO HIGHWAY · BRAZIL",url:"https://34.104.32.249.nip.io/SP008-KM095/stream.m3u8"}
+      {name:"SÃO PAULO HIGHWAY · BRAZIL",url:"https://34.104.32.249.nip.io/SP008-KM095/stream.m3u8"},
+      // Additional direct public HLS cameras from the maintained Live-Environment-Streams registry.
+      // These avoid YouTube embeds/ads; every feed is still runtime-checked and may go offline.
+      {name:"ALVOR BEACH · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/alvor/playlist.m3u8"},
+      {name:"APÚLIA BEACH · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/bcapulia/playlist.m3u8"},
+      {name:"ARMAÇÃO DE PÊRA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/armacaodepera/playlist.m3u8"},
+      {name:"ARRIFANA BEACH · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/arrifana/playlist.m3u8"},
+      {name:"CARCAVELOS BEACH · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/carcavelos/playlist.m3u8"},
+      {name:"COSTA DA CAPARICA · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/costacaparicacds/playlist.m3u8"},
+      {name:"RIVIERA BEACH · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/riviera/playlist.m3u8"},
+      {name:"TARQUINHO BEACH · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/bctarquinho/playlist.m3u8"},
+      {name:"WHISTLER VILLAGE · CANADA",url:"https://streamer6.brownrice.com/whistlervillagefitz/whistlervillagefitz.stream/main_playlist.m3u8"}
     ];
 let worldIndex=0, worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     const destroyWorldHls=()=>{if(worldHls){try{worldHls.destroy()}catch(_){}worldHls=null;}};
