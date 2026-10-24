@@ -52,7 +52,33 @@ const css=`
 #jarvis-ultron-root #jarvis-ultron-bridge{display:none!important}
 #jarvis-ultron-root .uam-console{right:6px!important;left:auto!important;bottom:78px!important;max-height:21%!important;width:44%!important;transform:none!important}
 #jarvis-ultron-root .uam-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;max-height:calc(22vh - 28px)!important}
-}`;
+}
+/* ULTRON scan/results layout v2 */
+#jarvis-ultron-root .uz-data{right:7px!important;left:auto!important;top:auto!important;bottom:66px!important;width:min(48%,310px)!important;height:34%!important;max-height:none!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;z-index:15!important}
+#jarvis-ultron-root .uz-data-head{flex:0 0 22px!important;height:22px!important;padding:5px!important;font-size:6px!important}
+#jarvis-ultron-root .uz-results{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;padding:5px!important}
+#jarvis-ultron-root .uz-result{padding:5px!important;margin-bottom:4px!important}
+#jarvis-ultron-root .uz-result-title{font-size:8px!important;line-height:1.3!important}
+#jarvis-ultron-root .uz-result-note{font-size:8px!important;line-height:1.45!important;overflow-wrap:anywhere!important}
+#jarvis-ultron-root .uz-source{font-size:8px!important;padding:5px!important;max-width:100%!important}
+#jarvis-ultron-root .uz-camera{flex:0 0 104px!important;height:104px!important;min-height:104px!important;width:calc(100% - 14px)!important;margin:0 7px 6px!important;overflow:auto!important;overscroll-behavior:contain!important}
+#jarvis-ultron-root .uz-camera-head{height:20px!important;font-size:7px!important}
+#jarvis-ultron-root .uz-camera-empty{height:80px!important;font-size:8px!important}
+#jarvis-ultron-root .uz-camera img{width:100%!important;height:80px!important;object-fit:contain!important}
+#jarvis-ultron-commandbar{left:29%!important;right:7px!important;bottom:5px!important;height:48px!important;z-index:25!important}
+#jarvis-ultron-root .uam-console{left:auto!important;right:7px!important;top:auto!important;bottom:66px!important;width:min(48%,310px)!important;max-height:30%!important;height:30%!important;overflow:hidden!important;z-index:16!important}
+#jarvis-ultron-root .uam-grid{max-height:calc(30vh - 34px)!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important}
+#jarvis-ultron-root .uam-console *{min-width:0}
+@media(max-width:650px){
+#jarvis-ultron-root .uz-data{right:6px!important;bottom:64px!important;width:48%!important;height:35%!important;max-height:none!important}
+#jarvis-ultron-root .uz-camera{flex-basis:96px!important;height:96px!important;min-height:96px!important}
+#jarvis-ultron-root .uz-camera-empty{height:72px!important}
+#jarvis-ultron-root .uz-camera img{height:72px!important}
+#jarvis-ultron-commandbar{left:29%!important;right:6px!important;bottom:5px!important;height:46px!important;padding:4px!important}
+#jarvis-ultron-root .uam-console{right:6px!important;bottom:64px!important;width:48%!important;height:30%!important;max-height:30%!important}
+#jarvis-ultron-root .uam-grid{max-height:calc(30vh - 30px)!important}
+}
+`;
 function setup(){const root=document.getElementById('jarvis-ultron-root');if(!root||document.getElementById(ID))return false;
 const style=document.createElement('style');style.id=ID;style.textContent=css;document.head.appendChild(style);
 const bar=document.createElement('form');bar.id='jarvis-ultron-commandbar';bar.innerHTML='<input id="uz-command" autocomplete="off" placeholder="Ask ULTRON / run public scan…"><button type="button" id="uz-voice" aria-label="Voice input">🎙</button><button type="submit" id="uz-send">SEND</button>';
@@ -120,7 +146,7 @@ hideWake();
 const wakeObs=new MutationObserver(()=>{if(document.getElementById('jarvis-ultron-root'))hideWake();else{document.querySelectorAll('[data-uz-old-display]').forEach(el=>{const old=el.getAttribute('data-uz-old-display');if(old==='__default__')el.style.removeProperty('display');else el.style.display=old;el.removeAttribute('data-uz-old-display');});wakeObs.disconnect();}});
 wakeObs.observe(document.body,{childList:true,subtree:true});
 const label=root.querySelector('#uz-category-name');
-root.querySelectorAll('.uz-cat').forEach(btn=>{btn.addEventListener('click',()=>{const key=btn.dataset.key;if(!needsInput.has(key)){modal.hidden=true;autoScan(key);return;}modal.innerHTML='<label>'+ (names[key]||'PUBLIC QUERY') +'</label><input id="uz-modal-target" autocomplete="off" placeholder="Enter '+(names[key]||'public query').toLowerCase()+'"><div><button type="button" id="uz-modal-scan">RUN SCAN</button><button type="button" id="uz-modal-cancel">CANCEL</button></div><p style="font-size:8px;color:#94736a;line-height:1.4">Public and authorized sources only. No stolen records or passwords.</p>';modal.hidden=false;const inp=modal.querySelector('input');inp.value=root.querySelector('#uz-target')?.value||'';inp.focus();modal.querySelector('#uz-modal-cancel').onclick=()=>modal.hidden=true;modal.querySelector('#uz-modal-scan').onclick=()=>{const target=inp.value.trim();if(!target){inp.focus();return;}modal.hidden=true;const main=root.querySelector('#uz-target');if(main)main.value=target;const box=root.querySelector('#uz-results');if(window.ULTRON_INTEL&&typeof window.ULTRON_INTEL.run==='function'){window.ULTRON_INTEL.run(key,target);}else{setResults('PUBLIC SCAN SOURCES', [['email','username','phone','domain','ip','breach','github','exposure'].includes(key)?'Use the public-source modules below for '+escHtml(target):'Public-source query ready']);}say('ULTRON scan started for '+key+'.');};});});
+root.querySelectorAll('.uz-cat').forEach(btn=>{btn.addEventListener('click',()=>{const key=btn.dataset.key;if(!needsInput.has(key)){modal.hidden=true;if(window.ULTRON_INTEL&&typeof window.ULTRON_INTEL.run==='function')window.ULTRON_INTEL.run(key,'');else autoScan(key);return;}modal.innerHTML='<label>'+ (names[key]||'PUBLIC QUERY') +'</label><input id="uz-modal-target" autocomplete="off" placeholder="Enter '+(names[key]||'public query').toLowerCase()+'"><div><button type="button" id="uz-modal-scan">RUN SCAN</button><button type="button" id="uz-modal-cancel">CANCEL</button></div><p style="font-size:8px;color:#94736a;line-height:1.4">Public and authorized sources only. No stolen records or passwords.</p>';modal.hidden=false;const inp=modal.querySelector('input');inp.value=root.querySelector('#uz-target')?.value||'';inp.focus();modal.querySelector('#uz-modal-cancel').onclick=()=>modal.hidden=true;modal.querySelector('#uz-modal-scan').onclick=()=>{const target=inp.value.trim();if(!target){inp.focus();return;}modal.hidden=true;const main=root.querySelector('#uz-target');if(main)main.value=target;const box=root.querySelector('#uz-results');if(window.ULTRON_INTEL&&typeof window.ULTRON_INTEL.run==='function'){window.ULTRON_INTEL.run(key,target);}else{setResults('PUBLIC SCAN SOURCES', [['email','username','phone','domain','ip','breach','github','exposure'].includes(key)?'Use the public-source modules below for '+escHtml(target):'Public-source query ready']);}say('ULTRON scan started for '+key+'.');};});});
 bar.addEventListener('submit',e=>{e.preventDefault();const q=bar.querySelector('input').value.trim();if(!q)return;const target=root.querySelector('#uz-target');if(target)target.value=q;const active=root.querySelector('.uz-cat.active');if(active&&needsInput.has(active.dataset.key)){if(window.ULTRON_INTEL)window.ULTRON_INTEL.run(active.dataset.key,q);else root.querySelector('#uz-run')?.click();}else autoScan(active?.dataset.key||'news');say('ULTRON is processing your query.');});
 bar.querySelector('#uz-voice').addEventListener('click',()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){say('Voice input is unavailable. Please type your query.');return;}const rec=new SR();rec.lang='en-IN';rec.onresult=e=>{bar.querySelector('input').value=e.results[0][0].transcript};rec.onerror=()=>say('Voice input failed. Please try again.');rec.start();});
 return true;}
