@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-31';
+  const VERSION = 'ultron-core-rebuild-32';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -389,7 +389,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         if(!active||!worldFrame.isConnected){if(worldPlaybackMonitor)clearInterval(worldPlaybackMonitor);worldPlaybackMonitor=null;return;}
         const nowTime=Number(worldFrame.currentTime)||0;
         if(!worldFrame.paused&&worldFrame.readyState>=2&&nowTime>lastTime+0.12){lastTime=nowTime;lastAdvanceAt=Date.now();}
-        else if(Date.now()-lastAdvanceAt>9000)failWorldCam('playback stalled');
+        else if(Date.now()-lastAdvanceAt>30000)failWorldCam('playback stalled');
       },1500);
     };
     const startWorldCam=()=>{
