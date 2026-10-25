@@ -86,7 +86,7 @@ JARVIS-WEB is organized around six distinct environments, each with a different 
 Under the six product environments, the current implementation has three main technical execution paths:
 
 - **Browser HUD:** public/index.html plus selected browser modules from docs/.
-- **Hosted Web AI:** web-server.js → Express API → Gemini using a server-side key.
+- **Hosted Web AI:** web-server.js → Express API → Gemini and an independent BharatCode model route, both using server-side keys.
 - **Local backend:** server.js and gemini.cjs → local command handlers and OS-specific helpers.
 
 The browser frontend, hosted AI backend, and local backend have different permissions and responsibilities. They are not interchangeable.
@@ -99,7 +99,8 @@ The browser frontend, hosted AI backend, and local backend have different permis
 | docs/ | Browser modules, styles, icons, supporting assets, architecture/security/testing documentation, and a separate static HUD copy. The Pages workflow copies a curated set of assets; it does not use docs/index.html as the entry point. |
 | server.js | Local backend and supported machine-oriented command path. |
 | gemini.cjs | Gemini integration used by the local backend. |
-| web-server.js | Hosted web AI backend. |
+| web-server.js | Hosted web AI backend, including separate Gemini and BharatCode routes. |
+| BharatCode.txt | BharatCode Build League project and integration notes; contains no API key. |
 | render.yaml | Render service configuration for the hosted backend. |
 | .github/workflows/pages.yml | Syntax checks, project-specific checks, static-site build, and GitHub Pages deployment. |
 | WEB_DEPLOYMENT.md | Deployment instructions and environment differences. |
@@ -130,9 +131,11 @@ Do not switch to branch/folder publishing unless you intentionally want a differ
 
 1. Create a Render Blueprint from this repository using render.yaml, or create a Node web service manually.
 2. For a manual service, use build command npm install and start command node web-server.js.
-3. Add GEMINI_API_KEY as a **private environment variable** in Render. Never place it in frontend JavaScript, HTML, a URL, screenshots, or a public commit.
-4. Set ALLOWED_ORIGIN to the exact origin of the published frontend if needed. The service has a basic origin check and process-local request limiting; these are not authentication or a complete production security system.
-5. After deployment, use your actual Render URL in the frontend query parameter:
+3. Add GEMINI_API_KEY and BHARATCODE_API_KEY as **private environment variables** in Render if you want both providers. Never place either key in frontend JavaScript, HTML, a URL, screenshots, or a public commit.
+4. For BharatCode, obtain an eligible key from [BharatCode](https://bharatcode.ai/account). The backend uses `https://bharatcode.ai/api/model/v1` with model `qwen-3.8-27b`; see [BharatCode.txt](BharatCode.txt) and [the official API guide](https://bharatcode.ai/build).
+5. After deployment, open JARVIS Settings → **BharatCode // Build League**, enter the actual backend URL, and choose **SAVE & TEST BHARATCODE**. On success, BharatCode becomes the selected provider for the existing command box.
+6. Set ALLOWED_ORIGIN to the exact origin of the published frontend if needed. The service has a basic origin check and process-local request limiting; these are not authentication or a complete production security system.
+7. After deployment, use your actual Render URL in the frontend query parameter:
 
    https://anuveytq-sys.github.io/JARVIS-WEB/?api=https://YOUR-REAL-BACKEND.onrender.com
 
