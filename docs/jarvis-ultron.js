@@ -364,6 +364,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       if(!worldCamLoading&&!worldCamStarted)return;
       const failed=worldActiveCam;
       worldCamLoading=false;worldCamStarted=false;
+      if(worldCamTimer){clearTimeout(worldCamTimer);worldCamTimer=null;}
       clearWorldTimers();
       if(failed)worldFailedCams.add(failed.url);
       resetWorldVideo();
