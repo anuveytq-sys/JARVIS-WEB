@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-32';
+  const VERSION = 'ultron-core-rebuild-33';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -342,8 +342,7 @@
       for(const cam of candidates.slice(0,150))worldCams.push(cam);
       console.info('[ULTRON] Global camera registry added',Math.min(candidates.length,150),'additional feeds.');
     };
-    // Let the first camera start before fetching the optional global registry to avoid competing with video startup.
-    setTimeout(()=>{if(active&&worldFrame.isConnected)loadGlobalWorldCams().catch(error=>console.warn('[ULTRON] Global camera registry unavailable; using built-in feeds.',error));},15000);
+    // Keep the optional 21-country registry fetch disabled during the live session: its burst of network/JSON work can stall lower-powered mobile browsers. The built-in feed list continues rotating every 20 seconds.
 let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     let worldBlackCheckTimer=null, worldPlaybackMonitor=null, worldRetryTimer=null, worldActiveCam=null;
     const worldFailedCams=new Set();
