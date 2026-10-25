@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-37';
+  const VERSION = 'ultron-core-rebuild-38';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -168,50 +168,71 @@
       if(osintCategory==='USERNAME'&&!/^[a-zA-Z0-9._-]{1,64}$/.test(normalized)){osintInput.setCustomValidity('Use letters, numbers, dots, underscores, or hyphens.');osintInput.reportValidity();return;}
       closeOsintModal();
       activeScanTarget=osintCategory;targetMeta.textContent=osintCategory+' · '+normalized;targetContent.replaceChildren();
-      const resultTitle=document.createElement('div');resultTitle.className='uc-target-entry';resultTitle.textContent='PUBLIC-SOURCE LOOKUP · '+normalized;targetContent.appendChild(resultTitle);
-      const sourceLinks=osintCategory==='EMAIL'?[
-        ['Web search','https://www.google.com/search?q='+encodeURIComponent('"'+normalized+'"')],
-        ['Bing search','https://www.bing.com/search?q='+encodeURIComponent('"'+normalized+'"')],
-        ['DuckDuckGo search','https://duckduckgo.com/?q='+encodeURIComponent('"'+normalized+'"')],
-        ['Gravatar public profile','https://gravatar.com/'+encodeURIComponent(normalized)],
-        ['Domain information','https://lookup.icann.org/en/lookup?name='+encodeURIComponent(normalized.split('@')[1]||'')]
-      ]:osintCategory==='PHONE'?[
-        ['Web search','https://www.google.com/search?q='+encodeURIComponent('"'+normalized+'"')],
-        ['Bing search','https://www.bing.com/search?q='+encodeURIComponent('"'+normalized+'"')],
-        ['DuckDuckGo search','https://duckduckgo.com/?q='+encodeURIComponent('"'+normalized+'"')],
-        ['Truecaller public lookup','https://www.truecaller.com/search/'+encodeURIComponent(normalized.replace(/[^+\d]/g,''))],
-        ['Phone-number format reference','https://en.wikipedia.org/wiki/E.164']
-      ]:[
-        ['Web search','https://www.google.com/search?q='+encodeURIComponent('"'+normalized+'"')],
-        ['Bing search','https://www.bing.com/search?q='+encodeURIComponent('"'+normalized+'"')],
-        ['DuckDuckGo search','https://duckduckgo.com/?q='+encodeURIComponent('"'+normalized+'"')],
-        ['GitHub users','https://github.com/search?q='+encodeURIComponent(normalized)+'&type=users'],
-        ['GitLab users','https://gitlab.com/search?search='+encodeURIComponent(normalized)],
-        ['Reddit search','https://www.reddit.com/search/?q='+encodeURIComponent(normalized)],
-        ['Mastodon account search','https://mastodon.social/search?q='+encodeURIComponent(normalized)]
-      ];
+      const resultTitle=document.createElement('div');resultTitle.className='uc-target-entry';resultTitle.textContent='PUBLIC OSINT MODULES · '+normalized;targetContent.appendChild(resultTitle);
       const addScanEntry=(label,value,url)=>{
         const entry=document.createElement('div');entry.className='uc-target-entry';
         const title=document.createElement('div');title.className='uc-target-label';title.textContent=label;entry.appendChild(title);
         if(value){const desc=document.createElement('div');desc.textContent=value;entry.appendChild(desc);}
-        if(url){const link=document.createElement('a');link.className='uc-target-link';link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='OPEN PUBLIC SOURCE ↗';entry.appendChild(link);}
-        targetContent.appendChild(entry);
+        if(url){const link=document.createElement('a');link.className='uc-target-link';link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='VIEW PUBLIC SOURCE ↗';entry.appendChild(link);}
+        targetContent.appendChild(entry);return entry;
       };
-      addScanEntry('INPUT CHECK',osintCategory==='EMAIL'?'Email syntax looks valid; this does not verify ownership or breach status.':osintCategory==='PHONE'?'Number format accepted; this does not verify ownership, location, or subscriber identity.':'Username format accepted; matching profiles must be verified manually.');
-      sourceLinks.forEach(([label,url])=>addScanEntry(label,'Search the public web or service for matching public information.',url));
-      if(osintCategory==='USERNAME'){
-        addScanEntry('GITHUB PUBLIC PROFILE','Checking the public GitHub user endpoint…');
-        const githubEntry=targetContent.lastElementChild;
+      const withTimeout=async(url,ms=5000)=>{
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),ms);
+        try{return await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal,cache:'no-store'});}
+        finally{clearTimeout(timer);}
+      };
+      const addPublicSearches=()=>{
+        const q=encodeURIComponent('"'+normalized+'"');
+        [['Google public-web search','https://www.google.com/search?q='+q],['Bing public-web search','https://www.bing.com/search?q='+q],['DuckDuckGo public-web search','https://duckduckgo.com/?q='+q]].forEach(([label,url])=>addScanEntry(label,'Open indexed public pages; verify any match against the original source.',url));
+      };
+      addScanEntry('SCOPE','Public sources and basic metadata only. This scan does not retrieve leaked databases, passwords, private records, or subscriber identity data.');
+      if(osintCategory==='EMAIL'){
+        const domain=(normalized.split('@')[1]||'').toLowerCase();
+        addScanEntry('EMAIL SYNTAX','Valid email-address format. This does not prove that the mailbox exists or identify its owner.');
+        const domainEntry=addScanEntry('DOMAIN / DNS MODULE','Checking public DNS mail records…');
         try{
-          const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),4500);
-          let response;try{response=await fetch('https://api.github.com/users/'+encodeURIComponent(normalized),{headers:{Accept:'application/vnd.github+json'},signal:controller.signal,cache:'no-store'});}finally{clearTimeout(timeout);}
+          const response=await withTimeout('https://dns.google/resolve?name='+encodeURIComponent(domain)+'&type=MX');
           const data=response.ok?await response.json():null;
-          if(data&&data.login){githubEntry.replaceChildren();const label=document.createElement('div');label.className='uc-target-label';label.textContent='GITHUB PUBLIC PROFILE';githubEntry.appendChild(label);[['Login',data.login],['Name',data.name],['Public repositories',data.public_repos],['Followers',data.followers],['Public profile',data.html_url]].forEach(([key,value])=>{if(value===null||value===undefined||value==='')return;const row=document.createElement('div');row.textContent=key+': '+value;githubEntry.appendChild(row);});const link=document.createElement('a');link.className='uc-target-link';link.href=data.html_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='OPEN GITHUB PROFILE ↗';githubEntry.appendChild(link);}
-          else githubEntry.textContent='No exact public GitHub user profile was returned. Other public search links are available above.';
-        }catch(_){githubEntry.textContent='GitHub profile lookup was unavailable. Use the public search links above.';}
+          const records=(data?.Answer||[]).filter(x=>x.type===15).map(x=>x.data);
+          domainEntry.replaceChildren();
+          const label=document.createElement('div');label.className='uc-target-label';label.textContent='DOMAIN / DNS MODULE';domainEntry.appendChild(label);
+          const row=document.createElement('div');row.textContent=records.length?'Public MX records: '+records.join('; '):'No public MX records were returned (or the domain publishes none).';domainEntry.appendChild(row);
+          const status=document.createElement('div');status.textContent='DNS response status: '+(data?.Status===0?'NOERROR':String(data?.Status??'unknown'));domainEntry.appendChild(status);
+          const link=document.createElement('a');link.className='uc-target-link';link.href='https://lookup.icann.org/en/lookup?name='+encodeURIComponent(domain);link.target='_blank';link.rel='noopener noreferrer';link.textContent='VIEW DOMAIN REGISTRATION DATA ↗';domainEntry.appendChild(link);
+        }catch(_){domainEntry.textContent='Public DNS lookup unavailable right now. Mailbox ownership cannot be inferred.';}
+        addScanEntry('PUBLIC PROFILE','Check whether the address owner has voluntarily published a profile.','https://gravatar.com/'+encodeURIComponent(normalized));
+        addPublicSearches();
+      }else if(osintCategory==='PHONE'){
+        const digits=normalized.replace(/\D/g,'');
+        addScanEntry('PHONE FORMAT MODULE',(normalized.trim().startsWith('+')?'International-style number':'Number without an explicit + country prefix')+' · '+digits.length+' digits. Formatting cannot confirm whether the number is active, who owns it, or the subscriber’s location.');
+        addScanEntry('NUMBERING PLAN REFERENCE','Use country calling-code guidance to interpret the format; this is not a subscriber lookup.','https://www.itu.int/oth/T0202.aspx?parent=T0202');
+        addPublicSearches();
+      }else{
+        addScanEntry('USERNAME FORMAT','Accepted handle format. Identical usernames on different services may belong to different people.');
+        const githubEntry=addScanEntry('GITHUB PUBLIC PROFILE','Querying public profile API…');
+        try{
+          const response=await withTimeout('https://api.github.com/users/'+encodeURIComponent(normalized));
+          const data=response.ok?await response.json():null;
+          githubEntry.replaceChildren();
+          const label=document.createElement('div');label.className='uc-target-label';label.textContent='GITHUB PUBLIC PROFILE';githubEntry.appendChild(label);
+          if(data?.login){
+            [['Login',data.login],['Display name',data.name],['Public repositories',data.public_repos],['Followers',data.followers],['Public profile',data.html_url]].forEach(([key,value])=>{if(value===null||value===undefined||value==='')return;const row=document.createElement('div');row.textContent=key+': '+value;githubEntry.appendChild(row);});
+            const link=document.createElement('a');link.className='uc-target-link';link.href=data.html_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='OPEN PUBLIC PROFILE ↗';githubEntry.appendChild(link);
+          }else githubEntry.appendChild(document.createTextNode('No exact public GitHub profile was returned.'));
+        }catch(_){githubEntry.textContent='GitHub public profile API unavailable. Check public search results.';}
+        const gitlabEntry=addScanEntry('GITLAB PUBLIC PROFILE','Querying public user search…');
+        try{
+          const response=await withTimeout('https://gitlab.com/api/v4/users?username='+encodeURIComponent(normalized));
+          const data=response.ok?await response.json():null;
+          gitlabEntry.replaceChildren();
+          const label=document.createElement('div');label.className='uc-target-label';label.textContent='GITLAB PUBLIC PROFILE';gitlabEntry.appendChild(label);
+          const matches=Array.isArray(data)?data.filter(x=>String(x.username||'').toLowerCase()===normalized.toLowerCase()):[];
+          if(matches.length){matches.slice(0,3).forEach(x=>{const row=document.createElement('div');row.textContent='Username: '+x.username+(x.name?' · Display name: '+x.name:'');gitlabEntry.appendChild(row);if(x.web_url){const a=document.createElement('a');a.className='uc-target-link';a.href=x.web_url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='OPEN PUBLIC PROFILE ↗';gitlabEntry.appendChild(a);}});}
+          else gitlabEntry.appendChild(document.createTextNode('No exact public GitLab profile was returned.'));
+        }catch(_){gitlabEntry.textContent='GitLab public profile API unavailable. Check public search results.';}
+        addPublicSearches();
       }
-    });
-    const targetMeta=el.querySelector('.uc-target-meta');
+      const targetMeta=el.querySelector('.uc-target-meta');
     const targetContent=el.querySelector('.uc-target-content');
     let activeScanTarget='';
     const scanCategory=value=>{
