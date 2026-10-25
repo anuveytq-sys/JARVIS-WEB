@@ -1,0 +1,40 @@
+JARVIS-WEB — BharatCode Build League
+=====================================
+
+Project
+-------
+Name: JARVIS-WEB — Modular Browser AI Assistant
+Repository: https://github.com/anuveytq-sys/JARVIS-WEB
+Live frontend: https://anuveytq-sys.github.io/JARVIS-WEB/
+
+Purpose
+-------
+JARVIS-WEB is an experimental modular browser assistant interface. This submission adds an independent BharatCode-powered answer path to the existing hosted backend while preserving the existing Gemini path and other browser modules.
+
+BharatCode integration
+----------------------
+Provider: BharatCode OpenAI-compatible Chat Completions API
+Base URL: https://bharatcode.ai/api/model/v1
+Model: qwen-3.8-27b
+Backend endpoint: POST /api/bharatcode/command
+Status endpoint: GET /api/bharatcode/status
+Required server environment variable: BHARATCODE_API_KEY
+
+Configuration
+-------------
+1. Create or sign in to a BharatCode account and obtain an API key from https://bharatcode.ai/account.
+2. Add BHARATCODE_API_KEY to the private environment variables of the hosted JARVIS backend (Render). Never place the key in frontend JavaScript, this file, screenshots, or Git history.
+3. Deploy the backend update and confirm GET /api/bharatcode/status reports configured=true.
+4. Open JARVIS settings, enter the deployed backend base URL, test the BharatCode connection, and select BharatCode as the AI provider.
+5. Send a normal question through the existing JARVIS command box to test the integration.
+
+Security and limitations
+------------------------
+- This file intentionally contains no API key or personal credentials.
+- The API key is used only by the server. The browser sends prompts to the JARVIS backend, not directly to BharatCode.
+- This integration supplies text-generation responses; it does not grant JARVIS device-control permissions or make every existing module AI-powered.
+- Availability, quotas, account access, model names, and provider terms can change. Check the official BharatCode documentation before submitting.
+- Do not claim an end-to-end test passed until the backend is deployed with a valid private key and the actual browser workflow has been tested.
+
+Official API documentation: https://bharatcode.ai/build
+Official Build League page: https://bharatcode.ai/hackathon

@@ -2,7 +2,7 @@
    Displays replies on-screen as well as using the original HUD speech.
    No API keys or secrets are stored in this file. */
 (() => {
-  const API_BASE = (new URLSearchParams(location.search).get("api") || localStorage.getItem("jarvisApiBase") || "").replace(/\/+$/, "");
+  let API_BASE = (new URLSearchParams(location.search).get("api") || localStorage.getItem("jarvisApiBase") || "").replace(/\/+$/, "");
   const originalFetch = window.fetch.bind(window);
 
   // Visible diagnostics and replies: useful on mobile where speech may be silent.
@@ -400,7 +400,8 @@
       ["auto", "AUTO — OpenRouter first, then Gemini, then backend"],
       ["openrouter", "OpenRouter"],
       ["gemini", "Personal Gemini"],
-      ["backend", "Hosted JARVIS backend"]
+      ["backend", "Hosted JARVIS backend (Gemini)"],
+      ["bharatcode", "BharatCode — Build League model"]
     ].forEach(([value, text]) => {
       const option = document.createElement("option");
       option.value = value;
@@ -579,6 +580,84 @@
     });
     openRouterButtons.append(openRouterTest, openRouterRemove);
     openRouterSection.append(openRouterHeading, openRouterInfo, openRouterKeyLabel, openRouterKeyInput, openRouterModelLabel, openRouterModelInput, openRouterStatus, openRouterButtons);
+
+    const bharatCodeSection = document.createElement("div");
+    Object.assign(bharatCodeSection.style, {
+      margin: "4px 0 14px", padding: "14px", border: "1px solid #287b91",
+      borderRadius: "10px", background: "rgba(0,10,24,.72)"
+    });
+    const bharatCodeHeading = document.createElement("h3");
+    bharatCodeHeading.textContent = "BHARATCODE // BUILD LEAGUE";
+    Object.assign(bharatCodeHeading.style, { margin: "0 0 6px", color: "#62f5ff", fontSize: "14px", letterSpacing: "1px" });
+    const bharatCodeInfo = document.createElement("p");
+    bharatCodeInfo.textContent = "Uses BharatCode Qwen 3.8 27B through the hosted JARVIS backend. The API key stays in the backend's private environment settings; do not paste it into this browser.";
+    Object.assign(bharatCodeInfo.style, { margin: "0 0 10px", color: "#b6dce7", fontSize: "12px" });
+    const bharatCodeBaseLabel = document.createElement("label");
+    bharatCodeBaseLabel.textContent = "Hosted JARVIS backend URL";
+    Object.assign(bharatCodeBaseLabel.style, { display: "block", marginBottom: "6px", color: "#62f5ff" });
+    const bharatCodeBaseInput = document.createElement("input");
+    bharatCodeBaseInput.type = "url";
+    bharatCodeBaseInput.autocomplete = "url";
+    bharatCodeBaseInput.spellcheck = false;
+    bharatCodeBaseInput.placeholder = "https://your-jarvis-backend.example";
+    bharatCodeBaseInput.value = API_BASE;
+    Object.assign(bharatCodeBaseInput.style, {
+      width: "100%", boxSizing: "border-box", padding: "12px", marginBottom: "10px",
+      borderRadius: "8px", border: "1px solid #287b91", background: "#00101f",
+      color: "#fff", font: "14px system-ui,sans-serif"
+    });
+    const bharatCodeStatus = document.createElement("p");
+    bharatCodeStatus.setAttribute("role", "status");
+    bharatCodeStatus.textContent = API_BASE
+      ? "Backend URL is set. Test the BharatCode connection before using it."
+      : "Enter the deployed JARVIS backend URL. The BharatCode key must be configured on that server.";
+    Object.assign(bharatCodeStatus.style, { margin: "0 0 10px", color: "#baf7ff", fontSize: "12px", overflowWrap: "anywhere" });
+    const bharatCodeButtons = document.createElement("div");
+    Object.assign(bharatCodeButtons.style, { display: "flex", flexWrap: "wrap", gap: "8px" });
+    const bharatCodeTest = document.createElement("button");
+    bharatCodeTest.type = "button";
+    bharatCodeTest.textContent = "SAVE & TEST BHARATCODE";
+    Object.assign(bharatCodeTest.style, {
+      flex: "1 1 180px", minHeight: "42px", padding: "10px", borderRadius: "8px",
+      border: "1px solid #00d9ff", background: "rgba(0,0,0,.35)", color: "#fff",
+      font: "bold 12px system-ui,sans-serif", cursor: "pointer"
+    });
+    bharatCodeTest.addEventListener("click", async () => {
+      const base = bharatCodeBaseInput.value.trim().replace(/\/+$/, "");
+      if (!/^https:\/\//i.test(base)) {
+        bharatCodeStatus.textContent = "Enter a valid HTTPS backend URL.";
+        bharatCodeStatus.style.color = "#ffd0d0";
+        return;
+      }
+      bharatCodeTest.disabled = true;
+      bharatCodeStatus.textContent = "Saving the backend URL and testing BharatCode…";
+      bharatCodeStatus.style.color = "#baf7ff";
+      try {
+        const response = await originalFetch(base + "/api/bharatcode/command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command: "Reply with exactly: JARVIS BharatCode connection successful." })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data?.ok || !data?.reply) {
+          throw new Error(data?.reply || ("Backend returned HTTP " + response.status));
+        }
+        API_BASE = base;
+        localStorage.setItem("jarvisApiBase", base);
+        sessionStorage.setItem(AI_PROVIDER_SLOT, "bharatcode");
+        providerSelect.value = "bharatcode";
+        bharatCodeStatus.textContent = "Connected successfully. BharatCode replied: " + String(data.reply).slice(0, 180);
+        bharatCodeStatus.style.color = "#9dffcb";
+        showReply("BharatCode connection successful. JARVIS is now using BharatCode Qwen 3.8 27B.");
+      } catch (error) {
+        bharatCodeStatus.textContent = "Connection test failed: " + (error?.message || "network error") + ". Confirm the backend is deployed, BHARATCODE_API_KEY is configured privately, and the URL is correct.";
+        bharatCodeStatus.style.color = "#ffd0d0";
+      } finally {
+        bharatCodeTest.disabled = false;
+      }
+    });
+    bharatCodeButtons.append(bharatCodeTest);
+    bharatCodeSection.append(bharatCodeHeading, bharatCodeInfo, bharatCodeBaseLabel, bharatCodeBaseInput, bharatCodeButtons, bharatCodeStatus);
 
     const status = document.createElement("p");
     status.setAttribute("role", "status");
@@ -831,7 +910,7 @@
     contactsSection.append(contactsHeading, contactsInfo, contactsButtons, contactsFile, contactsStatus);
     contactsStatus.textContent = contactCount() + " phone contact(s) currently saved in this browser.";
 
-    card.append(heading, intro, warning, voiceSection, providerLabel, providerSelect, label, input, modelLabel, modelSelect, openRouterSection, contactsSection, status, row);
+    card.append(heading, intro, warning, voiceSection, providerLabel, providerSelect, label, input, modelLabel, modelSelect, openRouterSection, bharatCodeSection, contactsSection, status, row);
     modal.appendChild(card);
     document.body.append(modal);
   }
@@ -887,6 +966,20 @@
     const answer = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
     if (!answer) throw new Error("Gemini returned no text. Check safety filters, model access, or quota.");
     return answer;
+  }
+
+  async function askBharatCode(command) {
+    if (!API_BASE) throw new Error("No hosted JARVIS backend URL is configured. Open SETTINGS and set the backend URL.");
+    const response = await originalFetch(API_BASE + "/api/bharatcode/command", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.ok || !data?.reply) {
+      throw new Error(data?.reply || ("BharatCode backend returned HTTP " + response.status));
+    }
+    return data.reply;
   }
 
   const say = (text) => ({ ok: true, reply: text });
@@ -1202,6 +1295,18 @@
         const provider = getAIProvider();
         const personalKey = getPersonalKey();
         const openRouterKey = getOpenRouterKey();
+        if (provider === "bharatcode") {
+          try {
+            const answer = await askBharatCode(command);
+            const result = { ok: true, reply: answer, provider: "bharatcode", model: "qwen-3.8-27b" };
+            showReply(answer);
+            return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
+          } catch (error) {
+            const result = { ok: false, reply: "BharatCode request failed: " + (error?.message || "unknown error") + ". Open ⚙ SETTINGS to test the backend connection." };
+            showReply(result.reply, "error");
+            return new Response(JSON.stringify(result), { status: 502, headers: { "Content-Type": "application/json" } });
+          }
+        }
         const useOpenRouter = provider === "openrouter" || (provider === "auto" && !!openRouterKey);
         const useGemini = provider === "gemini" || (provider === "auto" && !openRouterKey && !!personalKey);
         if (useOpenRouter) {

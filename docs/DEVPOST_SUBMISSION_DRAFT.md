@@ -34,7 +34,7 @@ Do not record the demo until the selected workflow has been tested from a fresh 
 
 - **Frontend:** HTML, CSS, and modular browser JavaScript.
 - **Hosted service:** Node.js and Express.
-- **AI integration:** Google Gemini through the server-side `GEMINI_API_KEY` environment variable.
+- **AI integrations:** Existing Google Gemini route via server-side `GEMINI_API_KEY`, plus a separate BharatCode Qwen 3.8 27B route via server-side `BHARATCODE_API_KEY` (`POST /api/bharatcode/command`). Describe the BharatCode route as verified only after deploying and testing it with a valid key.
 - **Static deployment:** GitHub Pages workflow.
 - **Hosted backend deployment:** Render configuration in `render.yaml`.
 
@@ -45,7 +45,8 @@ Do not record the demo until the selected workflow has been tested from a fresh 
 - Hosted timers are not synchronized by the current web backend.
 - Voice recognition depends on browser support and user permissions.
 - The current backend has basic origin checks and process-local request limiting, not a complete production security system.
-- AI responses require a correctly configured server-side API key and remain subject to provider availability, quotas, and terms.
+- AI responses require correctly configured server-side API keys and remain subject to provider availability, quotas, account eligibility, and terms.
+- The BharatCode route is added in source; it is not confirmed live until `BHARATCODE_API_KEY` is configured on the deployed backend and a browser-to-backend request succeeds.
 
 ## Demo and repository
 

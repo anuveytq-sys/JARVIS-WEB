@@ -18,8 +18,9 @@ The repository includes separate browser modules for areas such as the web bridg
 ### Hosted AI backend
 
 - `web-server.js` runs a separate Express service intended for hosted web AI.
-- It exposes `GET /api/status`, `POST /api/command`, `GET /api/timers`, and `POST /api/voice`.
-- The chat route calls the configured Gemini model using `GEMINI_API_KEY` from the server environment.
+- It exposes `GET /api/status`, `POST /api/command`, `GET /api/timers`, and `POST /api/voice` for existing behavior.
+- It also exposes an independent `GET /api/bharatcode/status` and `POST /api/bharatcode/command` path for BharatCode.
+- The Gemini route uses `GEMINI_API_KEY`; the BharatCode route uses `BHARATCODE_API_KEY`. Both keys are server-side environment variables. The BharatCode key is never collected by the browser UI.
 - The hosted backend explicitly describes itself as web AI mode and does not run local shell commands or control a visitor's device.
 - `render.yaml` configures a Render service using `node web-server.js`.
 
@@ -35,6 +36,8 @@ The repository includes separate browser modules for areas such as the web bridg
 |---|---|---|
 | Hosted backend | `GET /api/status` | Returns basic web-backend status and model metadata |
 | Hosted backend | `POST /api/command` | Sends a text prompt to the configured Gemini model |
+| Hosted backend | `GET /api/bharatcode/status` | Reports BharatCode model metadata and whether the server-side key is configured; never returns the key |
+| Hosted backend | `POST /api/bharatcode/command` | Sends a prompt to BharatCode Qwen 3.8 27B and returns the text response |
 | Hosted backend | `GET /api/timers` | Returns an empty timer list with a note that hosted timers are not synchronized |
 | Hosted backend | `POST /api/voice` | Reports that voice recognition runs in the browser when supported |
 | Local backend | `POST /api/command` | Local command handling; inspect implementation before exposing it to a network |

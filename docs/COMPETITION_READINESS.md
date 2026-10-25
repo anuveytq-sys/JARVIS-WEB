@@ -11,6 +11,19 @@ Use this document before entering a hackathon, accelerator showcase, or software
 - [ ] Rules about AI tools, third-party APIs, open-source licensing, and intellectual property are understood.
 - [ ] Prize eligibility, payment conditions, deadlines, and required deliverables are confirmed on the organizer's official page.
 
+## BharatCode Build League integration checklist
+
+- [ ] Confirm the organizer accepts this previously built repository and any existing-project disclosure required by the rules; do not assume eligibility from the technical integration alone.
+- [ ] Obtain an eligible BharatCode API key from the official account page.
+- [ ] Configure `BHARATCODE_API_KEY` as a private environment variable on the hosted backend. Never commit the key or paste it into browser settings.
+- [ ] Deploy the backend routes `GET /api/bharatcode/status` and `POST /api/bharatcode/command`.
+- [ ] Open JARVIS Settings → BharatCode // Build League, enter the actual backend URL, and use **SAVE & TEST BHARATCODE**.
+- [ ] Verify a real prompt succeeds through the existing JARVIS command box and record the deployed commit and test date.
+- [ ] Ensure `BharatCode.txt` exists in the public repository root.
+- [ ] Re-check current API terms, quota, model availability, event eligibility, and submission deadline on official pages.
+
+The integration code is prepared in the repository, but it is not end-to-end verified until the backend is deployed with a valid private key and tested from the published browser UI.
+
 ## 2. Choose a focused story
 
 Describe JARVIS as a modular browser-based assistant interface. Pick one specific, demonstrably working workflow for the demo rather than claiming every planned capability works in every environment.
