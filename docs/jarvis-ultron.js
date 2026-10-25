@@ -398,7 +398,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         if(!active||!worldFrame.isConnected){if(worldPlaybackMonitor)clearInterval(worldPlaybackMonitor);worldPlaybackMonitor=null;return;}
         const nowTime=Number(worldFrame.currentTime)||0;
         if(!worldFrame.paused&&worldFrame.readyState>=2&&nowTime>lastTime+0.12){lastTime=nowTime;lastAdvanceAt=Date.now();}
-        else if(Date.now()-lastAdvanceAt>30000)failWorldCam('playback stalled');
+        else if(Date.now()-lastAdvanceAt>5000)failWorldCam('playback stalled');
       },1500);
     };
     const startWorldCam=()=>{
@@ -412,7 +412,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       if(!cam){worldFailedCams.clear();cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;}
       if(!cam)return;
       worldActiveCam=cam;worldCamLoading=true;worldCamStarted=false;worldAttempt++;
-      worldPlace.textContent='CHECKING LIVE FEED';worldLiveBadge.textContent='CONNECTING';worldLiveBadge.style.opacity='.75';
+      worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;worldLiveBadge.textContent='CONNECTING';worldLiveBadge.style.opacity='.75';
       let worldBrightSamples=0, worldCheckedSamples=0, lastCrossOriginTime=-1, crossOriginAdvancingSamples=0;
       const clearBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
       worldFrame.onplaying=()=>{
@@ -430,7 +430,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldFrame.onerror=()=>failWorldCam('media error');
       worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},7000);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},2500);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
