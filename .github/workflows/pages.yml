@@ -24,25 +24,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Repair ULTRON duplicate telemetry binding
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('docs/jarvis-ultron.js')
-          s = p.read_text(encoding='utf-8')
-          marker = "const earthPanel=el.querySelector('.uc-earth-panel');"
-          telemetry = "const earthPanel=el.querySelector('.uc-earth-telemetry');"
-          start = s.find(telemetry)
-          target = s.find(marker)
-          if start == -1 or target == -1 or start > target:
-              raise SystemExit('ULTRON telemetry block markers not found')
-          block = s[start:target]
-          block = block.replace(telemetry, "const earthTelemetryPanel=el.querySelector('.uc-earth-telemetry');", 1)
-          block = block.replace('earthPanel.', 'earthTelemetryPanel.')
-          s = s[:start] + block + s[target:]
-          p.write_text(s, encoding='utf-8')
-          PY
-
       - name: Validate browser JavaScript
         run: |
           node --check docs/jarvis-web.js
