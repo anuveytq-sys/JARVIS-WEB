@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-38';
+  const VERSION = 'ultron-core-rebuild-39';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -181,11 +181,29 @@
         try{return await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal,cache:'no-store'});}
         finally{clearTimeout(timer);}
       };
-      const addPublicSearches=()=>{
+      const addPublicSearches=async()=>{
         const q=encodeURIComponent('"'+normalized+'"');
-        [['Google public-web search','https://www.google.com/search?q='+q],['Bing public-web search','https://www.bing.com/search?q='+q],['DuckDuckGo public-web search','https://duckduckgo.com/?q='+q]].forEach(([label,url])=>addScanEntry(label,'Open indexed public pages; verify any match against the original source.',url));
+        const entry=addScanEntry('PUBLIC WEB RESULTS','Querying DuckDuckGo public instant-answer index…');
+        try{
+          const response=await withTimeout('https://api.duckduckgo.com/?q='+q+'&format=json&no_html=1&skip_disambig=1',6000);
+          const data=response.ok?await response.json():null;
+          entry.replaceChildren();
+          const label=document.createElement('div');label.className='uc-target-label';label.textContent='PUBLIC WEB RESULTS';entry.appendChild(label);
+          const snippets=[];
+          if(data?.AbstractText)snippets.push(data.AbstractText);
+          if(data?.Answer)snippets.push('Answer: '+data.Answer);
+          const collect=items=>{(items||[]).forEach(item=>{if(item?.Text)snippets.push(item.Text);if(item?.Topics)collect(item.Topics);});};
+          collect(data?.RelatedTopics);
+          const unique=[...new Set(snippets)].slice(0,6);
+          if(unique.length)unique.forEach((snippet,i)=>{const row=document.createElement('div');row.textContent=(i+1)+'. '+snippet;entry.appendChild(row);});
+          else entry.appendChild(document.createTextNode('No instant-answer snippets were returned. This index does not expose full search-engine results; no match is not proof that information is absent.'));
+        }catch(_){
+          entry.replaceChildren();
+          const label=document.createElement('div');label.className='uc-target-label';label.textContent='PUBLIC WEB RESULTS';entry.appendChild(label);
+          entry.appendChild(document.createTextNode('Public search API unavailable or blocked by the browser. No result was verified; try again later.'));
+        }
       };
-      addScanEntry('SCOPE','Public sources and basic metadata only. This scan does not retrieve leaked databases, passwords, private records, or subscriber identity data.');
+      addScanEntry('SCOPE','Public-source enrichment only. No breached databases, passwords, private records, subscriber identity data, or inferred identity claims. Results are limited by each service and browser CORS access.');
       if(osintCategory==='EMAIL'){
         const domain=(normalized.split('@')[1]||'').toLowerCase();
         addScanEntry('EMAIL SYNTAX','Valid email-address format. This does not prove that the mailbox exists or identify its owner.');
@@ -200,13 +218,13 @@
           const status=document.createElement('div');status.textContent='DNS response status: '+(data?.Status===0?'NOERROR':String(data?.Status??'unknown'));domainEntry.appendChild(status);
           const link=document.createElement('a');link.className='uc-target-link';link.href='https://lookup.icann.org/en/lookup?name='+encodeURIComponent(domain);link.target='_blank';link.rel='noopener noreferrer';link.textContent='VIEW DOMAIN REGISTRATION DATA ↗';domainEntry.appendChild(link);
         }catch(_){domainEntry.textContent='Public DNS lookup unavailable right now. Mailbox ownership cannot be inferred.';}
-        addScanEntry('PUBLIC PROFILE','Check whether the address owner has voluntarily published a profile.','https://gravatar.com/'+encodeURIComponent(normalized));
-        addPublicSearches();
+        addScanEntry('PUBLIC PROFILE CHECK','A profile match cannot be confirmed from an email address alone in this browser-only deployment. No private account lookup is performed.');
+        await addPublicSearches();
       }else if(osintCategory==='PHONE'){
         const digits=normalized.replace(/\D/g,'');
         addScanEntry('PHONE FORMAT MODULE',(normalized.trim().startsWith('+')?'International-style number':'Number without an explicit + country prefix')+' · '+digits.length+' digits. Formatting cannot confirm whether the number is active, who owns it, or the subscriber’s location.');
         addScanEntry('NUMBERING PLAN REFERENCE','Use country calling-code guidance to interpret the format; this is not a subscriber lookup.','https://www.itu.int/oth/T0202.aspx?parent=T0202');
-        addPublicSearches();
+        await addPublicSearches();
       }else{
         addScanEntry('USERNAME FORMAT','Accepted handle format. Identical usernames on different services may belong to different people.');
         const githubEntry=addScanEntry('GITHUB PUBLIC PROFILE','Querying public profile API…');
@@ -230,7 +248,7 @@
           if(matches.length){matches.slice(0,3).forEach(x=>{const row=document.createElement('div');row.textContent='Username: '+x.username+(x.name?' · Display name: '+x.name:'');gitlabEntry.appendChild(row);if(x.web_url){const a=document.createElement('a');a.className='uc-target-link';a.href=x.web_url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='OPEN PUBLIC PROFILE ↗';gitlabEntry.appendChild(a);}});}
           else gitlabEntry.appendChild(document.createTextNode('No exact public GitLab profile was returned.'));
         }catch(_){gitlabEntry.textContent='GitLab public profile API unavailable. Check public search results.';}
-        addPublicSearches();
+        await addPublicSearches();
       }
       const targetMeta=el.querySelector('.uc-target-meta');
     const targetContent=el.querySelector('.uc-target-content');
