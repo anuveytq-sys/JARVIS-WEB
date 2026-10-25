@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-35';
+  const VERSION = 'ultron-core-rebuild-36';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -386,6 +386,9 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       if(!worldCamLoading||!worldFrame.isConnected)return;
       worldCamStarted=true;worldCamLoading=false;
       if(worldCamWatchdog){clearTimeout(worldCamWatchdog);worldCamWatchdog=null;}
+      // Give every successfully playing feed a full 20 seconds; do not rotate while it is loading.
+      if(worldCamTimer)clearTimeout(worldCamTimer);
+      worldCamTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},20000);
       if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}
       worldFrame.style.visibility='visible';
       worldPlace.textContent=cam.name;
@@ -398,7 +401,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         if(!active||!worldFrame.isConnected){if(worldPlaybackMonitor)clearInterval(worldPlaybackMonitor);worldPlaybackMonitor=null;return;}
         const nowTime=Number(worldFrame.currentTime)||0;
         if(!worldFrame.paused&&worldFrame.readyState>=2&&nowTime>lastTime+0.12){lastTime=nowTime;lastAdvanceAt=Date.now();}
-        else if(Date.now()-lastAdvanceAt>5000)failWorldCam('playback stalled');
+        else if(Date.now()-lastAdvanceAt>8000)failWorldCam('playback stalled');
       },1500);
     };
     const startWorldCam=()=>{
@@ -430,7 +433,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldFrame.onerror=()=>failWorldCam('media error');
       worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},2500);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},9000);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
@@ -462,6 +465,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       }
     };
     const nextWorldCam=()=>{
+      if(worldCamTimer){clearTimeout(worldCamTimer);worldCamTimer=null;}
       clearWorldTimers();worldCamLoading=false;worldCamStarted=false;
       resetWorldVideo();
       try{startWorldCam()}catch(error){
@@ -471,19 +475,12 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       }
     };
     startWorldCam();
-    // Keep the requested 20-second rotation independent from individual stream errors.
-    worldCamTimer=setInterval(()=>{
-      if(!active||!worldFrame.isConnected)return;
-      try{nextWorldCam()}catch(error){
-        console.warn('[ULTRON] Camera rotation recovered from error:',error);
-        worldCamLoading=false;worldCamStarted=false;
-        clearWorldTimers();
-        worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},500);
-      }
-    },20000);
+    // Rotation is scheduled only after a feed is genuinely playing. Failed feeds are skipped promptly;
+    // a slow-but-valid feed gets up to 9 seconds to load and then a full 20 seconds on screen.
+    worldCamTimer=null;
     window.__ultronWorldCamTimer=worldCamTimer;
     el.querySelector('.uc-exit').addEventListener('click',()=>{
-      if(worldCamTimer)clearInterval(worldCamTimer);
+      if(worldCamTimer)clearTimeout(worldCamTimer);
       clearWorldTimers();destroyWorldHls();resetWorldVideo();window.__ultronWorldCamTimer=null;
     });
     const setStatus=message=>{status.textContent=message||'';};
