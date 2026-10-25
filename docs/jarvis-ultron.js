@@ -137,16 +137,12 @@
         }finally{clearTimeout(timeout);}
       };
       try{
-        const results=await Promise.allSettled(sources.map(loadSource));
-        const winner=results.find(x=>x.status==='fulfilled');
-        if(winner){
-          earthSatelliteRecords=winner.value;earthLastCatalogAt=Date.now();
-          try{localStorage.setItem(cacheKey,JSON.stringify({savedAt:earthLastCatalogAt,records:earthSatelliteRecords}));}catch(_){}
-        }else{
-          lastError=results.find(x=>x.status==='rejected')?.reason;
-          console.warn('[ULTRON] Satellite catalog unavailable; using cached data if available.',lastError);
-        }
-      }catch(error){lastError=error;console.warn('[ULTRON] Satellite catalog unavailable.',error);}
+        earthSatelliteRecords=await Promise.any(sources.map(loadSource));
+        earthLastCatalogAt=Date.now();
+        try{localStorage.setItem(cacheKey,JSON.stringify({savedAt:earthLastCatalogAt,records:earthSatelliteRecords}));}catch(_){}
+      }catch(error){
+        lastError=error;console.warn('[ULTRON] Satellite catalog unavailable; using cached data if available.',lastError);
+      }
       earthRenderTelemetry();
     };
     earthPanel.addEventListener('pointerdown',e=>e.stopPropagation());earthPanel.addEventListener('click',e=>e.stopPropagation());earthRenderTelemetry();earthLoadCatalog();earthRefreshTimer=setInterval(earthRenderTelemetry,1000);
@@ -333,12 +329,16 @@
         }finally{clearTimeout(timeout);}
       };
       const results=await Promise.allSettled(countryCodes.map(fetchCountry));
-      const candidates=[];
-      for(const result of results)if(result.status==='fulfilled')for(const cam of result.value){
-        if(existing.has(cam.url))continue;
-        existing.add(cam.url);candidates.push(cam);
+      const countryBuckets=[];
+      for(const result of results){
+        if(result.status!=='fulfilled')continue;
+        const bucket=[];
+        for(const cam of result.value){if(existing.has(cam.url))continue;existing.add(cam.url);bucket.push(cam);}
+        if(bucket.length)countryBuckets.push(bucket);
       }
-      // Keep a bounded, geographically diverse rotation and avoid delaying the first camera.
+      // Round-robin countries so the rotation doesn't get dominated by the first large catalog.
+      const candidates=[];
+      while(countryBuckets.some(bucket=>bucket.length))for(const bucket of countryBuckets){const cam=bucket.shift();if(cam)candidates.push(cam);if(candidates.length>=150)break;}
       for(const cam of candidates.slice(0,150))worldCams.push(cam);
       console.info('[ULTRON] Global camera registry added',Math.min(candidates.length,150),'additional feeds.');
     };
