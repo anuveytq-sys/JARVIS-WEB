@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-33';
+  const VERSION = 'ultron-core-rebuild-34';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -370,7 +370,17 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldLiveBadge.textContent='RECONNECTING';
       worldLiveBadge.style.opacity='.8';
       worldPlace.textContent='SEARCHING FOR LIVE FEED';
-      worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},250);
+      // Skip unavailable streams promptly; after one pass, retry the full feed pool.
+      if(worldFailedCams.size>=worldCams.length)worldFailedCams.clear();
+      worldRetryTimer=setTimeout(()=>{
+        if(active&&worldFrame.isConnected){
+          try{nextWorldCam()}catch(error){
+            console.warn('[ULTRON] Camera switch recovered from error:',error);
+            worldCamLoading=false;worldCamStarted=false;
+            worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)startWorldCam()},500);
+          }
+        }
+      },250);
     };
     const markWorldCamLive=(cam)=>{
       if(!worldCamLoading||!worldFrame.isConnected)return;
@@ -451,9 +461,26 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         document.head.appendChild(loader);
       }
     };
-    const nextWorldCam=()=>{clearWorldTimers();worldCamLoading=false;worldCamStarted=false;resetWorldVideo();startWorldCam();};
+    const nextWorldCam=()=>{
+      clearWorldTimers();worldCamLoading=false;worldCamStarted=false;
+      resetWorldVideo();
+      try{startWorldCam()}catch(error){
+        console.warn('[ULTRON] Camera startup recovered from error:',error);
+        worldCamLoading=false;worldCamStarted=false;
+        worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)startWorldCam()},500);
+      }
+    };
     startWorldCam();
-    worldCamTimer=setInterval(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},20000);
+    // Keep the requested 20-second rotation independent from individual stream errors.
+    worldCamTimer=setInterval(()=>{
+      if(!active||!worldFrame.isConnected)return;
+      try{nextWorldCam()}catch(error){
+        console.warn('[ULTRON] Camera rotation recovered from error:',error);
+        worldCamLoading=false;worldCamStarted=false;
+        clearWorldTimers();
+        worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)nextWorldCam()},500);
+      }
+    },20000);
     window.__ultronWorldCamTimer=worldCamTimer;
     el.querySelector('.uc-exit').addEventListener('click',()=>{
       if(worldCamTimer)clearInterval(worldCamTimer);
