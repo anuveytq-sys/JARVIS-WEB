@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-ultron-core25-20261025';
+  const VERSION = 'env-shortcuts-ultron-core26-20261025';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -42,8 +42,8 @@
     if(ultronOpenPromise) return ultronOpenPromise;
     ultronOpenPromise=(async()=>{
     try {
-      if (window.ULTRON?.version !== 'ultron-core-rebuild-27') {
-        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-27');
+      if (window.ULTRON?.version !== 'ultron-core-rebuild-28') {
+        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-28');
       }
       if(typeof window.ULTRON?.open==='function') window.ULTRON.open();
       else throw new Error('ULTRON core entry point missing');
