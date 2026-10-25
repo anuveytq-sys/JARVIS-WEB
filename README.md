@@ -63,48 +63,27 @@ JARVIS-WEB is organized as a modular assistant cockpit with a futuristic HUD, a 
 
 ---
 
-## Three environments, three different permission models
+## The six JARVIS environments
 
-The name “JARVIS” describes the overall project, but the website, hosted backend, and local backend do not have the same access. Treat them as distinct execution environments.
+JARVIS-WEB is organized around six distinct environments, each with a different role. They bring focused tools together under one futuristic assistant experience. The descriptions below summarize the intended scope of each environment; individual features can depend on permissions, APIs, backend configuration, and device/browser support.
 
-| Environment | What it does | What it does not automatically do |
-|---|---|---|
-| **1. Browser / GitHub Pages** | Serves the HUD and browser modules over HTTPS. Runs browser-side UI and features allowed by the browser, the user's permissions, and available services. | Cannot run Node.js on the visitor's device, execute local shell commands, open arbitrary desktop apps, or read private files just because a webpage requests it. |
-| **2. Hosted Web AI / Render** | Runs web-server.js as an Express service. Provides status and AI command endpoints and sends configured prompts to Gemini using a server-side GEMINI_API_KEY. | Does not control the visitor's computer, open their apps, inspect their files, or execute the local backend's shell commands. The hosted timer endpoint currently returns an empty list; voice recognition is browser-side. |
-| **3. Local machine backend** | server.js with gemini.cjs is the local execution path. Its code includes supported command handling, known-app launch logic, file search/open helpers, timers, and system-information helpers. Actual support depends on the operating system and command mapping. | Is not available to a remote website merely because GitHub Pages is open. It should remain local-only unless it receives a dedicated security review and deliberate access controls. |
-
-### Environment 1 — Browser interface
-
-The static site is the visible JARVIS experience. GitHub Pages serves the compiled site; the current workflow starts with public/index.html and copies a curated set of browser modules, styles, and assets from docs/. It is not a Node.js host.
-
-**Best for:** Exploring the interface, browser-compatible modules, voice/media interactions supported by the browser, and a public project demonstration.
-
-### Environment 2 — Hosted AI mode
-
-The hosted service is configured separately from the static site. The frontend can be pointed to the actual backend URL using the documented api query parameter. The backend's main routes are:
-
-| Route | Purpose |
+| Environment | Core capabilities |
 |---|---|
-| GET /api/status | Reports basic hosted-service status and model metadata. |
-| POST /api/command | Sends a text prompt to the configured Gemini model. |
-| GET /api/timers | Returns the current hosted timer response; the implementation currently returns an empty list. |
-| POST /api/voice | Provides endpoint compatibility for voice-related requests; recognition is handled in the browser. |
+| **Main JARVIS** | The central assistant experience for AI conversations, voice-oriented interaction, supported command routing, service shortcuts, and connected workflows such as calling/Beacon and reminders where configured. |
+| **VELVE** | A satellite- and country-oriented exploration environment, bringing together visualizations and satellite/data-related modules. Coverage and freshness depend on the available data sources and feeds. |
+| **TerraNexus** | An Earth-focused visual and exploration environment for geographic or planet-scale context, using the dedicated TerraNexus interface and its supporting modules. Specific data layers depend on what is configured and available. |
+| **Command Centre** | A mission-control-style workspace for organizing and monitoring supported commands, mission/task interfaces, status panels, reminders, and workflow shortcuts. Displayed controls do not by themselves guarantee background execution or persistent synchronization. |
+| **Vision Intelligence** | A camera/vision-oriented environment with hand-gesture and other visual-interaction modules. Features require compatible browser/device support, access permissions, and their associated vision resources. |
+| **ULTRON** | A specialist research and intelligence environment for supported search and analysis workflows, including lawful open-source research using public, authorized sources. It is not a guarantee of access to private, leaked, restricted, or non-public data. |
 
-**Best for:** A browser-based AI question-and-answer workflow without granting the hosted service access to a visitor's machine.
+**Important:** These are six product environments—not six guarantees of fully autonomous or universally available functionality. Demonstrate only workflows verified in the target deployment, and keep the boundaries between browser permissions, hosted services, and local-machine access clear.
 
-### Environment 3 — Local machine mode
-
-The local backend is separate from the hosted web service. The code contains operating-system-specific app launching and helper routines for locating/opening files, timers, and system information. What works depends on the host OS, installed applications/utilities, and the exact command route.
-
-**Best for:** Authorized local experiments on a machine you control, where the local server and its dependencies are installed and intentionally running.
-
-**Security warning:** The local backend uses Node's child-process shell execution for supported commands. Keep it bound to local access, do not expose it publicly, and review command mappings and input handling before adding more power. Do not treat the hosted service as a safe tunnel to the local machine.
 
 ---
 
 ## Architecture
 
-The system has three main execution paths:
+Under the six product environments, the current implementation has three main technical execution paths:
 
 - **Browser HUD:** public/index.html plus selected browser modules from docs/.
 - **Hosted Web AI:** web-server.js → Express API → Gemini using a server-side key.
