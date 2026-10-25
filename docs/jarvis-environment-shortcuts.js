@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-ultron-core24-20261024';
+  const VERSION = 'env-shortcuts-ultron-core25-20261025';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -16,22 +16,45 @@
     { name:'ULTRON', subtitle:'PUBLIC INTELLIGENCE MATRIX', command:'open ULTRON environment' }
   ];
   const findVoiceAnalyzer=()=>Array.from(document.querySelectorAll('.panel-title')).find(t=>/VOICE\s+ANALYZER/i.test(t.textContent||''))?.closest('.panel')||null;
-  const loadScript=(id,src)=>new Promise((resolve,reject)=>{if(document.getElementById(id)){resolve();return}const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
+  const scriptLoads = new Map();
+  const loadScript=(id,src)=>{
+    if(scriptLoads.has(id)) return scriptLoads.get(id);
+    const existing=document.getElementById(id);
+    if(existing?.dataset.loaded==='true') return Promise.resolve();
+    const promise=new Promise((resolve,reject)=>{
+      const script=existing||document.createElement('script');
+      script.id=id; script.src=src; script.async=true;
+      script.onload=()=>{script.dataset.loaded='true';resolve()};
+      script.onerror=()=>{scriptLoads.delete(id);script.remove();reject(new Error('Failed to load '+src))};
+      if(!existing) document.head.appendChild(script);
+    });
+    scriptLoads.set(id,promise);
+    return promise;
+  };
 
   const normalize=value=>String(value||'').toLowerCase().replace(/[’'`]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
   const isUltronOpen=text=>/^(hey jarvis )?(please )?(open|launch|start|activate|engage|enable|boot|bring up|show|display|summon|release|unleash|deploy|initialize|power up|wake up) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(take me to|go to|enter|enter the) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(i want|i need) (the )?ultron( environment| mode| system)?$/.test(normalize(text));
   const isUltronClose=text=>/^(hey jarvis )?(please )?(close|exit|quit|dismiss|hide|shut|deactivate|disable|stop|terminate|end|leave) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(stand down|power down|put away|take down) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(return|go back|take me back) (from|out of) (the )?ultron$/.test(normalize(text)) || /^ultron (close|exit|quit|shutdown|shut down|offline|sleep)$/.test(normalize(text));
 
   const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-ultron-core24-20261024')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
+  let ultronOpenPromise=null;
   const loadUltron=async()=>{
+    if(ultronOpenPromise) return ultronOpenPromise;
+    ultronOpenPromise=(async()=>{
     try {
-      if (window.ULTRON?.version !== 'ultron-core-rebuild-26') { document.getElementById('jarvis-ultron-core-loader')?.remove(); await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-26'); }
+      if (window.ULTRON?.version !== 'ultron-core-rebuild-27') {
+        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-27');
+      }
       if(typeof window.ULTRON?.open==='function') window.ULTRON.open();
       else throw new Error('ULTRON core entry point missing');
     } catch(error) {
       console.error('[JARVIS] ULTRON core failed to load',error);
       alert('ULTRON could not load. Check your internet connection and try again.');
+    } finally {
+      ultronOpenPromise=null;
     }
+    })();
+    return ultronOpenPromise;
   };
 
   const installDirectCommandHook=()=>{
