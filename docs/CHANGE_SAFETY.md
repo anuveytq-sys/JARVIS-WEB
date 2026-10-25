@@ -1,12 +1,8 @@
 # Safe Change and Rollback Workflow
 
-## Current preparation branch
+## Current Devpost-readiness documentation
 
-The competition-readiness documentation is prepared on the separate branch:
-
-`devpost/portfolio-readiness`
-
-The default `main` branch is not the target for these documentation changes. The intent is to keep the existing application and deployment behavior untouched while the documentation diff is reviewed.
+The documentation proposal is tracked in pull request #2 on branch `devpost/portfolio-readiness-current`. It is documentation-only and targets `main`. The separate cleanup of three confirmed server backup files was merged independently; the current Pages workflow has since completed successfully on `main`.
 
 ## Before any future code change
 
@@ -18,16 +14,18 @@ The default `main` branch is not the target for these documentation changes. The
 6. Open a pull request and review it before merging.
 7. Verify the deployed site only after an intentional merge/deployment.
 
-## Undoing this preparation
+## Undoing a change
 
-Because this work is isolated on `devpost/portfolio-readiness`, it can be undone without reverting unrelated commits on `main`:
+- If a pull request is still open, close it without merging to keep it off the default branch.
+- If a change has been merged, revert the specific merge/squash commit or the individual commit that introduced it. Review the target commit before reverting; do not force-push or reset shared history as a first choice.
+- Git history preserves the deleted backup files and prior versions unless repository history is rewritten. To restore a file, retrieve its version from a known commit and review it before committing the restoration.
 
-- If the pull request is still open, close it without merging.
-- If it has not been merged, the default branch and production deployment should remain unchanged by this branch.
-- If changes are later merged, revert the specific merge commit or the individual documentation commits. Review the target commit before reverting; do not force-push or reset shared history as a first choice.
+This workflow cannot guarantee rollback of external side effects. A hosting deployment, secret rotation, provider configuration change, or external service action needs its own rollback plan.
 
-This workflow cannot guarantee rollback of external side effects. A separate hosting deployment, secret rotation, or service configuration change would need its own rollback plan.
+## Scope of the Devpost documentation pass
 
-## Scope of the current documentation pass
+The proposal updates project documentation only: the README, deployment notes, architecture, security review, testing checklist, competition checklist, submission draft, and change-safety notes. It does not modify application JavaScript/HTML modules, dependencies, environment variables, Render configuration, or GitHub Actions workflow files. No runtime feature behavior is intentionally changed.
 
-This pass is intentionally documentation-only. It does not reorganize application modules, change scripts, alter environment variables, modify the Render configuration, or intentionally trigger a production deployment.
+## Release evidence and limits
+
+A successful GitHub Pages workflow demonstrates that its configured checks and build steps passed; it does not prove every browser feature works end-to-end. Before a competition submission, test the exact workflow to be recorded on the target browser/device, confirm the hosted backend separately if used, and describe only observed behavior.
