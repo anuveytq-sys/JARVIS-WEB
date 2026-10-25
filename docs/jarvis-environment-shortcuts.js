@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-ultron-core28-20261025';
+  const VERSION = 'env-shortcuts-ultron-core29-20261025';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -18,15 +18,25 @@
   const findVoiceAnalyzer=()=>Array.from(document.querySelectorAll('.panel-title')).find(t=>/VOICE\s+ANALYZER/i.test(t.textContent||''))?.closest('.panel')||null;
   const scriptLoads = new Map();
   const loadScript=(id,src)=>{
-    if(scriptLoads.has(id)) return scriptLoads.get(id);
-    const existing=document.getElementById(id);
-    if(existing?.dataset.loaded==='true') return Promise.resolve();
+    const isUltronCore=id==='jarvis-ultron-core-loader';
+    const expectedCore='ultron-core-rebuild-30';
+    if(scriptLoads.has(id)){
+      if(!isUltronCore||window.ULTRON?.version===expectedCore)return scriptLoads.get(id);
+      scriptLoads.delete(id);
+      document.getElementById(id)?.remove();
+    }
+    let existing=document.getElementById(id);
+    if(existing?.dataset.loaded==='true'){
+      if(!isUltronCore||window.ULTRON?.version===expectedCore)return Promise.resolve();
+      existing.remove();
+      existing=null;
+    }
     const promise=new Promise((resolve,reject)=>{
-      const script=existing||document.createElement('script');
+      const script=document.createElement('script');
       script.id=id; script.src=src; script.async=true;
       script.onload=()=>{script.dataset.loaded='true';resolve()};
       script.onerror=()=>{scriptLoads.delete(id);script.remove();reject(new Error('Failed to load '+src))};
-      if(!existing) document.head.appendChild(script);
+      document.head.appendChild(script);
     });
     scriptLoads.set(id,promise);
     return promise;
@@ -43,7 +53,7 @@
     ultronOpenPromise=(async()=>{
     try {
       if (window.ULTRON?.version !== 'ultron-core-rebuild-30') {
-        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-28');
+        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-30');
       }
       if(typeof window.ULTRON?.open==='function') window.ULTRON.open();
       else throw new Error('ULTRON core entry point missing');
