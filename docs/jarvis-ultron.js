@@ -101,7 +101,7 @@
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
     const earthPanel=el.querySelector('.uc-earth-telemetry');
     const earthContent=el.querySelector('.uc-earth-content');
-    let earthRefreshTimer=null, earthSatelliteRecords=[], earthSatelliteIndex=0, earthLastCatalogAt=0, earthCatalogStartedAt=Date.now();
+    let earthRefreshTimer=null, earthSatelliteRecords=[], earthSatelliteIndex=0, earthLastCatalogAt=0;
     const earthEscape=value=>String(value??'—').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
     const earthSunDistanceAU=now=>{const day=(now-Date.UTC(now.getUTCFullYear(),0,0))/86400000;const g=(357.529+0.98560028*(day-3))%360*Math.PI/180;return 1.00014-0.01671*Math.cos(g)-0.00014*Math.cos(2*g);};
     const earthRenderTelemetry=()=>{
@@ -111,7 +111,7 @@
       earthContent.innerHTML=html.join('');if(sats.length)earthSatelliteIndex=(earthSatelliteIndex+1)%sats.length;
     };
     const earthLoadCatalog=async()=>{try{const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),9000);const response=await fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json',{signal:controller.signal,cache:'no-store'});clearTimeout(timeout);if(!response.ok)throw new Error('Satellite catalog HTTP '+response.status);const data=await response.json();if(!Array.isArray(data))throw new Error('Invalid satellite catalog');earthSatelliteRecords=data.filter(x=>x&&x.OBJECT_NAME).map(x=>({name:x.OBJECT_NAME,noradCatId:x.NORAD_CAT_ID,objectType:x.OBJECT_TYPE||'ACTIVE',inclination:Number(x.INCLINATION),period:Number(x.PERIOD),perigee:Number(x.PERIGEE),apogee:Number(x.APOGEE)}));earthLastCatalogAt=Date.now();}catch(error){console.warn('[ULTRON] Satellite catalog unavailable; Earth telemetry remains live.',error);}earthRenderTelemetry();};
-    earthPanel.addEventListener('pointerdown',e=>e.stopPropagation());earthPanel.addEventListener('click',e=>e.stopPropagation());earthRenderTelemetry();earthLoadCatalog();earthRefreshTimer=setInterval(()=>{earthRenderTelemetry();if(!earthLastCatalogAt&&Date.now()-earthCatalogStartedAt>15000)earthLoadCatalog();},1000);
+    earthPanel.addEventListener('pointerdown',e=>e.stopPropagation());earthPanel.addEventListener('click',e=>e.stopPropagation());earthRenderTelemetry();earthLoadCatalog();earthRefreshTimer=setInterval(earthRenderTelemetry,1000);
 
     const targetPanel=el.querySelector('.uc-target-details');
     const targetMeta=el.querySelector('.uc-target-meta');
