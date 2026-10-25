@@ -1,79 +1,246 @@
 # JARVIS-WEB
+### A modular AI command cockpit for the browser, the cloud, and the local machine
 
-**JARVIS-WEB is an experimental, modular browser-based AI assistant interface** with a futuristic HUD and separate feature modules for voice, vision, automation, missions, calling, Beacon, VELVE, and related tools. See the feature notes and deployment limitations below before relying on any capability.
+**JARVIS-WEB brings a cinematic sci-fi HUD and a growing collection of AI, voice, vision, navigation, automation, and specialist tools into one modular assistant experience.** Rather than treating an assistant as a single chat box, the project explores a unified command surface: ask, navigate, inspect, and launch supported workflows from one futuristic interface.
 
-> **Project status:** Experimental. Individual features depend on browser permissions, the configured backend, third-party services, device/browser support, and network availability. A feature name or UI control is not by itself a guarantee that every environment supports it.
+> **One interface. Multiple environments. A modular system built to grow.**
+>
+> JARVIS-WEB is an experimental project—not a claim of unrestricted device control or flawless autonomy. The capabilities available in each environment depend on the active frontend, backend, browser, permissions, service configuration, and network. This README deliberately distinguishes project areas from features that still require environment-specific verification.
 
-## What this repository contains
+---
 
-- `public/` — primary HTML entry-point source copied by the current Pages workflow.
-- `docs/` — browser-side modules, styles, assets, deployment notes, and a separate static HUD copy. The Pages workflow copies a curated set of assets from this folder; it does not use `docs/index.html` as its entry point.
-- `server.js` and `gemini.cjs` — local backend-related files.
-- `web-server.js` and `render.yaml` — hosted AI-backend path for Render.
-- `.github/workflows/` — automated checks and deployment workflow configuration.
-- `WEB_DEPLOYMENT.md` — deployment notes and important environment limitations.
+## At a glance
 
-The exact file paths and deployment settings are the source of truth; avoid moving or renaming files without updating every script, workflow, and reference that uses them.
+- **Project:** JARVIS-WEB — Modular Browser AI Assistant
+- **Frontend:** HTML, CSS, and modular browser JavaScript
+- **Hosted AI service:** Node.js, Express, and Google Gemini
+- **Static hosting:** GitHub Pages
+- **Hosted backend configuration:** Render
+- **Local machine backend:** Node.js (server.js and gemini.cjs)
+- **License:** MIT for this repository; third-party components retain their own terms
 
-## Main capabilities
+### Open JARVIS
 
-The project is designed around a modular assistant experience. Depending on the enabled module and environment, the interface includes or explores:
+- **Live interface:** https://anuveytq-sys.github.io/JARVIS-WEB/
+- **Source code:** https://github.com/anuveytq-sys/JARVIS-WEB
 
-- Browser-based AI chat and voice output.
-- Voice and vision-related interactions that require browser permission.
-- Modular command, mission, and automation interfaces.
-- Calling and Beacon-related interfaces/integrations.
-- VELVE and other specialist visual/interactive modules.
-- A hosted web AI mode separate from local machine-specific functionality.
+The live interface and hosted AI path are separate parts of the system. The frontend can load while AI responses remain unavailable if the backend is missing, sleeping, misconfigured, or unable to reach its provider. Check the latest deployment and test the exact workflow before relying on the live demo.
 
-**Important:** Browser-only hosting cannot silently control a visitor's operating system, run arbitrary local shell commands, or access private device data. The hosted AI backend is intentionally separate from the local backend and has a narrower capability set. Review [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+---
 
-## Try the web version
+## The JARVIS experience
 
-The repository's documented GitHub Pages URL is:
+JARVIS-WEB is organized as a modular assistant cockpit with a futuristic HUD, a central command experience, and feature modules that add focused capabilities. The repository includes or explores the following areas; individual modules may have different maturity levels and dependencies.
 
-`https://anuveytq-sys.github.io/JARVIS-WEB/`
+### Core interface and interaction
 
-Availability depends on the repository's Pages configuration and the latest successful deployment. The hosted AI response path also requires a separately configured backend; see the deployment guide. Do not assume a live endpoint is healthy without testing it.
+- **Futuristic HUD:** A science-fiction-inspired dashboard with animated visual layers, system panels, and a central 3D-style core.
+- **AI conversation:** A browser-to-backend text command path for asking questions when the hosted or local AI service is configured.
+- **Voice-oriented interaction:** Browser speech-recognition and speech-related integrations where supported. Microphone access requires permission and browser compatibility.
+- **Command routing:** Modular command and service-routing code intended to direct supported requests toward the appropriate feature or service.
+- **Mission and reminder interfaces:** Mission-control and reminder-related modules for organizing assistant workflows. Persistence and execution depend on the specific module and environment.
+- **Sharing and navigation helpers:** Modules for selected navigation, service access, sharing, and workflow shortcuts.
 
-## Deployment overview
+### Vision, input, and immersive modules
 
-1. **Static frontend:** The Pages workflow builds from `public/index.html` and copies the required browser modules and assets from `docs/`.
-2. **Hosted AI backend:** The Render configuration runs `node web-server.js` and expects `GEMINI_API_KEY` to be configured as a private environment variable.
-3. **Local backend:** Local machine-oriented capabilities belong to the local backend path and are not automatically available from a static website.
+- **Vision intelligence:** Camera/vision-oriented modules that depend on browser media support, permissions, and the feature's required resources.
+- **Hand gestures:** A hand-gesture interaction module intended to support hands-free pointer or interface interaction when its vision dependencies are available.
+- **Wake-style interactions:** Clap/snap-related wake interaction code is present; microphone behavior and reliability must be verified on the target device.
+- **3D core and visual effects:** A central visual core and related styling that give the interface its distinctive command-center aesthetic.
+- **Focus and media tools:** Focus-detection and music/media-related modules, subject to their own browser and service requirements.
 
-Follow [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md). Never commit API keys, access tokens, passwords, or other secrets. If a key has been exposed, revoke it and create a replacement.
+### Specialist tools and integrations
 
-## Development and validation
+- **GitHub access and platform search:** Modules for selected repository-related and platform-search workflows; actions depend on configured permissions and available APIs.
+- **YouTube-related tools:** A module for YouTube upload workflows; availability depends on the integration, credentials, and authorization it requires.
+- **Calling and Beacon:** Calling-related and Beacon modules are present for supported communication/workflow scenarios. They do not guarantee that every contact, call type, or device is callable from every browser.
+- **ULTRON:** A specialist module and command layer in the codebase. Its UI or name should not be interpreted as authorization to retrieve private, leaked, restricted, or non-public information.
+- **VELVE:** A satellite/country-oriented visualization area with satellite data handling and voice-related support modules. Data availability depends on upstream feeds and static fallback data.
+- **TerraNexus:** A separate specialist visual/tool module with its own UI and supporting code.
+- **Environment shortcuts and power modules:** Additional shortcut and specialist command modules intended to extend the main experience.
 
-Before changing application behavior:
+**Important:** This is a map of project areas and modules, not a guarantee that every listed feature works end-to-end in every deployment. Use the testing checklist and demonstrate only workflows verified on the actual target device.
 
-1. Work on a separate branch and keep the known-good `main` branch untouched until the changes have been reviewed.
-2. Check module dependencies, script-loading order, and references in `public/index.html`, the Pages workflow, and deployment configuration.
-3. Run the repository's configured checks. The Pages workflow includes JavaScript syntax checks and project-specific verification steps; a successful syntax check does not prove that browser interactions or remote services work end-to-end.
-4. Test on the intended browser/device and confirm the frontend and backend separately.
-5. Document any feature that cannot be verified in the test environment.
+---
 
-The `package.json` test script is currently a placeholder that exits with an error. Do not interpret that placeholder as a passing application test suite. Use the GitHub Actions workflow and manual end-to-end checks as separate evidence.
+## Three environments, three different permission models
 
-## Competition / demo preparation
+The name “JARVIS” describes the overall project, but the website, hosted backend, and local backend do not have the same access. Treat them as distinct execution environments.
+
+| Environment | What it does | What it does not automatically do |
+|---|---|---|
+| **1. Browser / GitHub Pages** | Serves the HUD and browser modules over HTTPS. Runs browser-side UI and features allowed by the browser, the user's permissions, and available services. | Cannot run Node.js on the visitor's device, execute local shell commands, open arbitrary desktop apps, or read private files just because a webpage requests it. |
+| **2. Hosted Web AI / Render** | Runs web-server.js as an Express service. Provides status and AI command endpoints and sends configured prompts to Gemini using a server-side GEMINI_API_KEY. | Does not control the visitor's computer, open their apps, inspect their files, or execute the local backend's shell commands. The hosted timer endpoint currently returns an empty list; voice recognition is browser-side. |
+| **3. Local machine backend** | server.js with gemini.cjs is the local execution path. Its code includes supported command handling, known-app launch logic, file search/open helpers, timers, and system-information helpers. Actual support depends on the operating system and command mapping. | Is not available to a remote website merely because GitHub Pages is open. It should remain local-only unless it receives a dedicated security review and deliberate access controls. |
+
+### Environment 1 — Browser interface
+
+The static site is the visible JARVIS experience. GitHub Pages serves the compiled site; the current workflow starts with public/index.html and copies a curated set of browser modules, styles, and assets from docs/. It is not a Node.js host.
+
+**Best for:** Exploring the interface, browser-compatible modules, voice/media interactions supported by the browser, and a public project demonstration.
+
+### Environment 2 — Hosted AI mode
+
+The hosted service is configured separately from the static site. The frontend can be pointed to the actual backend URL using the documented api query parameter. The backend's main routes are:
+
+| Route | Purpose |
+|---|---|
+| GET /api/status | Reports basic hosted-service status and model metadata. |
+| POST /api/command | Sends a text prompt to the configured Gemini model. |
+| GET /api/timers | Returns the current hosted timer response; the implementation currently returns an empty list. |
+| POST /api/voice | Provides endpoint compatibility for voice-related requests; recognition is handled in the browser. |
+
+**Best for:** A browser-based AI question-and-answer workflow without granting the hosted service access to a visitor's machine.
+
+### Environment 3 — Local machine mode
+
+The local backend is separate from the hosted web service. The code contains operating-system-specific app launching and helper routines for locating/opening files, timers, and system information. What works depends on the host OS, installed applications/utilities, and the exact command route.
+
+**Best for:** Authorized local experiments on a machine you control, where the local server and its dependencies are installed and intentionally running.
+
+**Security warning:** The local backend uses Node's child-process shell execution for supported commands. Keep it bound to local access, do not expose it publicly, and review command mappings and input handling before adding more power. Do not treat the hosted service as a safe tunnel to the local machine.
+
+---
+
+## Architecture
+
+The system has three main execution paths:
+
+- **Browser HUD:** public/index.html plus selected browser modules from docs/.
+- **Hosted Web AI:** web-server.js → Express API → Gemini using a server-side key.
+- **Local backend:** server.js and gemini.cjs → local command handlers and OS-specific helpers.
+
+The browser frontend, hosted AI backend, and local backend have different permissions and responsibilities. They are not interchangeable.
+
+### Repository map
+
+| Path | Responsibility |
+|---|---|
+| public/index.html | Main HTML source used by the current Pages workflow. |
+| docs/ | Browser modules, styles, icons, supporting assets, architecture/security/testing documentation, and a separate static HUD copy. The Pages workflow copies a curated set of assets; it does not use docs/index.html as the entry point. |
+| server.js | Local backend and supported machine-oriented command path. |
+| gemini.cjs | Gemini integration used by the local backend. |
+| web-server.js | Hosted web AI backend. |
+| render.yaml | Render service configuration for the hosted backend. |
+| .github/workflows/pages.yml | Syntax checks, project-specific checks, static-site build, and GitHub Pages deployment. |
+| WEB_DEPLOYMENT.md | Deployment instructions and environment differences. |
+| docs/ARCHITECTURE.md | Expanded architecture notes. |
+| docs/SECURITY_REVIEW.md | Initial security review and remediation priorities. |
+| docs/TESTING_CHECKLIST.md | Manual verification checklist. |
+| docs/COMPETITION_READINESS.md | Competition preparation checklist. |
+| docs/DEVPOST_SUBMISSION_DRAFT.md | Submission-description starting point. |
+
+The browser module paths, HTML loading order, and workflow asset-copy list are coupled. Do not rename or delete a module solely because it looks unused; check static and dynamic references first.
+
+---
+
+## Setup and deployment
+
+### A. Publish the frontend with GitHub Pages
+
+The repository's Pages workflow builds from public/index.html and copies selected modules/assets from docs/.
+
+1. Open the repository's **Settings → Pages**.
+2. Confirm the publishing source is **GitHub Actions**.
+3. Open the latest [Pages workflow runs](https://github.com/anuveytq-sys/JARVIS-WEB/actions/workflows/pages.yml) and confirm the run for the intended commit succeeded.
+4. Visit the [JARVIS-WEB live interface](https://anuveytq-sys.github.io/JARVIS-WEB/).
+
+Do not switch to branch/folder publishing unless you intentionally want a different build path.
+
+### B. Configure the hosted AI backend
+
+1. Create a Render Blueprint from this repository using render.yaml, or create a Node web service manually.
+2. For a manual service, use build command npm install and start command node web-server.js.
+3. Add GEMINI_API_KEY as a **private environment variable** in Render. Never place it in frontend JavaScript, HTML, a URL, screenshots, or a public commit.
+4. Set ALLOWED_ORIGIN to the exact origin of the published frontend if needed. The service has a basic origin check and process-local request limiting; these are not authentication or a complete production security system.
+5. After deployment, use your actual Render URL in the frontend query parameter:
+
+   https://anuveytq-sys.github.io/JARVIS-WEB/?api=https://YOUR-REAL-BACKEND.onrender.com
+
+   Replace the example backend host with your actual service URL. Never put credentials in the URL.
+
+For details, see [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md).
+
+### C. Run the local backend
+
+The local path requires Node.js and the dependencies/configuration expected by the repository. Review server.js, gemini.cjs, and the deployment notes before running it on a machine. Configure required secrets locally through an environment file or environment variables that are excluded from version control. Do not publish a local server or expose its command routes to the internet.
+
+Because the local backend can run machine commands, only run it on a device you own or are authorized to administer, and inspect the exact command behavior before use.
+
+---
+
+## Security, privacy, and reliability
+
+JARVIS-WEB is an evolving experimental project. Its current protections are not a security certification.
+
+- **API keys:** Keep secrets server-side. Rotate any key that may have been exposed and remove secrets from public code and logs.
+- **Hosted endpoint:** Origin checks are not authentication. Requests without an Origin header are accepted by the current middleware, and the process-local rate limit is not shared across instances. Configure provider quotas, alerts, and stronger abuse controls before broad public promotion.
+- **Local command execution:** The local backend uses shell execution. Keep it local-only and review all command call sites and input handling.
+- **Browser permissions:** Camera, microphone, speech, and related APIs depend on browser support and explicit user permission.
+- **Third-party services:** AI providers, satellite feeds, APIs, browsers, and external integrations may change, become unavailable, or enforce quotas.
+- **Data and privacy:** Use test data in demos. Do not record real private messages, account tokens, passwords, or sensitive files.
+- **Limitations:** A successful build or JavaScript syntax check does not prove every feature works end-to-end.
+
+See the [initial security review](docs/SECURITY_REVIEW.md) and [manual testing checklist](docs/TESTING_CHECKLIST.md).
+
+---
+
+## Testing and project status
+
+The GitHub Pages workflow runs node --check on a set of browser modules, verifies selected project-specific markers, assembles the static site, and deploys it. These checks catch some syntax and packaging errors; they are **not** a complete browser test suite.
+
+The package.json test script is currently a placeholder that exits with an error. Do not interpret it as a passing automated test suite.
+
+Before a release or competition demo:
+
+- [ ] Verify the latest Pages workflow for the exact commit.
+- [ ] Load the live site in a fresh browser session and check the console.
+- [ ] Test the selected user journey on the actual target device/browser.
+- [ ] Test the hosted backend separately, including status and a valid AI request.
+- [ ] Confirm microphone/camera permission handling if the demo uses those APIs.
+- [ ] Verify all external services and required credentials.
+- [ ] Test graceful behavior when the backend is unavailable or a permission is denied.
+- [ ] Make sure the demo claims match what was actually observed.
+
+---
+
+## Devpost and competition preparation
+
+JARVIS-WEB is designed to tell a strong engineering story: a modular command-center interface, multiple execution environments, and a deliberate separation between browser features, hosted AI, and local machine actions.
+
+For a credible submission, choose one or two workflows that work reliably and show them from start to finish. Explain the architecture, what is genuinely distinctive, and the current limitations. Do not present UI animations, module names, or planned capabilities as proof that every feature is production-ready.
 
 - [Competition readiness checklist](docs/COMPETITION_READINESS.md)
-- [Draft submission description](docs/DEVPOST_SUBMISSION_DRAFT.md)
+- [Devpost submission draft](docs/DEVPOST_SUBMISSION_DRAFT.md)
 - [Architecture notes](docs/ARCHITECTURE.md)
-- [Manual verification checklist](docs/TESTING_CHECKLIST.md)
-- [Initial security review and remediation priorities](docs/SECURITY_REVIEW.md)
-- [Safe change and rollback workflow](docs/CHANGE_SAFETY.md)
+- [Testing checklist](docs/TESTING_CHECKLIST.md)
+- [Security review](docs/SECURITY_REVIEW.md)
+- [Change safety and rollback](docs/CHANGE_SAFETY.md)
 
-Before submitting to a hackathon, confirm that the event accepts existing projects and that your location, age, team status, and project meet its rules. Record a demo using features that were actually tested. Verify live URLs immediately before submission and never show API keys, private messages, personal information, or account tokens in the recording.
+Before entering an event, verify its current rules for eligibility, age, team size, pre-existing projects, AI usage, intellectual property, deadlines, judging criteria, and prize requirements. Add an authentic demo video and accurate contributor/third-party credits.
 
-## Security and privacy notes
+---
 
-- Keep API keys and service credentials out of source files, URLs, screenshots, videos, and commit history.
-- Browser features such as camera, microphone, and notifications require user permission and vary by browser.
-- Treat third-party integrations as optional dependencies that can fail or change.
-- The current deployment notes describe basic safeguards, not a complete security audit. Review [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md) before broad public promotion. Do not expose the local command-executing backend publicly without a separate security review.
+## Contributing safely
 
-## License
+JARVIS-WEB contains many coupled modules, so small-looking changes can affect script order or feature behavior.
 
-This repository currently includes an MIT license. Review the licenses and terms of any bundled assets, dependencies, APIs, or third-party services separately; the repository license does not override their terms.
+1. Start from the latest known-good commit.
+2. Create a branch for one focused change.
+3. Trace imports, HTML references, dynamic loading, backend routes, and workflow copy lists before editing.
+4. Keep changes scoped and review the complete diff.
+5. Run the configured checks and manually test the affected workflow.
+6. Deploy only after the intended changes are reviewed.
+7. Keep rollback tied to the specific commit or pull request.
+
+Do not remove modules or assets until their use has been checked across the application and build workflow.
+
+---
+
+## License and credits
+
+This repository includes an MIT license. That license applies to this repository's covered code, subject to the license text; it does not override the licenses, terms, attribution requirements, or usage restrictions of bundled assets, dependencies, Google Gemini, Render, GitHub Pages, satellite-data providers, or other third-party services. Review those terms separately before distribution or competition submission.
+
+---
+
+**JARVIS-WEB — a modular AI cockpit built to bring more of the assistant experience into one place, while keeping clear boundaries between the browser, the cloud, and the local machine.**
