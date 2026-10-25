@@ -35,7 +35,9 @@ The repository includes separate browser modules for areas such as the web bridg
 | Component | Route | Purpose evidenced by source |
 |---|---|---|
 | Hosted backend | `GET /api/status` | Returns basic web-backend status and model metadata |
-| Hosted backend | `POST /api/command` | Sends a text prompt to the configured Gemini model |\n| Hosted backend | `GET /api/bharatcode/status` | Reports BharatCode model metadata and whether the server-side key is configured; never returns the key |\n| Hosted backend | `POST /api/bharatcode/command` | Sends a prompt to BharatCode Qwen 3.8 27B and returns the text response |
+| Hosted backend | `POST /api/command` | Sends a text prompt to the configured Gemini model |
+| Hosted backend | `GET /api/bharatcode/status` | Reports BharatCode model metadata and whether the server-side key is configured; never returns the key |
+| Hosted backend | `POST /api/bharatcode/command` | Sends a prompt to BharatCode Qwen 3.8 27B and returns the text response |
 | Hosted backend | `GET /api/timers` | Returns an empty timer list with a note that hosted timers are not synchronized |
 | Hosted backend | `POST /api/voice` | Reports that voice recognition runs in the browser when supported |
 | Local backend | `POST /api/command` | Local command handling; inspect implementation before exposing it to a network |
