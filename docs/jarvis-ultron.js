@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-28';
+  const VERSION = 'ultron-core-rebuild-29';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -110,7 +110,7 @@
       const html=['<div><span class="uc-earth-label">UTC</span> '+now.toISOString().slice(11,19)+'</div>','<div><span class="uc-earth-label">SUN RANGE</span> '+fmt(km/1e6,2)+'M km · '+fmt(au,5)+' AU</div>','<div><span class="uc-earth-label">EARTH YEAR</span> 365.256 days</div>','<div><span class="uc-earth-label">EARTH AGE</span> ~4.54B years</div>','<div><span class="uc-earth-label">ATMOS</span> N₂ 78.08% · O₂ 20.95%</div>','<div><span class="uc-earth-label">LAYERS</span> Tropo · Strato · Meso · Thermo · Exo</div>','<div><span class="uc-earth-label">SAT CATALOG</span> '+(sats.length?sats.length.toLocaleString()+' records':'catalog loading')+'</div>',sat?'<div><span class="uc-earth-label">SAT '+(earthSatelliteIndex+1)+'/'+sats.length+'</span> '+earthEscape(sat.name)+'</div><div><span class="uc-earth-label">NORAD</span> '+earthEscape(sat.noradCatId)+' · '+earthEscape(sat.objectType)+'</div><div><span class="uc-earth-label">ORBIT</span> inc '+fmt(sat.inclination,1)+'° · '+fmt(sat.period,1)+' min</div><div><span class="uc-earth-label">ALT</span> '+fmt(sat.perigee,0)+'–'+fmt(sat.apogee,0)+' km</div>':'<div><span class="uc-earth-label">SATELLITES</span> waiting for public catalog…</div>','<div style="color:rgba(255,174,121,.62)">Orbital elements update when the public catalog is reachable.</div>'];
       earthContent.innerHTML=html.join('');if(sats.length)earthSatelliteIndex=(earthSatelliteIndex+1)%sats.length;
     };
-    const earthLoadCatalog=async()=>{try{const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),9000);const response=await fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json',{signal:controller.signal,cache:'no-store'});clearTimeout(timeout);if(!response.ok)throw new Error('Satellite catalog HTTP '+response.status);const data=await response.json();if(!Array.isArray(data))throw new Error('Invalid satellite catalog');earthSatelliteRecords=data.filter(x=>x&&x.OBJECT_NAME).map(x=>({name:x.OBJECT_NAME,noradCatId:x.NORAD_CAT_ID,objectType:x.OBJECT_TYPE||'ACTIVE',inclination:Number(x.INCLINATION),period:Number(x.PERIOD),perigee:Number(x.PERIGEE),apogee:Number(x.APOGEE)}));earthLastCatalogAt=Date.now();}catch(error){console.warn('[ULTRON] Satellite catalog unavailable; Earth telemetry remains live.',error);}earthRenderTelemetry();};
+    const earthLoadCatalog=async()=>{const catalogUrl='https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json';const sources=[catalogUrl,'https://api.allorigins.win/raw?url='+encodeURIComponent(catalogUrl)];let lastError=null;for(const source of sources){let timeout;try{const controller=new AbortController();timeout=setTimeout(()=>controller.abort(),10000);const response=await fetch(source,{signal:controller.signal,cache:'no-store'});if(!response.ok)throw new Error('Satellite catalog HTTP '+response.status);const data=await response.json();if(!Array.isArray(data))throw new Error('Invalid satellite catalog');const records=data.filter(x=>x&&x.OBJECT_NAME).map(x=>({name:x.OBJECT_NAME,noradCatId:x.NORAD_CAT_ID,objectType:x.OBJECT_TYPE||'ACTIVE',inclination:Number(x.INCLINATION),period:Number(x.PERIOD),perigee:Number(x.PERIGEE),apogee:Number(x.APOGEE)}));if(!records.length)throw new Error('Satellite catalog returned no records');earthSatelliteRecords=records;earthLastCatalogAt=Date.now();break;}catch(error){lastError=error;console.warn('[ULTRON] Satellite catalog source unavailable; trying fallback.',error);}finally{if(timeout)clearTimeout(timeout);}}if(!earthSatelliteRecords.length&&lastError)console.warn('[ULTRON] Satellite catalog unavailable; Earth telemetry remains live.',lastError);earthRenderTelemetry();};
     earthPanel.addEventListener('pointerdown',e=>e.stopPropagation());earthPanel.addEventListener('click',e=>e.stopPropagation());earthRenderTelemetry();earthLoadCatalog();earthRefreshTimer=setInterval(earthRenderTelemetry,1000);
 
     const targetPanel=el.querySelector('.uc-target-details');
@@ -186,6 +186,9 @@
       if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();toggleWorldCamSize();}
     });
     const worldCams=[
+      // Additional global city cameras; public endpoints can occasionally change or go offline.
+      {name:"SEOUL HAN RIVER · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge13/ch16.stream/playlist.m3u8"},
+      {name:"SEOUL DOWNTOWN · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge6/ch113.stream/playlist.m3u8"},
       // Prerecorded CBS VOD clip removed: a playing HLS file is not proof of a live camera.
       {name:"Seoul City · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/edge13/ch16.stream/playlist.m3u8"},
       {name:"Seoul Traffic · SOUTH KOREA",url:"https://topiscctv1.eseoul.go.kr/sd1/ch34.stream/playlist.m3u8"},
