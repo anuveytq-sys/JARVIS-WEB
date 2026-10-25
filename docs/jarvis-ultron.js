@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-29';
+  const VERSION = 'ultron-core-rebuild-30';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -110,7 +110,45 @@
       const html=['<div><span class="uc-earth-label">UTC</span> '+now.toISOString().slice(11,19)+'</div>','<div><span class="uc-earth-label">SUN RANGE</span> '+fmt(km/1e6,2)+'M km · '+fmt(au,5)+' AU</div>','<div><span class="uc-earth-label">EARTH YEAR</span> 365.256 days</div>','<div><span class="uc-earth-label">EARTH AGE</span> ~4.54B years</div>','<div><span class="uc-earth-label">ATMOS</span> N₂ 78.08% · O₂ 20.95%</div>','<div><span class="uc-earth-label">LAYERS</span> Tropo · Strato · Meso · Thermo · Exo</div>','<div><span class="uc-earth-label">SAT CATALOG</span> '+(sats.length?sats.length.toLocaleString()+' records':'catalog loading')+'</div>',sat?'<div><span class="uc-earth-label">SAT '+(earthSatelliteIndex+1)+'/'+sats.length+'</span> '+earthEscape(sat.name)+'</div><div><span class="uc-earth-label">NORAD</span> '+earthEscape(sat.noradCatId)+' · '+earthEscape(sat.objectType)+'</div><div><span class="uc-earth-label">ORBIT</span> inc '+fmt(sat.inclination,1)+'° · '+fmt(sat.period,1)+' min</div><div><span class="uc-earth-label">ALT</span> '+fmt(sat.perigee,0)+'–'+fmt(sat.apogee,0)+' km</div>':'<div><span class="uc-earth-label">SATELLITES</span> waiting for public catalog…</div>','<div style="color:rgba(255,174,121,.62)">Orbital elements update when the public catalog is reachable.</div>'];
       earthContent.innerHTML=html.join('');if(sats.length)earthSatelliteIndex=(earthSatelliteIndex+1)%sats.length;
     };
-    const earthLoadCatalog=async()=>{const catalogUrl='https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json';const sources=[catalogUrl,'https://api.allorigins.win/raw?url='+encodeURIComponent(catalogUrl)];let lastError=null;for(const source of sources){let timeout;try{const controller=new AbortController();timeout=setTimeout(()=>controller.abort(),10000);const response=await fetch(source,{signal:controller.signal,cache:'no-store'});if(!response.ok)throw new Error('Satellite catalog HTTP '+response.status);const data=await response.json();if(!Array.isArray(data))throw new Error('Invalid satellite catalog');const records=data.filter(x=>x&&x.OBJECT_NAME).map(x=>({name:x.OBJECT_NAME,noradCatId:x.NORAD_CAT_ID,objectType:x.OBJECT_TYPE||'ACTIVE',inclination:Number(x.INCLINATION),period:Number(x.PERIOD),perigee:Number(x.PERIGEE),apogee:Number(x.APOGEE)}));if(!records.length)throw new Error('Satellite catalog returned no records');earthSatelliteRecords=records;earthLastCatalogAt=Date.now();break;}catch(error){lastError=error;console.warn('[ULTRON] Satellite catalog source unavailable; trying fallback.',error);}finally{if(timeout)clearTimeout(timeout);}}if(!earthSatelliteRecords.length&&lastError)console.warn('[ULTRON] Satellite catalog unavailable; Earth telemetry remains live.',lastError);earthRenderTelemetry();};
+    const earthLoadCatalog=async()=>{
+      const catalogUrl='https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json';
+      const cacheKey='ultron-earth-active-catalog-v1',cacheMaxAge=6*60*60*1000;
+      try{
+        const cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
+        if(cached&&Array.isArray(cached.records)&&cached.records.length&&Date.now()-cached.savedAt<cacheMaxAge){
+          earthSatelliteRecords=cached.records;earthRenderTelemetry();
+        }
+      }catch(_){}
+      const sources=[
+        catalogUrl,
+        'https://api.allorigins.win/raw?url='+encodeURIComponent(catalogUrl)
+      ];
+      let lastError=null;
+      const loadSource=async source=>{
+        const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),9000);
+        try{
+          const response=await fetch(source,{signal:controller.signal,cache:'no-store'});
+          if(!response.ok)throw new Error('Satellite catalog HTTP '+response.status);
+          const data=await response.json();
+          if(!Array.isArray(data))throw new Error('Invalid satellite catalog');
+          const records=data.filter(x=>x&&x.OBJECT_NAME).map(x=>({name:x.OBJECT_NAME,noradCatId:x.NORAD_CAT_ID,objectType:x.OBJECT_TYPE||'ACTIVE',inclination:Number(x.INCLINATION),period:Number(x.PERIOD),perigee:Number(x.PERIGEE),apogee:Number(x.APOGEE)}));
+          if(!records.length)throw new Error('Satellite catalog returned no records');
+          return records;
+        }finally{clearTimeout(timeout);}
+      };
+      try{
+        const results=await Promise.allSettled(sources.map(loadSource));
+        const winner=results.find(x=>x.status==='fulfilled');
+        if(winner){
+          earthSatelliteRecords=winner.value;earthLastCatalogAt=Date.now();
+          try{localStorage.setItem(cacheKey,JSON.stringify({savedAt:earthLastCatalogAt,records:earthSatelliteRecords}));}catch(_){}
+        }else{
+          lastError=results.find(x=>x.status==='rejected')?.reason;
+          console.warn('[ULTRON] Satellite catalog unavailable; using cached data if available.',lastError);
+        }
+      }catch(error){lastError=error;console.warn('[ULTRON] Satellite catalog unavailable.',error);}
+      earthRenderTelemetry();
+    };
     earthPanel.addEventListener('pointerdown',e=>e.stopPropagation());earthPanel.addEventListener('click',e=>e.stopPropagation());earthRenderTelemetry();earthLoadCatalog();earthRefreshTimer=setInterval(earthRenderTelemetry,1000);
 
     const targetPanel=el.querySelector('.uc-target-details');
@@ -270,6 +308,41 @@
       {name:"TARQUINHO BEACH · PORTUGAL",url:"https://video-auth1.iol.pt/beachcam/bctarquinho/playlist.m3u8"},
       {name:"WHISTLER VILLAGE · CANADA",url:"https://streamer6.brownrice.com/whistlervillagefitz/whistlervillagefitz.stream/main_playlist.m3u8"}
     ];
+
+    // Enrich the built-in list in the background with recently verified, direct HLS streams
+    // from the public Live-Environment-Streams country registries. Existing feeds start immediately.
+    const loadGlobalWorldCams=async()=>{
+      const countryCodes=['JP','IT','TH','KR','DE','FR','PT','PL','TR','ID','ES','HR','CZ','RO','NO','IS','NZ','PH','TW','GB','MT'];
+      const base='https://raw.githubusercontent.com/william-ricchiuti/Live-Environment-Streams/main/data/';
+      const existing=new Set(worldCams.map(cam=>cam.url));
+      const fetchCountry=async code=>{
+        const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),5000);
+        try{
+          const response=await fetch(base+code+'.json',{signal:controller.signal,cache:'force-cache'});
+          if(!response.ok)throw new Error('Camera registry HTTP '+response.status);
+          const data=await response.json();
+          return (Array.isArray(data?.features)?data.features:[]).filter(feature=>{
+            const p=feature?.properties||{};
+            return p.status==='active'&&p.url_type==='hls'&&!p.source_url_requires&&typeof p.url==='string'&&/^https:\/\//i.test(p.url);
+          }).map(feature=>{
+            const p=feature.properties;
+            const location=String(p.display_name||p.name||code).trim();
+            const country=String(p.country_code||code).toUpperCase();
+            return {name:(location+' · '+country).slice(0,100),url:p.url};
+          });
+        }finally{clearTimeout(timeout);}
+      };
+      const results=await Promise.allSettled(countryCodes.map(fetchCountry));
+      const candidates=[];
+      for(const result of results)if(result.status==='fulfilled')for(const cam of result.value){
+        if(existing.has(cam.url))continue;
+        existing.add(cam.url);candidates.push(cam);
+      }
+      // Keep a bounded, geographically diverse rotation and avoid delaying the first camera.
+      for(const cam of candidates.slice(0,150))worldCams.push(cam);
+      console.info('[ULTRON] Global camera registry added',Math.min(candidates.length,150),'additional feeds.');
+    };
+    loadGlobalWorldCams().catch(error=>console.warn('[ULTRON] Global camera registry unavailable; using built-in feeds.',error));
 let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     let worldBlackCheckTimer=null, worldPlaybackMonitor=null, worldRetryTimer=null, worldActiveCam=null;
     const worldFailedCams=new Set();
@@ -347,7 +420,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldFrame.onerror=()=>failWorldCam('media error');
       worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},8000);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},3800);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
