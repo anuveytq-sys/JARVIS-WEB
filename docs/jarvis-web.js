@@ -968,6 +968,20 @@
     return answer;
   }
 
+  async function askBharatCode(command) {
+    if (!API_BASE) throw new Error("No hosted JARVIS backend URL is configured. Open SETTINGS and set the backend URL.");
+    const response = await originalFetch(API_BASE + "/api/bharatcode/command", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.ok || !data?.reply) {
+      throw new Error(data?.reply || ("BharatCode backend returned HTTP " + response.status));
+    }
+    return data.reply;
+  }
+
   const say = (text) => ({ ok: true, reply: text });
   const isAny = (text, words) => words.some(w => text.includes(w));
 
@@ -1281,6 +1295,18 @@
         const provider = getAIProvider();
         const personalKey = getPersonalKey();
         const openRouterKey = getOpenRouterKey();
+        if (provider === "bharatcode") {
+          try {
+            const answer = await askBharatCode(command);
+            const result = { ok: true, reply: answer, provider: "bharatcode", model: "qwen-3.8-27b" };
+            showReply(answer);
+            return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
+          } catch (error) {
+            const result = { ok: false, reply: "BharatCode request failed: " + (error?.message || "unknown error") + ". Open ⚙ SETTINGS to test the backend connection." };
+            showReply(result.reply, "error");
+            return new Response(JSON.stringify(result), { status: 502, headers: { "Content-Type": "application/json" } });
+          }
+        }
         const useOpenRouter = provider === "openrouter" || (provider === "auto" && !!openRouterKey);
         const useGemini = provider === "gemini" || (provider === "auto" && !openRouterKey && !!personalKey);
         if (useOpenRouter) {
