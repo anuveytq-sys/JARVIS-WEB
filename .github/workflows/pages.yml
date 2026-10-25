@@ -27,6 +27,7 @@ jobs:
       - name: Validate browser JavaScript
         run: |
           node --check docs/jarvis-web.js
+          node --check web-server.js
           node --check docs/jarvis-universal-service-router.js
           node --check docs/jarvis-github-access.js
           node --check docs/jarvis-platform-search.js
