@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-39';
+  const VERSION = 'ultron-core-rebuild-40';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -96,7 +96,7 @@
       @keyframes ucCamPulse{50%{opacity:.35}}
       @media(max-width:600px){#${overlayId} .uc-worldcam{top:64px;right:15px;width:104px}#${overlayId} .uc-worldcam-head{height:18px;font-size:6px}#${overlayId} .uc-worldcam-frame{height:calc(100% - 18px)}}
       @media(max-width:600px){#${overlayId} .uc-mark{top:20px;left:18px}#${overlayId} .uc-sub{top:51px;left:20px}#${overlayId} .uc-exit{top:15px;right:15px}#${overlayId} .uc-hint{bottom:108px;font-size:7px;letter-spacing:.14em}#${overlayId} .uc-command{bottom:26px;height:42px;width:calc(100% - 28px)}#${overlayId} .uc-send,#${overlayId} .uc-voice{flex-basis:34px;width:34px;height:32px}}
-    `; document.head.appendChild(style); document.body.appendChild(el); el.querySelector('.uc-exit').addEventListener('click',close);
+    `; document.head.appendChild(style); document.body.appendChild(el); el.querySelector('.uc-exit').addEventListener('click',()=>{close();});
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
     const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
     const earthPanel=el.querySelector('.uc-earth-telemetry');
@@ -598,10 +598,27 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         resetTargetDetails(detectedCategory,target);
       }
       if(typeof window.sendCommand!=='function'){setStatus('Command service is not ready yet.');return;}
+      if (/^(hey jarvis[, ]*)?(please )?(close|exit|quit|dismiss|hide|shut|deactivate|disable|stop|terminate|end|leave) (the )?ultron( environment| mode| system)?[.! ]*$/i.test(command) || /^ultron (close|exit|quit|shutdown|shut down|offline|sleep)[.! ]*$/i.test(command)) {
+        input.value='';
+        close();
+        return;
+      }
       setStatus('Sending…'); voice.disabled=true;
-      try{const commandResult=await window.sendCommand(command);if(detectedCategory&&commandResult!==undefined&&commandResult!==null&&commandResult!==false&&commandResult!==''){setTargetDetails({category:detectedCategory,target:command.replace(/^(hey jarvis[, ]*)?(please )?(scan|search|investigate|lookup|look up|check|find|recon|osint)\\s+/i,'').trim(),results:commandResult});}input.value='';setStatus('Command sent.');}
-      catch(error){console.error('[ULTRON] command failed',error);setStatus('Command could not be sent.');}
-      finally{voice.disabled=false;setTimeout(()=>{if(status.textContent==='Command sent.')setStatus('');},2200);}
+      speakUltron('Executing command: ' + command);
+      try {
+        const commandResult = await window.sendCommand(command);
+        if (detectedCategory && commandResult !== undefined && commandResult !== null && commandResult !== false && commandResult !== '') {
+          setTargetDetails({category:detectedCategory,target:command.replace(/^(hey jarvis[, ]*)?(please )?(scan|search|investigate|lookup|look up|check|find|recon|osint)\\s+/i,'').trim(),results:commandResult});
+        }
+        input.value=''; setStatus('Command sent.');
+        speakUltron('Command sent.');
+      } catch(error) {
+        console.error('[ULTRON] command failed',error); setStatus('Command could not be sent.');
+        speakUltron('Sorry, the command could not be sent.');
+      } finally {
+        voice.disabled=false;
+        setTimeout(()=>{if(status.textContent==='Command sent.')setStatus('');},2200);
+      }
     });
     const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!Recognition){voice.disabled=true;voice.title='Voice input is not supported in this browser';voice.setAttribute('aria-label','Voice input not supported');}
@@ -654,7 +671,22 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     const halo=new T.Mesh(new T.SphereGeometry(2.5,32,24),new T.MeshBasicMaterial({color:0xff5a16,wireframe:true,transparent:true,opacity:.035,blending:T.AdditiveBlending,depthWrite:false}));root.add(halo);
   }
   function cleanup(){if(earthRefreshTimer)clearInterval(earthRefreshTimer);earthRefreshTimer=null;if(window.ULTRON_TARGET_DETAILS)delete window.ULTRON_TARGET_DETAILS;active=false;if(window.__ultronWorldCamTimer){clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}document.body.classList.remove(scopedUiClass);cancelAnimationFrame(frame);if(resizeHandler)window.removeEventListener('resize',resizeHandler);const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){renderer.dispose();renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
-  function close(){cleanup();}
-  function open(){if(active)return;active=true;document.body.classList.add(scopedUiClass);loadThree().then(()=>{if(!active)return;const el=buildOverlay();makeScene(el);const canvas=el.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.3,Math.min(1.3,targetX));lastX=e.clientX;lastY=e.clientY});const stopDrag=()=>{drag=false};canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);wheelHandler=e=>{e.preventDefault();zoom=Math.max(.68,Math.min(1.7,zoom+(e.deltaY>0?.06:-.06)))};canvas.addEventListener('wheel',wheelHandler,{passive:false});resizeHandler=()=>{if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8))};window.addEventListener('resize',resizeHandler);let t=0;const animate=()=>{if(!active||!renderer)return;frame=requestAnimationFrame(animate);t+=.004;rotX+=(targetX-rotX)*.045;rotY+=(targetY-rotY)*.045;root.rotation.x=rotX+Math.sin(t*.3)*.035;root.rotation.y=rotY+t*.11;root.rotation.z=Math.sin(t*.22)*.04;core.rotation.x=t*.18;core.rotation.y=-t*.23;coreGlow.scale.setScalar(1+Math.sin(t*2.1)*.055);ringGroup.rotation.y=-t*.12;ringGroup.rotation.x=Math.sin(t*.4)*.12;camera.position.z+=(11/zoom-camera.position.z)*.08;renderer.render(scene,camera)};animate();}).catch(error=>{active=false;document.body.classList.remove(scopedUiClass);console.error('[ULTRON] core startup failed',error);alert('ULTRON core could not load. Please check your connection, then reload JARVIS. If the problem continues, WebGL may be unavailable in this browser.');});}
+  function speakUltron(message){
+    try {
+      if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(String(message || ''));
+      utterance.lang = document.documentElement.lang || navigator.language || 'en-US';
+      utterance.rate = 1;
+      utterance.pitch = 0.92;
+      window.speechSynthesis.speak(utterance);
+    } catch (error) { console.warn('[ULTRON] Voice announcement unavailable:', error); }
+  }
+  function returnToMainJarvis(){
+    const input = document.getElementById('commandInput') || document.getElementById('command');
+    if (input) { try { input.focus({ preventScroll: true }); } catch (_) { try { input.focus(); } catch (_) {} } }
+  }
+  function close(){cleanup();speakUltron('Ultron closed.');setTimeout(returnToMainJarvis,80);}
+  function open(){if(active)return;active=true;document.body.classList.add(scopedUiClass);loadThree().then(()=>{if(!active)return;const el=buildOverlay();makeScene(el);speakUltron('Ultron released.');const canvas=el.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.3,Math.min(1.3,targetX));lastX=e.clientX;lastY=e.clientY});const stopDrag=()=>{drag=false};canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);wheelHandler=e=>{e.preventDefault();zoom=Math.max(.68,Math.min(1.7,zoom+(e.deltaY>0?.06:-.06)))};canvas.addEventListener('wheel',wheelHandler,{passive:false});resizeHandler=()=>{if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8))};window.addEventListener('resize',resizeHandler);let t=0;const animate=()=>{if(!active||!renderer)return;frame=requestAnimationFrame(animate);t+=.004;rotX+=(targetX-rotX)*.045;rotY+=(targetY-rotY)*.045;root.rotation.x=rotX+Math.sin(t*.3)*.035;root.rotation.y=rotY+t*.11;root.rotation.z=Math.sin(t*.22)*.04;core.rotation.x=t*.18;core.rotation.y=-t*.23;coreGlow.scale.setScalar(1+Math.sin(t*2.1)*.055);ringGroup.rotation.y=-t*.12;ringGroup.rotation.x=Math.sin(t*.4)*.12;camera.position.z+=(11/zoom-camera.position.z)*.08;renderer.render(scene,camera)};animate();}).catch(error=>{active=false;document.body.classList.remove(scopedUiClass);console.error('[ULTRON] core startup failed',error);alert('ULTRON core could not load. Please check your connection, then reload JARVIS. If the problem continues, WebGL may be unavailable in this browser.');});}
   window.ULTRON={version:VERSION,open,close};
 })();
