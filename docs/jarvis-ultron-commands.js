@@ -475,7 +475,7 @@
           if (existing) existing.remove();
           const script = document.createElement('script');
           script.id = 'jarvis-ultron-core-loader';
-          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-26';
+          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-40';
           script.onload = resolve;
           script.onerror = reject;
           document.head.appendChild(script);
