@@ -250,7 +250,8 @@
         }catch(_){gitlabEntry.textContent='GitLab public profile API unavailable. Check public search results.';}
         await addPublicSearches();
       }
-      const targetMeta=el.querySelector('.uc-target-meta');
+    });
+    const targetMeta=el.querySelector('.uc-target-meta');
     const targetContent=el.querySelector('.uc-target-content');
     let activeScanTarget='';
     const scanCategory=value=>{
