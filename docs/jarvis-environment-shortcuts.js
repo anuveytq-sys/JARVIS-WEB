@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-ultron-core40-20261026';
+  const VERSION = 'env-shortcuts-ultron-core40-20261027';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -46,7 +46,7 @@
   const isUltronOpen=text=>/^(hey jarvis )?(please )?(open|launch|start|activate|engage|enable|boot|bring up|show|display|summon|release|unleash|deploy|initialize|power up|wake up) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(take me to|go to|enter|enter the) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(i want|i need) (the )?ultron( environment| mode| system)?$/.test(normalize(text));
   const isUltronClose=text=>/^(hey jarvis )?(please )?(close|exit|quit|dismiss|hide|shut|deactivate|disable|stop|terminate|end|leave) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(stand down|power down|put away|take down) (the )?ultron( environment| mode| system)?$/.test(normalize(text)) || /^(hey jarvis )?(return|go back|take me back) (from|out of) (the )?ultron$/.test(normalize(text)) || /^ultron (close|exit|quit|shutdown|shut down|offline|sleep)$/.test(normalize(text));
 
-  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-ultron-core40-20261026')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
+  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-ultron-core40-20261027')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
   let ultronOpenPromise=null;
   const loadUltron=async()=>{
     if(ultronOpenPromise) return ultronOpenPromise;
@@ -65,6 +65,24 @@
     }
     })();
     return ultronOpenPromise;
+  };
+
+  const installUltronExitHook=()=>{
+    const overlay=document.getElementById('ultron-clean-core');
+    if(!overlay)return false;
+    const exit=overlay.querySelector('.uc-exit');
+    if(!exit||exit.dataset.jarvisExitHook==='1')return true;
+    exit.dataset.jarvisExitHook='1';
+    exit.addEventListener('click',()=>{
+      setTimeout(()=>{
+        if(document.getElementById('ultron-clean-core')){
+          try{window.ULTRON?.close?.()}catch(error){console.warn('[JARVIS] ULTRON exit recovery failed',error)}
+        }
+        const input=document.getElementById('commandInput')||document.getElementById('command');
+        if(input){try{input.focus({preventScroll:true})}catch(_){try{input.focus()}catch(__){}}}
+      },0);
+    },false);
+    return true;
   };
 
   const installDirectCommandHook=()=>{
@@ -117,6 +135,6 @@
     });
     oldPanel.parentNode.insertBefore(panel,oldPanel);
   };
-  const start=async()=>{await loadUltronCommands();let tries=0;const timer=setInterval(()=>{tries++;installDirectCommandHook();buildPanel();if(document.getElementById(PANEL_ID)||tries>=100)clearInterval(timer)},100)};
+  const start=async()=>{await loadUltronCommands();let tries=0;const timer=setInterval(()=>{tries++;installDirectCommandHook();installUltronExitHook();buildPanel();if(document.getElementById(PANEL_ID)||tries>=100)clearInterval(timer)},100)};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
