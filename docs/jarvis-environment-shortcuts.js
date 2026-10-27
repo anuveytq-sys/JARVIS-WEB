@@ -135,6 +135,6 @@
     });
     oldPanel.parentNode.insertBefore(panel,oldPanel);
   };
-  const start=async()=>{await loadUltronCommands();let tries=0;const timer=setInterval(()=>{tries++;installDirectCommandHook();installUltronExitHook();buildPanel();if(document.getElementById(PANEL_ID)||tries>=100)clearInterval(timer)},100)};
+  const start=async()=>{await loadUltronCommands();let tries=0;const timer=setInterval(()=>{tries++;installDirectCommandHook();const exitReady=installUltronExitHook();buildPanel();if((document.getElementById(PANEL_ID)&&exitReady)||tries>=100)clearInterval(timer)},100)};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
