@@ -67,6 +67,10 @@
     return ultronOpenPromise;
   };
 
+  const focusMainJarvis=()=>{
+    const input=document.getElementById('commandInput')||document.getElementById('command');
+    if(input){try{input.focus({preventScroll:true})}catch(_){try{input.focus()}catch(__){}}}
+  };
   const installUltronExitHook=()=>{
     const overlay=document.getElementById('ultron-clean-core');
     if(!overlay)return false;
@@ -74,13 +78,13 @@
     if(!exit||exit.dataset.jarvisExitHook==='1')return true;
     exit.dataset.jarvisExitHook='1';
     exit.addEventListener('click',()=>{
+      try{window.ULTRON?.close?.()}catch(error){console.warn('[JARVIS] ULTRON exit recovery failed',error)}
       setTimeout(()=>{
         if(document.getElementById('ultron-clean-core')){
-          try{window.ULTRON?.close?.()}catch(error){console.warn('[JARVIS] ULTRON exit recovery failed',error)}
+          try{window.ULTRON?.close?.()}catch(error){console.warn('[JARVIS] ULTRON exit retry failed',error)}
         }
-        const input=document.getElementById('commandInput')||document.getElementById('command');
-        if(input){try{input.focus({preventScroll:true})}catch(_){try{input.focus()}catch(__){}}}
-      },0);
+        focusMainJarvis();
+      },120);
     },false);
     return true;
   };
@@ -97,6 +101,7 @@
       if(event.stopPropagation)event.stopPropagation();
       if(isUltronOpen(value)) await loadUltron(); else if(typeof window.ULTRON?.close==='function') window.ULTRON.close(); else document.getElementById('jarvis-ultron-root')?.remove();
       input.value='';
+      if(isUltronClose(value)) setTimeout(focusMainJarvis,120);
     };
     input.addEventListener('keydown',e=>{if(e.key==='Enter')intercept(e)},true);
     if(form)form.addEventListener('submit',intercept,true);
