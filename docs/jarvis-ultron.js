@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const VERSION = 'ultron-core-rebuild-43';
-  if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
+  if (window.ULTRON?.version === VERSION) return; // Loading the same core must never trigger a second open.
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
     'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
