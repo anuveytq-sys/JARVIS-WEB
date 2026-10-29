@@ -1,5 +1,6 @@
 name: Stabilize ULTRON world feed
 
+# v2 trigger: keep the stabilization patch workflow active on main.
 on:
   push:
     branches: [main]
