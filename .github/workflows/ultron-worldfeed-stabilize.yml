@@ -18,20 +18,20 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Patch ULTRON feed to fail fast and isolate playback
+
+      - name: Replace ULTRON feed startup with isolated live-image feed
         shell: python
         run: |
           from pathlib import Path
-          import re
 
           p = Path('docs/jarvis-ultron.js')
           s = p.read_text(encoding='utf-8')
-          marker = '/* ULTRON_SAFE_WORLD_FEED_V1 */'
+          marker = '/* ULTRON_SAFE_WORLD_FEED_V2 */'
           if marker in s:
-              print('ULTRON safe feed patch already present')
+              print('ULTRON V2 safe feed already present')
               raise SystemExit(0)
 
-          patch = r'''/* ULTRON_SAFE_WORLD_FEED_V1 */
+          patch = r'''/* ULTRON_SAFE_WORLD_FEED_V2 */
     const startUltronSafeWorldFeed=()=>{
       if(!active)return;
       const panel=document.querySelector('#ultron-clean-core .uc-worldcam');
@@ -39,46 +39,103 @@ jobs:
       const embed=panel?.querySelector('.uc-worldcam-embed');
       const place=panel?.querySelector('.uc-worldcam-place');
       if(!panel||!frame||!embed||!place)return;
-      let token=0;
-      const cams=[
-        {name:'TIMES SQUARE · NEW YORK · USA',url:'https://opencctv.org/cameras/united-states/new-york/new-york-city/times-square-south-4k-127051'},
-        {name:'HIGH LINE · NEW YORK · USA',url:'https://opencctv.org/cameras/united-states/new-york/new-york-city/high-line-cam-126942'},
-        {name:'CLAPHAM COMMON · LONDON · UK',url:'https://opencctv.org/cameras/united-kingdom/england/london/clapham-commonnorthside-14291'}
-      ];
-      let index=0;
-      const clear=()=>{token++;frame.pause?.();frame.removeAttribute('src');frame.load?.();embed.removeAttribute('src');embed.style.visibility='hidden';frame.style.visibility='hidden';};
-      const show=(i)=>{
-        const cam=cams[i%cams.length], my=++token;
-        place.textContent=cam.name+' · CONNECTING';
-        frame.style.visibility='hidden';
-        frame.pause?.(); frame.removeAttribute('src'); frame.load?.();
-        embed.style.visibility='visible';
-        embed.src=cam.url;
-        let settled=false;
-        const fail=()=>{
-          if(settled||my!==token||!active)return;
-          settled=true;
-          clear();
-          index=(i+1)%cams.length;
-          setTimeout(()=>show(index),250);
-        };
-        const ok=()=>{if(my!==token)return;settled=true;place.textContent=cam.name+' · LIVE';};
-        embed.addEventListener('load',ok,{once:true});
-        setTimeout(fail,7000);
+
+      let stopped=false, refreshTimer=null, failTimer=null, requestToken=0;
+      const img=document.createElement('img');
+      img.className='uc-worldcam-frame uc-worldcam-live-image';
+      img.alt='Live public world camera';
+      img.decoding='async';
+      img.loading='eager';
+      img.style.visibility='hidden';
+      img.style.opacity='0';
+      img.style.width='100%';
+      img.style.height='100%';
+      img.style.objectFit='cover';
+      img.style.display='block';
+      img.style.background='#050302';
+      frame.style.display='none';
+      embed.style.display='none';
+      frame.pause?.();
+      frame.removeAttribute('src');
+      frame.load?.();
+      embed.removeAttribute('src');
+      panel.dataset.safeWorldFeed='2';
+      panel.dataset.worldFeedSource='Transport for London JamCams';
+      frame.parentElement?.appendChild(img);
+
+      const stop=()=>{
+        stopped=true;
+        requestToken++;
+        if(refreshTimer)clearTimeout(refreshTimer);
+        if(failTimer)clearTimeout(failTimer);
+        refreshTimer=failTimer=null;
+        img.onload=img.onerror=null;
+        img.removeAttribute('src');
       };
-      clear();
-      show(index);
-      panel.dataset.safeWorldFeed='1';
+
+      const nextRefresh=()=>{
+        if(stopped||!active)return;
+        refreshTimer=setTimeout(load,60000);
+      };
+
+      const fail=()=>{
+        if(stopped||!active)return;
+        if(failTimer)clearTimeout(failTimer);
+        img.style.visibility='hidden';
+        img.style.opacity='0';
+        place.textContent='WORLD CAMERA · UNAVAILABLE';
+        nextRefresh();
+      };
+
+      const showCamera=(cam,token)=>{
+        if(stopped||token!==requestToken||!active)return;
+        if(failTimer)clearTimeout(failTimer);
+        place.textContent=cam.commonName+' · LIVE IMAGE';
+        img.onload=()=>{
+          if(stopped||token!==requestToken||!active)return;
+          img.style.visibility='visible';
+          img.style.opacity='1';
+          const badge=panel.querySelector('.uc-worldcam-live');
+          if(badge)badge.textContent='LIVE';
+          nextRefresh();
+        };
+        img.onerror=()=>fail();
+        img.src=cam.imageUrl+(cam.imageUrl.includes('?')?'&':'?')+'ultron='+Date.now();
+        failTimer=setTimeout(fail,7000);
+      };
+
+      const load=async()=>{
+        if(stopped||!active)return;
+        if(refreshTimer)clearTimeout(refreshTimer);
+        const token=++requestToken;
+        place.textContent='WORLD CAMERA · SCANNING';
+        try{
+          const res=await fetch('https://api.tfl.gov.uk/Place/Type/JamCam',{cache:'no-store'});
+          if(!res.ok)throw new Error('camera catalog '+res.status);
+          const data=await res.json();
+          const cams=(Array.isArray(data)?data:[]).map(c=>{
+            const props=Object.fromEntries((c.additionalProperties||[]).map(p=>[p.key,p.value]));
+            return {commonName:String(c.commonName||'LONDON CAMERA').replace(/\s+/g,' ').trim(),imageUrl:String(props.imageUrl||'').trim(),available:String(props.available||'').toLowerCase()==='true'};
+          }).filter(c=>c.available&&/^https:\/\//i.test(c.imageUrl));
+          if(!cams.length)throw new Error('no available cameras');
+          const cam=cams[Math.floor(Math.random()*Math.min(cams.length,25))];
+          showCamera(cam,token);
+        }catch(_){
+          if(token===requestToken)fail();
+        }
+      };
+
+      window.addEventListener('beforeunload',stop,{once:true});
+      load();
     };
     startUltronSafeWorldFeed();
 '''
 
-          pattern = r'(?m)^\s*startWorldEmbed\(\);\s*$'
-          s2, n = re.subn(pattern, patch.rstrip('\n'), s, count=1)
-          if n != 1:
-              raise SystemExit(f'Expected exactly one ULTRON startup startWorldEmbed() call, found {n}')
-          p.write_text(s2, encoding='utf-8')
-          print('Patched ULTRON startup feed:', n)
+          if 'startWorldEmbed();' not in s:
+              raise SystemExit('Could not find ULTRON startup call')
+          s=s.replace('startWorldEmbed();',patch.rstrip('\n'),1)
+          p.write_text(s,encoding='utf-8')
+          print('ULTRON startup feed replaced')
 
       - name: Validate ULTRON JavaScript
         run: node --check docs/jarvis-ultron.js
@@ -93,5 +150,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add docs/jarvis-ultron.js
-          git commit -m 'Stabilize ULTRON world feed with isolated fail-fast embeds'
+          git commit -m 'Fix ULTRON world feed with fail-fast live camera images'
           git push
