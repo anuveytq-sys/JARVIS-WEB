@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-47';
+  const VERSION = 'ultron-core-rebuild-46';
   if (window.ULTRON?.version === VERSION) return; // Loading the same core must never trigger a second open.
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -576,7 +576,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldFrame.onerror=()=>failWorldCam('media error');
       worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('stream startup timeout')},15000);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('stream startup timeout')},5500);
       let nativeFallbackTried=false;
       const tryNative=()=>{
         if(!worldCamLoading)return;
@@ -623,17 +623,8 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       }
     };
     startWorldCam();
-    // Enrich the built-in pool with currently listed public HLS streams. Load in
-    // small batches in the background so it cannot block ULTRON's render loop.
-    // If the built-in feeds have all failed, retry immediately when new feeds arrive.
-    loadGlobalWorldCams().then(()=>{
-      if(!active||!worldFrame.isConnected)return;
-      if(worldCams.length>worldFailedCams.size){
-        if(worldRetryTimer){clearTimeout(worldRetryTimer);worldRetryTimer=null;}
-        worldFailedCams.clear();
-        if(!worldCamLoading&&!worldCamStarted)nextWorldCam();
-      }
-    }).catch(error=>console.warn('[ULTRON] Public camera registry unavailable:',error));
+    // Keep optional registry discovery out of the live session. The previous
+    // camera panel used built-in feeds only; avoid delayed background network work.
     // Rotation is scheduled only after a real video frame is playing.
     worldCamTimer=null;
     window.__ultronWorldCamTimer=worldCamTimer;
