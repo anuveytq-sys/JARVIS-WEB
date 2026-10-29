@@ -1,0 +1,99 @@
+name: Stabilize ULTRON world feed
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/jarvis-ultron.js'
+      - '.github/workflows/ultron-worldfeed-stabilize.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  stabilize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Patch ULTRON feed to fail fast and isolate playback
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('docs/jarvis-ultron.js')
+          s = p.read_text(encoding='utf-8')
+          marker = '/* ULTRON_SAFE_WORLD_FEED_V1 */'
+          if marker in s:
+              print('ULTRON safe feed patch already present')
+              raise SystemExit(0)
+
+          patch = r'''/* ULTRON_SAFE_WORLD_FEED_V1 */
+    const startUltronSafeWorldFeed=()=>{
+      if(!active)return;
+      const panel=document.querySelector('#ultron-clean-core .uc-worldcam');
+      const frame=panel?.querySelector('.uc-worldcam-frame');
+      const embed=panel?.querySelector('.uc-worldcam-embed');
+      const place=panel?.querySelector('.uc-worldcam-place');
+      if(!panel||!frame||!embed||!place)return;
+      let token=0;
+      const cams=[
+        {name:'TIMES SQUARE · NEW YORK · USA',url:'https://opencctv.org/cameras/united-states/new-york/new-york-city/times-square-south-4k-127051'},
+        {name:'HIGH LINE · NEW YORK · USA',url:'https://opencctv.org/cameras/united-states/new-york/new-york-city/high-line-cam-126942'},
+        {name:'CLAPHAM COMMON · LONDON · UK',url:'https://opencctv.org/cameras/united-kingdom/england/london/clapham-commonnorthside-14291'}
+      ];
+      let index=0;
+      const clear=()=>{token++;frame.pause?.();frame.removeAttribute('src');frame.load?.();embed.removeAttribute('src');embed.style.visibility='hidden';frame.style.visibility='hidden';};
+      const show=(i)=>{
+        const cam=cams[i%cams.length], my=++token;
+        place.textContent=cam.name;
+        frame.style.visibility='hidden';
+        frame.pause?.(); frame.removeAttribute('src'); frame.load?.();
+        embed.style.visibility='visible';
+        embed.src=cam.url;
+        let settled=false;
+        const fail=()=>{
+          if(settled||my!==token||!active)return;
+          settled=true;
+          clear();
+          index=(i+1)%cams.length;
+          setTimeout(()=>show(index),250);
+        };
+        const ok=()=>{if(my!==token)return;settled=true;place.textContent=cam.name+' · LIVE';};
+        embed.addEventListener('load',ok,{once:true});
+        setTimeout(fail,7000);
+      };
+      clear();
+      show(index);
+      panel.dataset.safeWorldFeed='1';
+    };
+    startUltronSafeWorldFeed();
+'''
+
+          # The old startup call begins the slow direct-HLS retry chain. Replace only that call.
+          pattern = r'(?m)^\s*startWorldEmbed\(\);\s*$'
+          s2, n = re.subn(pattern, patch.rstrip('\n'), s, count=1)
+          if n != 1:
+              raise SystemExit(f'Expected exactly one ULTRON startup startWorldEmbed() call, found {n}')
+          p.write_text(s2, encoding='utf-8')
+          print('Patched ULTRON startup feed:', n)
+
+      - name: Validate ULTRON JavaScript
+        run: node --check docs/jarvis-ultron.js
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          if git diff --quiet -- docs/jarvis-ultron.js; then
+            echo 'No patch commit required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/jarvis-ultron.js
+          git commit -m 'Stabilize ULTRON world feed with isolated fail-fast embeds'
+          git push
