@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-41';
+  const VERSION = 'ultron-core-rebuild-43';
   if (window.ULTRON?.version === VERSION) { window.ULTRON.open(); return; }
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -432,7 +432,13 @@
           });
         }finally{clearTimeout(timeout);}
       };
-      const results=await Promise.allSettled(countryCodes.map(fetchCountry));
+      const results=[];
+      // Fetch in small batches so registry enrichment cannot freeze lower-powered phones.
+      for(let i=0;i<countryCodes.length;i+=3){
+        const batch=await Promise.allSettled(countryCodes.slice(i,i+3).map(fetchCountry));
+        results.push(...batch);
+        await new Promise(resolve=>setTimeout(resolve,120));
+      }
       const countryBuckets=[];
       for(const result of results){
         if(result.status!=='fulfilled')continue;
@@ -476,16 +482,31 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldLiveBadge.style.opacity='.8';
       worldPlace.textContent='SEARCHING FOR LIVE FEED';
       // Skip unavailable streams promptly; after one pass, retry the full feed pool.
-      if(worldFailedCams.size>=worldCams.length)worldFailedCams.clear();
+      if(worldFailedCams.size>=worldCams.length){
+        // Do not hammer every failed endpoint in an endless tight loop: that can
+        // starve the animation loop and make the entire ULTRON view appear frozen.
+        worldLiveBadge.textContent='OFFLINE';
+        worldLiveBadge.style.opacity='1';
+        worldPlace.textContent='';
+        worldRetryTimer=setTimeout(()=>{
+          if(!active||!worldFrame.isConnected)return;
+          worldFailedCams.clear();
+          nextWorldCam();
+        },15000);
+        return;
+      }
+      worldLiveBadge.textContent='';
+      worldLiveBadge.style.opacity='0';
+      worldPlace.textContent='';
       worldRetryTimer=setTimeout(()=>{
         if(active&&worldFrame.isConnected){
           try{nextWorldCam()}catch(error){
             console.warn('[ULTRON] Camera switch recovered from error:',error);
             worldCamLoading=false;worldCamStarted=false;
-            worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)startWorldCam()},500);
+            worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)startWorldCam()},1000);
           }
         }
-      },250);
+      },350);
     };
     const markWorldCamLive=(cam)=>{
       if(!worldCamLoading||!worldFrame.isConnected)return;
@@ -520,7 +541,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       if(!cam){worldFailedCams.clear();cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;}
       if(!cam)return;
       worldActiveCam=cam;worldCamLoading=true;worldCamStarted=false;worldAttempt++;
-      worldFrame.style.visibility='visible';worldPlace.textContent=cam.name;worldLiveBadge.textContent='CONNECTING';worldLiveBadge.style.opacity='.75';
+      worldFrame.style.visibility='hidden';worldPlace.textContent='';worldLiveBadge.textContent='';worldLiveBadge.style.opacity='0';
       let worldBrightSamples=0, worldCheckedSamples=0, lastCrossOriginTime=-1, crossOriginAdvancingSamples=0;
       const clearBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
       worldFrame.onplaying=()=>{
@@ -536,9 +557,9 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         },2500);
       };
       worldFrame.onerror=()=>failWorldCam('media error');
-      worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
+      worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name;};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},9000);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},5000);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
@@ -547,7 +568,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       const tryHls=()=>{
         if(!worldCamLoading)return;
         if(window.Hls&&window.Hls.isSupported()){
-          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:8,manifestLoadingTimeOut:6000,levelLoadingTimeOut:6000});
+          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:5,manifestLoadingTimeOut:3500,levelLoadingTimeOut:3500,fragLoadingTimeOut:3500,manifestLoadingMaxRetry:0,fragLoadingMaxRetry:0,levelLoadingMaxRetry:0});
           worldHls.on(window.Hls.Events.ERROR,(_,data)=>{
             if(!data?.fatal)return;
             destroyWorldHls();
@@ -580,8 +601,10 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       }
     };
     startWorldCam();
-    // Rotation is scheduled only after a feed is genuinely playing. Failed feeds are skipped promptly;
-    // a slow-but-valid feed gets up to 9 seconds to load and then a full 20 seconds on screen.
+    // Discover additional currently-active, direct HLS feeds in small background batches.
+    // This never owns playback and never blocks the ULTRON animation/render loop.
+    setTimeout(()=>{loadGlobalWorldCams().catch(error=>console.info('[ULTRON] Camera registry refresh skipped',error));},1800);
+    // Rotation is scheduled only after a real video frame is playing.
     worldCamTimer=null;
     window.__ultronWorldCamTimer=worldCamTimer;
     el.querySelector('.uc-exit').addEventListener('click',()=>{
