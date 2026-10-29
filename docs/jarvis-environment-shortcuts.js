@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-ultron-core45-20261029';
+  const VERSION = 'env-shortcuts-ultron-core33-20261029';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -19,7 +19,7 @@
   const scriptLoads = new Map();
   const loadScript=(id,src)=>{
     const isUltronCore=id==='jarvis-ultron-core-loader';
-    const expectedCore='ultron-core-rebuild-41';
+    const expectedCore='ultron-core-rebuild-33';
     if(scriptLoads.has(id)){
       if(!isUltronCore||window.ULTRON?.version===expectedCore)return scriptLoads.get(id);
       scriptLoads.delete(id);
@@ -55,20 +55,25 @@
       || /^(hey jarvis )?(show|bring me back to|return me to|take me back to) (main jarvis|jarvis)$/.test(value);
   };
 
-  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-ultron-core45-20261029')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
-  const loadUltronDigitalTwin=async()=>{try{await loadScript('jarvis-ultron-digital-twin-loader','./jarvis-ultron-digital-twin.js?v=ultron-digital-twin-1.0.0')}catch(e){console.warn('[JARVIS] ULTRON Digital Twin module unavailable',e)}};
+  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-ultron-core33-20261029')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
+  const removeDigitalTwinPanels=()=>{
+    const overlay=document.getElementById('ultron-clean-core');
+    if(!overlay)return;
+    overlay.querySelector('.uc-osint-launcher')?.remove();
+    overlay.querySelector('.uc-target-details')?.remove();
+  };
   let ultronOpenPromise=null;
   const loadUltron=async()=>{
     if(ultronOpenPromise) return ultronOpenPromise;
     ultronOpenPromise=(async()=>{
     try {
-      if (window.ULTRON?.version !== 'ultron-core-rebuild-41') {
-        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-41');
+      if (window.ULTRON?.version !== 'ultron-core-rebuild-33') {
+        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-33');
       }
       if(typeof window.ULTRON?.open==='function') await window.ULTRON.open();
       else throw new Error('ULTRON core entry point missing');
-      await loadUltronDigitalTwin();
-      window.JARVIS_ULTRON_DIGITAL_TWIN?.apply?.();
+      removeDigitalTwinPanels();
+      requestAnimationFrame(removeDigitalTwinPanels);
     } catch(error) {
       console.error('[JARVIS] ULTRON core failed to load',error);
       alert('ULTRON could not load. Check your internet connection and try again.');
