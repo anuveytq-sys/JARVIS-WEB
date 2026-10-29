@@ -1,6 +1,5 @@
 /* JARVIS // ULTRON FLEXIBLE COMMAND BRIDGE
-   Natural ULTRON aliases. Camera playback remains owned by the ULTRON core,
-   with a lifecycle-safe public-camera fallback only when the core stays black.
+   Natural ULTRON aliases. Camera playback has one owner: the ULTRON core. No second player is attached.
 */
 (() => {
   'use strict';
@@ -34,28 +33,6 @@
   ];
   const matches = (patterns, text) => patterns.some(pattern => pattern.test(text));
 
-  async function loadCameraRecovery() {
-    if (window.JARVIS_ULTRON_CAMERA_RECOVERY) return true;
-    const existing = document.getElementById('jarvis-ultron-camera-recovery-loader');
-    if (existing) {
-      await new Promise((resolve, reject) => {
-        existing.addEventListener('load', resolve, { once: true });
-        existing.addEventListener('error', reject, { once: true });
-      });
-      return !!window.JARVIS_ULTRON_CAMERA_RECOVERY;
-    }
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.id = 'jarvis-ultron-camera-recovery-loader';
-      script.src = './ultron-camera-recovery.js?v=20261029-camera-recovery-1';
-      script.async = true;
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-    return !!window.JARVIS_ULTRON_CAMERA_RECOVERY;
-  }
-
   async function openUltron() {
     try {
       if (!window.ULTRON || typeof window.ULTRON.open !== 'function') {
@@ -64,7 +41,7 @@
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.id = 'jarvis-ultron-core-loader';
-          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-42';
+          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-43';
           script.async = true;
           script.onload = resolve;
           script.onerror = reject;
@@ -73,12 +50,6 @@
       }
       if (typeof window.ULTRON?.open !== 'function') throw new Error('ULTRON core entry point missing');
       await window.ULTRON.open();
-      try {
-        await loadCameraRecovery();
-        window.JARVIS_ULTRON_CAMERA_RECOVERY?.attach?.();
-      } catch (cameraError) {
-        console.warn('[JARVIS] ULTRON camera recovery did not initialize', cameraError);
-      }
       return true;
     } catch (error) {
       console.error('[JARVIS] ULTRON core failed to load', error);
@@ -123,7 +94,7 @@
   }, 100);
 
   window.JARVIS_ULTRON_COMMANDS = {
-    version: 'ultron-commands-camera-recovery-20261029-v5',
+    version: 'ultron-commands-single-camera-owner-20261029-v6',
     open: openUltron,
     close: closeUltron,
     handle,
