@@ -474,10 +474,20 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     let worldBlackCheckTimer=null, worldPlaybackMonitor=null, worldRetryTimer=null, worldActiveCam=null;
     let worldEmbedTimer=null, worldEmbedIndex=0, worldEmbedMode=false;
     const worldEmbedCams=[
-      {name:'AMSTERDAM · DAM SQUARE',url:'https://www.youtube-nocookie.com/embed/Gd9d4q6WvUY?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
-      {name:'AMSTERDAM · DAMRAK',url:'https://www.youtube-nocookie.com/embed/43qH0tDA6lM?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
-      {name:'PARIS · EIFFEL TOWER VIEW',url:'https://www.youtube-nocookie.com/embed/OzYp4NRZlwQ?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
-      {name:'GUDAURI · MOUNTAIN VIEW',url:'https://www.youtube-nocookie.com/embed/QJ63HspHB6M?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'AMSTERDAM · DAM SQUARE · NETHERLANDS',url:'https://www.youtube-nocookie.com/embed/Gd9d4q6WvUY?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'PARIS · EIFFEL TOWER · FRANCE',url:'https://www.youtube-nocookie.com/embed/OzYp4NRZlwQ?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'TIMES SQUARE · NEW YORK · USA',url:'https://www.youtube-nocookie.com/embed/z-jYdOIKcTQ?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'VENICE · GRAND CANAL · ITALY',url:'https://www.youtube-nocookie.com/embed/r8N6IsoIkTk?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'KOH SAMUI · THAILAND',url:'https://www.youtube-nocookie.com/embed/Tpj0cmMVOd0?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'MAHO BEACH · SINT MAARTEN',url:'https://www.youtube-nocookie.com/embed/iSeH45R-8R0?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'MADEIRA AIRPORT · PORTUGAL',url:'https://www.youtube-nocookie.com/embed/BlDJpjn_0bM?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'TOKYO HANEDA · JAPAN',url:'https://www.youtube-nocookie.com/embed/3w4zEyFamuA?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'GUDAURI · MOUNTAINS · GEORGIA',url:'https://www.youtube-nocookie.com/embed/QJ63HspHB6M?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'MAASAI MARA · KENYA',url:'https://www.youtube-nocookie.com/embed/xXZqU5vnEug?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'WILD AFRICA · SOUTH AFRICA',url:'https://www.youtube-nocookie.com/embed/qpukdDslCjk?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'GIANT PANDAS · CHENGDU · CHINA',url:'https://www.youtube-nocookie.com/embed/SUXPnIEpbn4?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'SINT MAARTEN AIRCRAFT APPROACH',url:'https://www.youtube-nocookie.com/embed/2IQmpCXbOmM?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'MONTEREY BAY · CALIFORNIA · USA',url:'https://www.youtube-nocookie.com/embed/abbR-Ttd-cA?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
       {name:'PARIS · SACRÉ-CŒUR LIVE CHANNEL',url:'https://www.youtube-nocookie.com/embed/live_stream?channel=UCjgiKi29C--6aW3pgn0l5JA&autoplay=1&mute=1&playsinline=1&controls=0&rel=0'}
     ];
     const worldFailedCams=new Set();
@@ -743,7 +753,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     ringGroup=new T.Group();root.add(ringGroup);for(let i=0;i<4;i++){const ring=new T.Mesh(new T.TorusGeometry((1.18+i*.18)*.93,(.006+(i%2)*.003)*.93,5,120),new T.MeshBasicMaterial({color:i%2?0xff4d13:0xffa04b,transparent:true,opacity:.52,blending:T.AdditiveBlending,depthWrite:false}));ring.rotation.set(.7+i*.52,.3+i*.8,.2+i*.42);ringGroup.add(ring);}
     const halo=new T.Mesh(new T.SphereGeometry(2.5,32,24),new T.MeshBasicMaterial({color:0xff5a16,wireframe:true,transparent:true,opacity:.035,blending:T.AdditiveBlending,depthWrite:false}));root.add(halo);
   }
-  function cleanup(){lifecycleToken++;if(earthRefreshTimer)clearInterval(earthRefreshTimer);earthRefreshTimer=null;if(window.ULTRON_TARGET_DETAILS)delete window.ULTRON_TARGET_DETAILS;active=false;if(window.__ultronWorldCamTimer){clearTimeout(window.__ultronWorldCamTimer);clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}document.body.classList.remove(scopedUiClass);if(frame)cancelAnimationFrame(frame);frame=null;if(resizeHandler)window.removeEventListener('resize',resizeHandler);resizeHandler=null;if(wheelHandler)wheelHandler=null;const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){try{renderer.dispose();}catch(_){}renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
+  function cleanup(){lifecycleToken++;if(earthRefreshTimer)clearInterval(earthRefreshTimer);earthRefreshTimer=null;if(window.ULTRON_TARGET_DETAILS)delete window.ULTRON_TARGET_DETAILS;active=false;if(window.__ultronWorldEmbedTimer){clearTimeout(window.__ultronWorldEmbedTimer);window.__ultronWorldEmbedTimer=null;}if(window.__ultronWorldCamTimer){clearTimeout(window.__ultronWorldCamTimer);clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}document.body.classList.remove(scopedUiClass);if(frame)cancelAnimationFrame(frame);frame=null;if(resizeHandler)window.removeEventListener('resize',resizeHandler);resizeHandler=null;if(wheelHandler)wheelHandler=null;const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){try{renderer.dispose();}catch(_){}renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
   function speakUltron(message){
     try {
       if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
