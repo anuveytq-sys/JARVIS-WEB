@@ -1,5 +1,6 @@
 /* JARVIS // ULTRON FLEXIBLE COMMAND BRIDGE
-   Natural ULTRON aliases. Camera playback remains owned by the ULTRON core.
+   Natural ULTRON aliases. Camera playback remains owned by the ULTRON core,
+   with a lifecycle-safe public-camera fallback only when the core stays black.
 */
 (() => {
   'use strict';
@@ -33,10 +34,30 @@
   ];
   const matches = (patterns, text) => patterns.some(pattern => pattern.test(text));
 
+  async function loadCameraRecovery() {
+    if (window.JARVIS_ULTRON_CAMERA_RECOVERY) return true;
+    const existing = document.getElementById('jarvis-ultron-camera-recovery-loader');
+    if (existing) {
+      await new Promise((resolve, reject) => {
+        existing.addEventListener('load', resolve, { once: true });
+        existing.addEventListener('error', reject, { once: true });
+      });
+      return !!window.JARVIS_ULTRON_CAMERA_RECOVERY;
+    }
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.id = 'jarvis-ultron-camera-recovery-loader';
+      script.src = './ultron-camera-recovery.js?v=20261029-camera-recovery-1';
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+    return !!window.JARVIS_ULTRON_CAMERA_RECOVERY;
+  }
+
   async function openUltron() {
     try {
-      // Do not install a second camera manager. The ULTRON core already owns
-      // the camera lifecycle and can rebuild its overlay after every close().
       if (!window.ULTRON || typeof window.ULTRON.open !== 'function') {
         const existing = document.getElementById('jarvis-ultron-core-loader');
         if (existing) existing.remove();
@@ -52,6 +73,12 @@
       }
       if (typeof window.ULTRON?.open !== 'function') throw new Error('ULTRON core entry point missing');
       await window.ULTRON.open();
+      try {
+        await loadCameraRecovery();
+        window.JARVIS_ULTRON_CAMERA_RECOVERY?.attach?.();
+      } catch (cameraError) {
+        console.warn('[JARVIS] ULTRON camera recovery did not initialize', cameraError);
+      }
       return true;
     } catch (error) {
       console.error('[JARVIS] ULTRON core failed to load', error);
@@ -60,6 +87,7 @@
   }
 
   function closeUltron() {
+    try { window.JARVIS_ULTRON_CAMERA_RECOVERY?.stop?.(); } catch (error) { console.warn('[JARVIS] ULTRON camera recovery stop failed', error); }
     try { window.ULTRON?.close?.(); } catch (error) { console.warn('[JARVIS] ULTRON close failed', error); }
     document.getElementById('ultron-clean-core')?.remove();
     document.body.classList.remove('jarvis-ultron-focused');
@@ -95,7 +123,7 @@
   }, 100);
 
   window.JARVIS_ULTRON_COMMANDS = {
-    version: 'ultron-commands-camera-core-restore-20261029-v4',
+    version: 'ultron-commands-camera-recovery-20261029-v5',
     open: openUltron,
     close: closeUltron,
     handle,
