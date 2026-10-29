@@ -542,7 +542,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       if(!cam)return;
       worldActiveCam=cam;worldCamLoading=true;worldCamStarted=false;worldAttempt++;
       // Keep the selected location visible throughout the attempt; never leave the panel blank.
-      worldFrame.style.visibility='hidden';worldPlace.textContent=cam.name;worldLiveBadge.textContent='';worldLiveBadge.style.opacity='0';
+      worldFrame.style.visibility='visible';worldPlace.textContent='CHECKING LIVE FEED';worldLiveBadge.textContent='CONNECTING';worldLiveBadge.style.opacity='.75';
       let worldBrightSamples=0, worldCheckedSamples=0, lastCrossOriginTime=-1, crossOriginAdvancingSamples=0;
       const clearBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
       worldFrame.onplaying=()=>{
@@ -558,9 +558,9 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         },2500);
       };
       worldFrame.onerror=()=>failWorldCam('media error');
-      worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name;};
+      worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},5000);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},9000);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
@@ -569,7 +569,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       const tryHls=()=>{
         if(!worldCamLoading)return;
         if(window.Hls&&window.Hls.isSupported()){
-          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:5,manifestLoadingTimeOut:3500,levelLoadingTimeOut:3500,fragLoadingTimeOut:3500,manifestLoadingMaxRetry:0,fragLoadingMaxRetry:0,levelLoadingMaxRetry:0});
+          worldHls=new window.Hls({enableWorker:true,lowLatencyMode:true,maxBufferLength:8,manifestLoadingTimeOut:6000,levelLoadingTimeOut:6000});
           worldHls.on(window.Hls.Events.ERROR,(_,data)=>{
             if(!data?.fatal)return;
             destroyWorldHls();
@@ -605,9 +605,8 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       }
     };
     startWorldCam();
-    // Enrich the built-in rotation after the scene is already running. Registry requests
-    // are batched and isolated from the render loop; failures never stop camera rotation.
-    setTimeout(()=>{loadGlobalWorldCams().catch(error=>console.info('[ULTRON] Optional camera registry unavailable',error));},2500);
+    // Keep optional registry discovery out of the live session. The previous
+    // camera panel used built-in feeds only; avoid delayed background network work.
     // Rotation is scheduled only after a real video frame is playing.
     worldCamTimer=null;
     window.__ultronWorldCamTimer=worldCamTimer;
