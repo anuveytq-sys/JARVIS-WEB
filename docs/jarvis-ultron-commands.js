@@ -73,7 +73,7 @@
       ['TENBY HARBOUR · UNITED KINGDOM','https://s74.ipcamlive.com/streams/4azcyiwhlasoszw6g/stream.m3u8'],
       ['RIVER BURE · UNITED KINGDOM','https://s101.ipcamlive.com/streams/65jrzbexkvsgqd4ci/stream.m3u8'],
       ['CASTEL VOLTURNO · ITALY','https://5e0add8153fcd.streamlock.net:1936/vedetta/castel-volturno.stream/playlist.m3u8'],
-      ['FLORENCE · ITALY','https://5e0add8153fcd.streamlock.net:1936/vedetta/via-della.scala.stream/chunklist_w1359048502.m3u8'],
+      ['FLORENCE · ITALY','https://5e0add8153fcd.streamlock.net:1936/vedetta/via-della-scala.stream/chunklist_w1359048502.m3u8'],
       ['ANDRYCHOW · POLAND','https://hoktastream3.webcamera.pl/andrychow_cam_3aad9b/andrychow_cam_3aad9b.stream/playlist.m3u8'],
       ['BUKOWINA TATRZANSKA · POLAND','https://hoktastream1.webcamera.pl/bukovina_cam_7aa04f/bukovina_cam_7aa04f.stream/playlist.m3u8'],
       ['WARSAW CASTLE · POLAND','https://hoktastream2.webcamera.pl/warszawa_cam_5f3b1a/warszawa_cam_5f3b1a.stream/chunks.m3u8'],
@@ -459,7 +459,7 @@
   }, 100);
 
   window.JARVIS_ULTRON_COMMANDS = {
-    version: 'ultron-commands-camera-restored-20261029-v2',
+    version: 'ultron-commands-camera-restored-20261029-v3',
     open: openUltron,
     close: closeUltron,
     handle,
