@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-44';
+  const VERSION = 'ultron-core-rebuild-45';
   if (window.ULTRON?.version === VERSION) return; // Loading the same core must never trigger a second open.
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -462,7 +462,13 @@
       for(const cam of candidates.slice(0,150))worldCams.push(cam);
       console.info('[ULTRON] Global camera registry added',Math.min(candidates.length,150),'additional feeds.');
     };
-    // Keep the optional 21-country registry fetch disabled during the live session: its burst of network/JSON work can stall lower-powered mobile browsers. The built-in feed list continues rotating every 20 seconds.
+    // De-duplicate endpoints so a broken stream is not retried under several city labels.
+    const seenWorldCameraUrls = new Set();
+    for (let i = worldCams.length - 1; i >= 0; i--) {
+      if (seenWorldCameraUrls.has(worldCams[i].url)) worldCams.splice(i, 1);
+      else seenWorldCameraUrls.add(worldCams[i].url);
+    }
+    // No background registry crawl: only one public stream is attempted at a time.
 let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     let worldBlackCheckTimer=null, worldPlaybackMonitor=null, worldRetryTimer=null, worldActiveCam=null;
     const worldFailedCams=new Set();
@@ -490,8 +496,8 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       resetWorldVideo();
       worldLiveBadge.textContent='';
       worldLiveBadge.style.opacity='0';
-      // Preserve the last attempted location until the next candidate is selected.
-      if(failed?.name)worldPlace.textContent=failed.name;
+      // Never show a city label as if it were a working camera. Only mark the location after playback starts.
+      worldPlace.textContent='PUBLIC FEED UNAVAILABLE';
       // Skip unavailable streams promptly; after one pass, retry the full feed pool.
       if(worldFailedCams.size>=worldCams.length){
         // Do not hammer every failed endpoint in an endless tight loop: that can
@@ -518,7 +524,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
             worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)startWorldCam()},1000);
           }
         }
-      },350);
+      },1200);
     };
     const markWorldCamLive=(cam)=>{
       if(!worldCamLoading||!worldFrame.isConnected)return;
@@ -553,10 +559,8 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       if(!cam){worldFailedCams.clear();cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;}
       if(!cam)return;
       worldActiveCam=cam;worldCamLoading=true;worldCamStarted=false;worldAttempt++;
-      // Keep the selected location visible throughout the attempt; never leave the panel blank.
-      worldFrame.style.visibility='visible';worldPlace.textContent='CHECKING LIVE FEED';worldLiveBadge.textContent='CONNECTING';worldLiveBadge.style.opacity='.75';
-      let worldBrightSamples=0, worldCheckedSamples=0, lastCrossOriginTime=-1, crossOriginAdvancingSamples=0;
-      const clearBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
+      // Keep the player visually clean during startup: no fake live/checking label and no city name until frames play.
+      worldFrame.style.visibility='hidden';worldPlace.textContent='';worldLiveBadge.textContent='';worldLiveBadge.style.opacity='0';
       worldFrame.onplaying=()=>{
         if(!worldCamLoading)return;
         // Public feeds are cross-origin and night scenes can be dark; avoid pixel probing.
@@ -572,7 +576,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldFrame.onerror=()=>failWorldCam('media error');
       worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
-      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('live check timed out')},9000);
+      worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('stream startup timeout')},5500);
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
@@ -683,15 +687,15 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     camera=new T.PerspectiveCamera(42,innerWidth/innerHeight,.1,1000); camera.position.set(0,0,11);
     try { renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'}); }
     catch(e) { throw new Error('WebGL is unavailable on this device/browser'); }
-    renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<650?1.25:1.6)); renderer.setSize(innerWidth,innerHeight); renderer.outputColorSpace=T.SRGBColorSpace; renderer.toneMapping=T.ACESFilmicToneMapping; renderer.toneMappingExposure=1.35;
+    renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<650?1.1:1.45)); renderer.setSize(innerWidth,innerHeight); renderer.outputColorSpace=T.SRGBColorSpace; renderer.toneMapping=T.ACESFilmicToneMapping; renderer.toneMappingExposure=1.35;
     root=new T.Group(); scene.add(root); scene.add(new T.AmbientLight(0xff6824,1.5));
     const light=new T.PointLight(0xff6b1a,180,40); light.position.set(3,2,5); scene.add(light); const innerLight=new T.PointLight(0xffa04b,90,25); innerLight.position.set(-3,-1,2); scene.add(innerLight);
-    const N=innerWidth<650?1150:2400, positions=new Float32Array(N*3), golden=Math.PI*(3-Math.sqrt(5)), nodes=[];
+    const N=innerWidth<650?520:1500, positions=new Float32Array(N*3), golden=Math.PI*(3-Math.sqrt(5)), nodes=[];
     for(let i=0;i<N;i++){const y=1-(i/(N-1))*2,radius=Math.sqrt(1-y*y),theta=golden*i,p=new T.Vector3(Math.cos(theta)*radius,y,Math.sin(theta)*radius).multiplyScalar(2.01+Math.sin(i*12.989)*.052);nodes.push(p);positions[i*3]=p.x;positions[i*3+1]=p.y;positions[i*3+2]=p.z;}
     const links=[]; for(let i=0;i<N;i++){const candidates=[];for(let j=Math.max(0,i-10);j<Math.min(N,i+11);j++){if(i===j)continue;const d=nodes[i].distanceTo(nodes[j]);if(d<.52)candidates.push([d,j]);}candidates.sort((a,b)=>a[0]-b[0]);for(const [,j] of candidates.slice(0,5))if(j>i)links.push(nodes[i].x,nodes[i].y,nodes[i].z,nodes[j].x,nodes[j].y,nodes[j].z);}
     const lineGeo=new T.BufferGeometry();lineGeo.setAttribute('position',new T.Float32BufferAttribute(links,3));network=new T.LineSegments(lineGeo,new T.LineBasicMaterial({color:0xff641b,transparent:true,opacity:.22,blending:T.AdditiveBlending,depthWrite:false}));root.add(network);
     const pointGeo=new T.BufferGeometry();pointGeo.setAttribute('position',new T.Float32BufferAttribute(positions,3));particles=new T.Points(pointGeo,new T.PointsMaterial({color:0xffa15a,size:.0328,transparent:true,opacity:.9,blending:T.AdditiveBlending,depthWrite:false,sizeAttenuation:true}));root.add(particles);
-    const coreGeo=new T.IcosahedronGeometry(.765,5);
+    const coreGeo=new T.IcosahedronGeometry(.765,4);
     const corePos=coreGeo.attributes.position;
     for(let i=0;i<corePos.count;i++){
       const x=corePos.getX(i),y=corePos.getY(i),z=corePos.getZ(i);
@@ -700,17 +704,17 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     }
     coreGeo.computeVertexNormals();
     core=new T.Mesh(coreGeo,new T.MeshPhysicalMaterial({color:0x541706,emissive:0xff3c08,emissiveIntensity:1.8,roughness:.24,metalness:.52,clearcoat:1,clearcoatRoughness:.08,transparent:true,opacity:.96}));root.add(core);
-    coreGlow=new T.Mesh(new T.SphereGeometry(.672,64,48),new T.MeshBasicMaterial({color:0xff5b12,transparent:true,opacity:.11,blending:T.AdditiveBlending,depthWrite:false,side:T.BackSide}));root.add(coreGlow);
-    const plasmaShell=new T.Mesh(new T.SphereGeometry(.597,64,48),new T.MeshPhysicalMaterial({color:0xff681c,emissive:0xff3d05,emissiveIntensity:2.6,roughness:.12,metalness:.18,transparent:true,opacity:.28,side:T.DoubleSide,blending:T.AdditiveBlending,depthWrite:false}));root.add(plasmaShell);
-    const nucleusGeo=new T.IcosahedronGeometry(.363,5);
+    coreGlow=new T.Mesh(new T.SphereGeometry(.672,40,28),new T.MeshBasicMaterial({color:0xff5b12,transparent:true,opacity:.11,blending:T.AdditiveBlending,depthWrite:false,side:T.BackSide}));root.add(coreGlow);
+    const plasmaShell=new T.Mesh(new T.SphereGeometry(.597,40,28),new T.MeshPhysicalMaterial({color:0xff681c,emissive:0xff3d05,emissiveIntensity:2.6,roughness:.12,metalness:.18,transparent:true,opacity:.28,side:T.DoubleSide,blending:T.AdditiveBlending,depthWrite:false}));root.add(plasmaShell);
+    const nucleusGeo=new T.IcosahedronGeometry(.363,4);
     const nucleusPos=nucleusGeo.attributes.position;
     for(let i=0;i<nucleusPos.count;i++){const x=nucleusPos.getX(i),y=nucleusPos.getY(i),z=nucleusPos.getZ(i);const n=1+.075*Math.sin(x*27+z*18)*Math.cos(y*24-x*11);nucleusPos.setXYZ(i,x*n,y*n,z*n);}
     nucleusGeo.computeVertexNormals();
     const nucleus=new T.Mesh(nucleusGeo,new T.MeshStandardMaterial({color:0xffa64b,emissive:0xff4b08,emissiveIntensity:4.2,roughness:.16,metalness:.32}));root.add(nucleus);
     const corona=new T.Group();root.add(corona);
-    for(let i=0;i<3;i++){const arc=new T.Mesh(new T.TorusGeometry((.73+i*.085)*.93,(.012-i*.002)*.93,8,180,Math.PI*1.42),new T.MeshBasicMaterial({color:i===1?0xffb15b:0xff4b0b,transparent:true,opacity:.65,blending:T.AdditiveBlending,depthWrite:false}));arc.rotation.set(.7+i*.9,.35+i*.5,.2+i*.7);corona.add(arc);}
+    for(let i=0;i<3;i++){const arc=new T.Mesh(new T.TorusGeometry((.73+i*.085)*.93,(.012-i*.002)*.93,6,110,Math.PI*1.42),new T.MeshBasicMaterial({color:i===1?0xffb15b:0xff4b0b,transparent:true,opacity:.65,blending:T.AdditiveBlending,depthWrite:false}));arc.rotation.set(.7+i*.9,.35+i*.5,.2+i*.7);corona.add(arc);}
     const coreLight=new T.PointLight(0xff4b0c,38,9);root.add(coreLight);
-    ringGroup=new T.Group();root.add(ringGroup);for(let i=0;i<4;i++){const ring=new T.Mesh(new T.TorusGeometry((1.18+i*.18)*.93,(.006+(i%2)*.003)*.93,6,220),new T.MeshBasicMaterial({color:i%2?0xff4d13:0xffa04b,transparent:true,opacity:.52,blending:T.AdditiveBlending,depthWrite:false}));ring.rotation.set(.7+i*.52,.3+i*.8,.2+i*.42);ringGroup.add(ring);}
+    ringGroup=new T.Group();root.add(ringGroup);for(let i=0;i<4;i++){const ring=new T.Mesh(new T.TorusGeometry((1.18+i*.18)*.93,(.006+(i%2)*.003)*.93,5,120),new T.MeshBasicMaterial({color:i%2?0xff4d13:0xffa04b,transparent:true,opacity:.52,blending:T.AdditiveBlending,depthWrite:false}));ring.rotation.set(.7+i*.52,.3+i*.8,.2+i*.42);ringGroup.add(ring);}
     const halo=new T.Mesh(new T.SphereGeometry(2.5,32,24),new T.MeshBasicMaterial({color:0xff5a16,wireframe:true,transparent:true,opacity:.035,blending:T.AdditiveBlending,depthWrite:false}));root.add(halo);
   }
   function cleanup(){lifecycleToken++;if(earthRefreshTimer)clearInterval(earthRefreshTimer);earthRefreshTimer=null;if(window.ULTRON_TARGET_DETAILS)delete window.ULTRON_TARGET_DETAILS;active=false;if(window.__ultronWorldCamTimer){clearTimeout(window.__ultronWorldCamTimer);clearInterval(window.__ultronWorldCamTimer);window.__ultronWorldCamTimer=null;}document.body.classList.remove(scopedUiClass);if(frame)cancelAnimationFrame(frame);frame=null;if(resizeHandler)window.removeEventListener('resize',resizeHandler);resizeHandler=null;if(wheelHandler)wheelHandler=null;const el=document.getElementById(overlayId);if(el)el.remove();const style=document.getElementById('ultron-clean-core-style');if(style)style.remove();if(renderer){try{renderer.dispose();}catch(_){}renderer=null;}scene=camera=root=core=coreGlow=network=particles=ringGroup=null;}
@@ -730,6 +734,6 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     if (input) { try { input.focus({ preventScroll: true }); } catch (_) { try { input.focus(); } catch (_) {} } }
   }
   function close(){cleanup();speakUltron('Ultron closed.');setTimeout(returnToMainJarvis,80);}
-  function open(){if(active)return;const token=++lifecycleToken;active=true;document.body.classList.add(scopedUiClass);loadThree().then(()=>{if(!active||token!==lifecycleToken)return;const staleOverlay=document.getElementById(overlayId);if(staleOverlay)staleOverlay.remove();const staleStyle=document.getElementById('ultron-clean-core-style');if(staleStyle)staleStyle.remove();const el=buildOverlay();makeScene(el);speakUltron('Ultron released.');const canvas=el.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.3,Math.min(1.3,targetX));lastX=e.clientX;lastY=e.clientY});const stopDrag=()=>{drag=false};canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);wheelHandler=e=>{e.preventDefault();zoom=Math.max(.68,Math.min(1.7,zoom+(e.deltaY>0?.06:-.06)))};canvas.addEventListener('wheel',wheelHandler,{passive:false});resizeHandler=()=>{if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<650?1.25:1.6))};window.addEventListener('resize',resizeHandler);let t=0;const animate=()=>{if(!active||!renderer)return;frame=requestAnimationFrame(animate);try{t+=.004;rotX+=(targetX-rotX)*.045;rotY+=(targetY-rotY)*.045;root.rotation.x=rotX+Math.sin(t*.3)*.035;root.rotation.y=rotY+t*.11;root.rotation.z=Math.sin(t*.22)*.04;core.rotation.x=t*.18;core.rotation.y=-t*.23;coreGlow.scale.setScalar(1+Math.sin(t*2.1)*.055);ringGroup.rotation.y=-t*.12;ringGroup.rotation.x=Math.sin(t*.4)*.12;camera.position.z+=(11/zoom-camera.position.z)*.08;renderer.render(scene,camera)}catch(error){console.warn('[ULTRON] A render frame failed; animation loop remains active.',error);if(renderer?.getContext?.().isContextLost?.()){console.error('[ULTRON] WebGL context is lost; close and reopen ULTRON after the browser recovers.');}}};animate();}).catch(error=>{if(token!==lifecycleToken)return;cleanup();console.error('[ULTRON] core startup failed',error);alert('ULTRON core could not load. Please check your connection, then reload JARVIS. If the problem continues, WebGL may be unavailable in this browser.');});}
+  function open(){if(active)return;const token=++lifecycleToken;active=true;document.body.classList.add(scopedUiClass);loadThree().then(()=>{if(!active||token!==lifecycleToken)return;const staleOverlay=document.getElementById(overlayId);if(staleOverlay)staleOverlay.remove();const staleStyle=document.getElementById('ultron-clean-core-style');if(staleStyle)staleStyle.remove();const el=buildOverlay();makeScene(el);speakUltron('Ultron released.');const canvas=el.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.3,Math.min(1.3,targetX));lastX=e.clientX;lastY=e.clientY});const stopDrag=()=>{drag=false};canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);wheelHandler=e=>{e.preventDefault();zoom=Math.max(.68,Math.min(1.7,zoom+(e.deltaY>0?.06:-.06)))};canvas.addEventListener('wheel',wheelHandler,{passive:false});resizeHandler=()=>{if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<650?1.1:1.45))};window.addEventListener('resize',resizeHandler);let t=0;const animate=()=>{if(!active||!renderer)return;frame=requestAnimationFrame(animate);if(document.hidden)return;try{t+=.004;rotX+=(targetX-rotX)*.045;rotY+=(targetY-rotY)*.045;root.rotation.x=rotX+Math.sin(t*.3)*.035;root.rotation.y=rotY+t*.11;root.rotation.z=Math.sin(t*.22)*.04;core.rotation.x=t*.18;core.rotation.y=-t*.23;coreGlow.scale.setScalar(1+Math.sin(t*2.1)*.055);ringGroup.rotation.y=-t*.12;ringGroup.rotation.x=Math.sin(t*.4)*.12;camera.position.z+=(11/zoom-camera.position.z)*.08;renderer.render(scene,camera)}catch(error){console.warn('[ULTRON] A render frame failed; animation loop remains active.',error);if(renderer?.getContext?.().isContextLost?.()){console.error('[ULTRON] WebGL context is lost; close and reopen ULTRON after the browser recovers.');}}};animate();}).catch(error=>{if(token!==lifecycleToken)return;cleanup();console.error('[ULTRON] core startup failed',error);alert('ULTRON core could not load. Please check your connection, then reload JARVIS. If the problem continues, WebGL may be unavailable in this browser.');});}
   window.ULTRON={version:VERSION,open,close};
 })();
