@@ -19,7 +19,7 @@
   const scriptLoads = new Map();
   const loadScript=(id,src)=>{
     const isUltronCore=id==='jarvis-ultron-core-loader';
-    const expectedCore='ultron-core-rebuild-49';
+    const expectedCore='ultron-core-rebuild-50';
     if(scriptLoads.has(id)){
       if(!isUltronCore||window.ULTRON?.version===expectedCore)return scriptLoads.get(id);
       scriptLoads.delete(id);
@@ -67,8 +67,8 @@
     if(ultronOpenPromise) return ultronOpenPromise;
     ultronOpenPromise=(async()=>{
     try {
-      if (window.ULTRON?.version !== 'ultron-core-rebuild-49') {
-        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-49');
+      if (window.ULTRON?.version !== 'ultron-core-rebuild-50') {
+        await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-50');
       }
       if(typeof window.ULTRON?.open==='function') await window.ULTRON.open();
       else throw new Error('ULTRON core entry point missing');
