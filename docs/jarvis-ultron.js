@@ -480,14 +480,15 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       resetWorldVideo();
       worldLiveBadge.textContent='';
       worldLiveBadge.style.opacity='0';
-      worldPlace.textContent='';
+      // Preserve the last attempted location until the next candidate is selected.
+      if(failed?.name)worldPlace.textContent=failed.name;
       // Skip unavailable streams promptly; after one pass, retry the full feed pool.
       if(worldFailedCams.size>=worldCams.length){
         // Do not hammer every failed endpoint in an endless tight loop: that can
         // starve the animation loop and make the entire ULTRON view appear frozen.
         worldLiveBadge.textContent='OFFLINE';
         worldLiveBadge.style.opacity='1';
-        worldPlace.textContent='';
+        if(failed?.name)worldPlace.textContent=failed.name;
         worldRetryTimer=setTimeout(()=>{
           if(!active||!worldFrame.isConnected)return;
           worldFailedCams.clear();
@@ -497,7 +498,6 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       }
       worldLiveBadge.textContent='';
       worldLiveBadge.style.opacity='0';
-      worldPlace.textContent='';
       worldRetryTimer=setTimeout(()=>{
         if(active&&worldFrame.isConnected){
           try{nextWorldCam()}catch(error){
@@ -541,7 +541,8 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       if(!cam){worldFailedCams.clear();cam=worldCams[worldIndex%worldCams.length];worldIndex=(worldIndex+1)%worldCams.length;}
       if(!cam)return;
       worldActiveCam=cam;worldCamLoading=true;worldCamStarted=false;worldAttempt++;
-      worldFrame.style.visibility='hidden';worldPlace.textContent='';worldLiveBadge.textContent='';worldLiveBadge.style.opacity='0';
+      // Keep the selected location visible throughout the attempt; never leave the panel blank.
+      worldFrame.style.visibility='hidden';worldPlace.textContent=cam.name;worldLiveBadge.textContent='';worldLiveBadge.style.opacity='0';
       let worldBrightSamples=0, worldCheckedSamples=0, lastCrossOriginTime=-1, crossOriginAdvancingSamples=0;
       const clearBlackCheck=()=>{if(worldBlackCheckTimer){clearInterval(worldBlackCheckTimer);worldBlackCheckTimer=null;}};
       worldFrame.onplaying=()=>{
@@ -579,14 +580,17 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         }else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
         else failWorldCam('HLS unsupported');
       };
-      // Prefer hls.js where Media Source Extensions are available; canPlayType() can
-      // return a misleading "maybe" on browsers that cannot actually play this HLS stream.
+      // Use hls.js first on MSE browsers. Native HLS is the fallback for iPhone/iPad,
+      // where Safari's media stack is the reliable HLS path (including iOS Chrome).
+      const nativeHlsAvailable=!!worldFrame.canPlayType('application/vnd.apple.mpegurl');
+      const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent||'');
       if(window.Hls&&window.Hls.isSupported())tryHls();
-      else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();
+      else if(isAppleMobile&&nativeHlsAvailable)tryNative();
+      else if(window.Hls&&nativeHlsAvailable)tryNative();
       else{
         const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';loader.async=true;
-        loader.onload=()=>{if(window.Hls&&window.Hls.isSupported())tryHls();else if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam('HLS playback unsupported')};
-        loader.onerror=()=>{if(worldFrame.canPlayType('application/vnd.apple.mpegurl'))tryNative();else failWorldCam('player library unavailable')};
+        loader.onload=()=>{if(window.Hls&&window.Hls.isSupported())tryHls();else if(nativeHlsAvailable)tryNative();else failWorldCam('HLS playback unsupported')};
+        loader.onerror=()=>{if(nativeHlsAvailable)tryNative();else failWorldCam('player library unavailable')};
         document.head.appendChild(loader);
       }
     };
@@ -601,10 +605,9 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       }
     };
     startWorldCam();
-    // Keep external registry discovery out of the live session. The registry is large,
-    // remote and not required for rendering; fetching it while opening ULTRON can compete
-    // with camera playback and stall lower-powered mobile devices. Built-in feeds rotate
-    // immediately; registry discovery can be run separately in a future maintenance task.
+    // Enrich the built-in rotation after the scene is already running. Registry requests
+    // are batched and isolated from the render loop; failures never stop camera rotation.
+    setTimeout(()=>{loadGlobalWorldCams().catch(error=>console.info('[ULTRON] Optional camera registry unavailable',error));},2500);
     // Rotation is scheduled only after a real video frame is playing.
     worldCamTimer=null;
     window.__ultronWorldCamTimer=worldCamTimer;
