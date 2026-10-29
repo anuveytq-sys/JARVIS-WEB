@@ -409,6 +409,16 @@
       {name:"WHISTLER VILLAGE · CANADA",url:"https://streamer6.brownrice.com/whistlervillagefitz/whistlervillagefitz.stream/main_playlist.m3u8"}
     ];
 
+    // Deduplicate by URL: repeated entries otherwise prevent the all-failed circuit breaker
+    // from ever reaching worldCams.length and cause endless city-by-city retries.
+    {
+      const seenWorldCamUrls=new Set();
+      for(let i=worldCams.length-1;i>=0;i--){
+        if(seenWorldCamUrls.has(worldCams[i].url))worldCams.splice(i,1);
+        else seenWorldCamUrls.add(worldCams[i].url);
+      }
+    }
+
     // Enrich the built-in list in the background with recently verified, direct HLS streams
     // from the public Live-Environment-Streams country registries. Existing feeds start immediately.
     const loadGlobalWorldCams=async()=>{
@@ -488,12 +498,14 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         // starve the animation loop and make the entire ULTRON view appear frozen.
         worldLiveBadge.textContent='OFFLINE';
         worldLiveBadge.style.opacity='1';
-        if(failed?.name)worldPlace.textContent=failed.name;
+        worldPlace.textContent='NO PLAYABLE PUBLIC FEEDS';
+        // Keep ULTRON responsive and stop cycling every city on-screen. Retry once
+        // after a quiet cooldown so a temporarily recovered public source can return.
         worldRetryTimer=setTimeout(()=>{
           if(!active||!worldFrame.isConnected)return;
           worldFailedCams.clear();
           nextWorldCam();
-        },15000);
+        },60000);
         return;
       }
       worldLiveBadge.textContent='';
