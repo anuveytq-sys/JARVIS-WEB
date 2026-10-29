@@ -58,6 +58,7 @@ jobs:
           node --check docs/jarvis-environment-shortcuts.js
           node --check docs/jarvis-ultron.js
           node --check docs/jarvis-ultron-commands.js
+          node --check docs/jarvis-ultron-digital-twin.js
           node --check docs/jarvis-calling.js
           node --check docs/jarvis-advanced-modules.js
           node --check docs/jarvis-power-modules.js
@@ -87,7 +88,7 @@ jobs:
             velve-satellite-upgrade.js velve-voice-fix.js terranexus.js terranexus-ui-fix.js jarvis-neon-nexus.js \
             jarvis-neon-nexus-launcher-fix.js jarvis-neon-nexus-command-fix.js jarvis-core-3d.js jarvis-vision-intelligence.js \
             jarvis-vision-intelligence-enhancement.js jarvis-environment-shortcuts.js jarvis-ultron.js jarvis-ultron-commands.js \
-            jarvis-calling.js jarvis-advanced-modules.js jarvis-power-modules.js jarvis-mission-control.js jarvis-share.js \
+            jarvis-ultron-digital-twin.js jarvis-calling.js jarvis-advanced-modules.js jarvis-power-modules.js jarvis-mission-control.js jarvis-share.js \
             jarvis-reminders-sw.js; do cp "docs/$f" "_site/$f"; done
           for f in jarvis-command-center.css jarvis-velve.css terranexus.css jarvis-neon-nexus.css jarvis-core-3d.css jarvis-vision-intelligence-enhancement.css manifest.webmanifest jarvis-pwa-icon.svg; do cp "docs/$f" "_site/$f"; done
           cp docs/velve-countries.js _site/velve-countries.js
@@ -153,6 +154,7 @@ jobs:
           touch _site/.nojekyll
           test -s _site/jarvis-ultron.js
           test -s _site/jarvis-ultron-commands.js
+          test -s _site/jarvis-ultron-digital-twin.js
           grep -q "jarvis-ultron.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-ultron-commands.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
           grep -q "jarvis-environment-shortcuts.js?v=pages-${SITE_VERSION:0:12}" _site/index.html
