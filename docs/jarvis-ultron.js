@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-46';
+  const VERSION = 'ultron-core-rebuild-48';
   if (window.ULTRON?.version === VERSION) return; // Loading the same core must never trigger a second open.
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -38,7 +38,7 @@
   function buildOverlay() {
     let el = document.getElementById(overlayId); if (el) el.remove();
     el = document.createElement('section'); el.id = overlayId; el.setAttribute('role','application'); el.setAttribute('aria-label','ULTRON interactive neural core');
-    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><aside class="uc-worldcam" role="button" tabindex="0" aria-expanded="false" aria-label="World camera feed. Tap to enlarge or restore size"><div class="uc-worldcam-head"><span class="uc-worldcam-dot"></span><span>WORLD FEED</span><span class="uc-worldcam-live">LIVE</span></div><video class="uc-worldcam-frame" title="Public world camera feed" autoplay muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen"></video><div class="uc-worldcam-place" aria-live="polite"></div></aside><aside class="uc-osint-launcher" aria-label="Public intelligence lookup"><div class="uc-osint-head"><span class="uc-osint-dot"></span><span>PUBLIC LOOKUP</span><span class="uc-osint-tag">OSINT</span></div><div class="uc-osint-buttons"><button type="button" data-osint-category="EMAIL">EMAIL</button><button type="button" data-osint-category="PHONE">PHONE</button><button type="button" data-osint-category="USERNAME">USERNAME</button></div></aside><aside class="uc-earth-telemetry" aria-label="Earth and satellite telemetry"><div class="uc-earth-head"><span class="uc-earth-dot"></span><span>EARTH / SATELLITES</span><span class="uc-earth-live">LIVE</span></div><div class="uc-earth-content"><div>ACQUIRING ORBITAL DATA…</div></div></aside><aside class="uc-target-details" aria-label="Target Details Panel"><div class="uc-target-head"><span class="uc-target-dot"></span><span>TARGET DETAILS</span><button type="button" class="uc-target-clear" aria-label="Clear target details" title="Clear results">×</button></div><div class="uc-target-meta">NO SCAN SELECTED</div><div class="uc-target-content" aria-live="polite"><div class="uc-target-empty">SCAN RESULTS WILL APPEAR HERE</div></div></aside><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
+    el.innerHTML = '<canvas class="uc-canvas"></canvas><div class="uc-vignette"></div><div class="uc-mark">ULTRON</div><div class="uc-sub">NEURAL CORE</div><aside class="uc-worldcam" role="button" tabindex="0" aria-expanded="false" aria-label="World camera feed. Tap to enlarge or restore size"><div class="uc-worldcam-head"><span class="uc-worldcam-dot"></span><span>WORLD FEED</span><span class="uc-worldcam-live">LIVE</span></div><video class="uc-worldcam-frame" title="Public world camera feed" autoplay muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen"></video><iframe class="uc-worldcam-embed" title="Public live webcam" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" loading="eager"></iframe><div class="uc-worldcam-place" aria-live="polite"></div></aside><aside class="uc-osint-launcher" aria-label="Public intelligence lookup"><div class="uc-osint-head"><span class="uc-osint-dot"></span><span>PUBLIC LOOKUP</span><span class="uc-osint-tag">OSINT</span></div><div class="uc-osint-buttons"><button type="button" data-osint-category="EMAIL">EMAIL</button><button type="button" data-osint-category="PHONE">PHONE</button><button type="button" data-osint-category="USERNAME">USERNAME</button></div></aside><aside class="uc-earth-telemetry" aria-label="Earth and satellite telemetry"><div class="uc-earth-head"><span class="uc-earth-dot"></span><span>EARTH / SATELLITES</span><span class="uc-earth-live">LIVE</span></div><div class="uc-earth-content"><div>ACQUIRING ORBITAL DATA…</div></div></aside><aside class="uc-target-details" aria-label="Target Details Panel"><div class="uc-target-head"><span class="uc-target-dot"></span><span>TARGET DETAILS</span><button type="button" class="uc-target-clear" aria-label="Clear target details" title="Clear results">×</button></div><div class="uc-target-meta">NO SCAN SELECTED</div><div class="uc-target-content" aria-live="polite"><div class="uc-target-empty">SCAN RESULTS WILL APPEAR HERE</div></div></aside><div class="uc-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div><form class="uc-command" autocomplete="off"><input class="uc-command-input" type="text" aria-label="ULTRON command" placeholder="Enter a command…" maxlength="1000"><button class="uc-send" type="submit" aria-label="Send command" title="Send">➤</button><button class="uc-voice" type="button" aria-label="Voice command" title="Voice command">🎙</button><span class="uc-command-status" aria-live="polite"></span></form><button class="uc-exit" type="button" aria-label="Close ULTRON">×</button>'
     const style = document.createElement('style'); style.id='ultron-clean-core-style'; style.textContent=`
       body.${scopedUiClass} #jarvis-wake-word-toggle,body.${scopedUiClass} #jarvis-hand-gesture-toggle,body.${scopedUiClass} #jarvis-hand-gesture-status,body.${scopedUiClass} #jarvis-web-bridge-panel{display:none!important;visibility:hidden!important;pointer-events:none!important}\n      #${overlayId}{position:fixed;inset:0;z-index:2147483000;background:#050302;color:#ff8a32;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;isolation:isolate;touch-action:none}
       #${overlayId} .uc-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
@@ -93,13 +93,14 @@
       #${overlayId} .uc-worldcam-dot{width:5px;height:5px;border-radius:50%;background:#ff572c;box-shadow:0 0 7px #ff572c;animation:ucCamPulse 1.2s infinite}
       #${overlayId} .uc-worldcam-live{margin-left:auto;color:#ff7958}
       #${overlayId} .uc-worldcam-frame{display:block;width:100%;height:calc(100% - 20px);border:0;background:#090604;object-fit:cover;pointer-events:none;visibility:hidden}
+      #${overlayId} .uc-worldcam-embed{position:absolute;top:20px;left:0;display:block;width:100%;height:calc(100% - 20px);border:0;background:#090604;visibility:hidden;pointer-events:auto}
       #${overlayId} .uc-worldcam-place{position:absolute;left:4px;right:4px;bottom:4px;padding:3px 4px;background:rgba(0,0,0,.72);color:#ffd0ae;font:600 7px/1.3 Inter,system-ui,sans-serif;letter-spacing:.05em;text-align:center;pointer-events:none}
       @keyframes ucCamPulse{50%{opacity:.35}}
-      @media(max-width:600px){#${overlayId} .uc-worldcam{top:64px;right:15px;width:104px}#${overlayId} .uc-worldcam-head{height:18px;font-size:6px}#${overlayId} .uc-worldcam-frame{height:calc(100% - 18px)}}
+      @media(max-width:600px){#${overlayId} .uc-worldcam{top:64px;right:15px;width:104px}#${overlayId} .uc-worldcam-head{height:18px;font-size:6px}#${overlayId} .uc-worldcam-frame{height:calc(100% - 18px)}#${overlayId} .uc-worldcam-embed{top:18px;height:calc(100% - 18px)}}
       @media(max-width:600px){#${overlayId} .uc-mark{top:20px;left:18px}#${overlayId} .uc-sub{top:51px;left:20px}#${overlayId} .uc-exit{top:15px;right:15px}#${overlayId} .uc-hint{bottom:108px;font-size:7px;letter-spacing:.14em}#${overlayId} .uc-command{bottom:26px;height:42px;width:calc(100% - 28px)}#${overlayId} .uc-send,#${overlayId} .uc-voice{flex-basis:34px;width:34px;height:32px}}
     `; document.head.appendChild(style); document.body.appendChild(el); el.querySelector('.uc-exit').addEventListener('click',()=>{close();});
     const form=el.querySelector('.uc-command'), input=el.querySelector('.uc-command-input'), voice=el.querySelector('.uc-voice'), status=el.querySelector('.uc-command-status');
-    const worldFrame=el.querySelector('.uc-worldcam-frame'), worldPlace=el.querySelector('.uc-worldcam-place');
+    const worldFrame=el.querySelector('.uc-worldcam-frame'), worldEmbed=el.querySelector('.uc-worldcam-embed'), worldPlace=el.querySelector('.uc-worldcam-place');
     const earthPanel=el.querySelector('.uc-earth-telemetry');
     const earthContent=el.querySelector('.uc-earth-content');
     let earthRefreshTimer=null, earthSatelliteRecords=[], earthSatelliteIndex=0, earthLastCatalogAt=0;
@@ -471,6 +472,14 @@
     // No background registry crawl: only one public stream is attempted at a time.
 let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldCamTimer=null, worldCamWatchdog=null, worldCamStarted=false, worldCamLoading=false, worldAttempt=0;
     let worldBlackCheckTimer=null, worldPlaybackMonitor=null, worldRetryTimer=null, worldActiveCam=null;
+    let worldEmbedTimer=null, worldEmbedIndex=0, worldEmbedMode=false;
+    const worldEmbedCams=[
+      {name:'AMSTERDAM · DAM SQUARE',url:'https://www.youtube-nocookie.com/embed/Gd9d4q6WvUY?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'AMSTERDAM · DAMRAK',url:'https://www.youtube-nocookie.com/embed/43qH0tDA6lM?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'PARIS · EIFFEL TOWER VIEW',url:'https://www.youtube-nocookie.com/embed/OzYp4NRZlwQ?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'GUDAURI · MOUNTAIN VIEW',url:'https://www.youtube-nocookie.com/embed/QJ63HspHB6M?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'PARIS · SACRÉ-CŒUR LIVE CHANNEL',url:'https://www.youtube-nocookie.com/embed/live_stream?channel=UCjgiKi29C--6aW3pgn0l5JA&autoplay=1&mute=1&playsinline=1&controls=0&rel=0'}
+    ];
     const worldFailedCams=new Set();
     const worldLiveBadge=el.querySelector('.uc-worldcam-live');
     const destroyWorldHls=()=>{if(worldHls){try{worldHls.destroy()}catch(_){}worldHls=null;}};
@@ -485,6 +494,18 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       destroyWorldHls();
       try{worldFrame.pause();worldFrame.removeAttribute('src');worldFrame.load()}catch(_){}
       worldFrame.style.visibility='hidden';
+      if(worldEmbed){worldEmbed.style.visibility='hidden';worldEmbed.removeAttribute('src');}
+    };
+    const startWorldEmbed=()=>{
+      if(!active||!worldFrame?.isConnected||!worldEmbed?.isConnected)return;
+      worldEmbedMode=true;worldCamLoading=false;worldCamStarted=false;
+      if(worldCamTimer){clearTimeout(worldCamTimer);worldCamTimer=null;}
+      clearWorldTimers();resetWorldVideo();
+      if(worldEmbedTimer){clearTimeout(worldEmbedTimer);worldEmbedTimer=null;}
+      const cam=worldEmbedCams[worldEmbedIndex%worldEmbedCams.length];worldEmbedIndex=(worldEmbedIndex+1)%worldEmbedCams.length;
+      worldEmbed.src=cam.url;worldEmbed.style.visibility='visible';
+      worldPlace.textContent=cam.name;worldLiveBadge.textContent='PUBLIC STREAM';worldLiveBadge.style.opacity='1';
+      window.__ultronWorldEmbedTimer=worldEmbedTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)startWorldEmbed();},45000);
     };
     const failWorldCam=(reason)=>{
       if(!worldCamLoading&&!worldCamStarted)return;
@@ -498,6 +519,9 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldLiveBadge.style.opacity='0';
       // Never show a city label as if it were a working camera. Only mark the location after playback starts.
       worldPlace.textContent='PUBLIC FEED UNAVAILABLE';
+      // After three direct-feed failures, switch to an embeddable public stream rotation.
+      // The camera fallback is isolated from ULTRON's 3D render loop.
+      if(worldFailedCams.size>=Math.min(3,worldCams.length)){startWorldEmbed();return;}
       // Skip unavailable streams promptly; after one pass, retry the full feed pool.
       if(worldFailedCams.size>=worldCams.length){
         // Do not hammer every failed endpoint in an endless tight loop: that can
@@ -549,7 +573,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       },1500);
     };
     const startWorldCam=()=>{
-      if(!active||!worldFrame?.isConnected||worldCamLoading||worldCamStarted)return;
+      if(!active||!worldFrame?.isConnected||worldCamLoading||worldCamStarted||worldEmbedMode)return;
       clearWorldTimers();resetWorldVideo();
       let cam=null;
       for(let checked=0;checked<worldCams.length;checked++){
@@ -630,7 +654,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     window.__ultronWorldCamTimer=worldCamTimer;
     el.querySelector('.uc-exit').addEventListener('click',()=>{
       if(worldCamTimer)clearTimeout(worldCamTimer);
-      clearWorldTimers();destroyWorldHls();resetWorldVideo();window.__ultronWorldCamTimer=null;
+      clearWorldTimers();destroyWorldHls();resetWorldVideo();if(worldEmbedTimer)clearTimeout(worldEmbedTimer);worldEmbedTimer=null;window.__ultronWorldEmbedTimer=null;window.__ultronWorldCamTimer=null;
     });
     const setStatus=message=>{status.textContent=message||'';};
     form.addEventListener('pointerdown',e=>e.stopPropagation());
