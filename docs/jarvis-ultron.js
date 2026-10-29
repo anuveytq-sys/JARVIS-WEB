@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-45';
+  const VERSION = 'ultron-core-rebuild-46';
   if (window.ULTRON?.version === VERSION) return; // Loading the same core must never trigger a second open.
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -577,6 +577,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       worldFrame.onwaiting=()=>{if(worldCamStarted)worldPlace.textContent=cam.name+' · BUFFERING';};
       worldFrame.onstalled=()=>{if(worldCamStarted)setTimeout(()=>{if(worldCamStarted&&worldFrame.readyState<2)failWorldCam('stalled stream')},5000);};
       worldCamWatchdog=setTimeout(()=>{if(!worldCamStarted)failWorldCam('stream startup timeout')},5500);
+      let nativeFallbackTried=false;
       const tryNative=()=>{
         if(!worldCamLoading)return;
         destroyWorldHls();
@@ -589,6 +590,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
           worldHls.on(window.Hls.Events.ERROR,(_,data)=>{
             if(!data?.fatal)return;
             destroyWorldHls();
+            if(nativeHlsAvailable&&!nativeFallbackTried){nativeFallbackTried=true;tryNative();return;}
             failWorldCam('HLS '+(data.type===window.Hls.ErrorTypes.NETWORK_ERROR?'network error':'stream error'));
           });
           worldHls.on(window.Hls.Events.MANIFEST_PARSED,()=>{try{const p=worldFrame.play();if(p&&p.catch)p.catch(()=>{})}catch(_){}});
@@ -600,9 +602,9 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       // where Safari's media stack is the reliable HLS path (including iOS Chrome).
       const nativeHlsAvailable=!!worldFrame.canPlayType('application/vnd.apple.mpegurl');
       const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent||'');
-      if(window.Hls&&window.Hls.isSupported())tryHls();
-      else if(isAppleMobile&&nativeHlsAvailable)tryNative();
-      else if(window.Hls&&nativeHlsAvailable)tryNative();
+      if(isAppleMobile&&nativeHlsAvailable)tryNative();
+      else if(window.Hls&&window.Hls.isSupported())tryHls();
+      else if(nativeHlsAvailable)tryNative();
       else{
         const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';loader.async=true;
         loader.onload=()=>{if(window.Hls&&window.Hls.isSupported())tryHls();else if(nativeHlsAvailable)tryNative();else failWorldCam('HLS playback unsupported')};
