@@ -1,7 +1,7 @@
 /* ULTRON — clean rebuild: orange neural field + interactive 3D core only. */
 (() => {
   'use strict';
-  const VERSION = 'ultron-core-rebuild-48';
+  const VERSION = 'ultron-core-rebuild-49';
   if (window.ULTRON?.version === VERSION) return; // Loading the same core must never trigger a second open.
   const THREE_URLS = [
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js',
@@ -474,7 +474,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
     let worldBlackCheckTimer=null, worldPlaybackMonitor=null, worldRetryTimer=null, worldActiveCam=null;
     let worldEmbedTimer=null, worldEmbedIndex=0, worldEmbedMode=false;
     const worldEmbedCams=[
-      {name:'AMSTERDAM · DAM SQUARE · NETHERLANDS',url:'https://www.youtube-nocookie.com/embed/Gd9d4q6WvUY?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
+      {name:'TIMES SQUARE · NEW YORK · USA',url:'https://www.youtube-nocookie.com/embed/rnXIjl_Rzy4?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
       {name:'PARIS · EIFFEL TOWER · FRANCE',url:'https://www.youtube-nocookie.com/embed/OzYp4NRZlwQ?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
       {name:'TIMES SQUARE · NEW YORK · USA',url:'https://www.youtube-nocookie.com/embed/z-jYdOIKcTQ?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
       {name:'VENICE · GRAND CANAL · ITALY',url:'https://www.youtube-nocookie.com/embed/r8N6IsoIkTk?autoplay=1&mute=1&playsinline=1&controls=0&rel=0'},
@@ -656,7 +656,10 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
         worldRetryTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)startWorldCam()},500);
       }
     };
-    startWorldCam();
+    // Start with a known public, embeddable live stream instead of waiting for
+    // direct HLS feeds to fail first. This keeps the panel from getting stuck
+    // on PUBLIC FEED UNAVAILABLE while the fallback threshold is reached.
+    startWorldEmbed();
     // Keep optional registry discovery out of the live session. The previous
     // camera panel used built-in feeds only; avoid delayed background network work.
     // Rotation is scheduled only after a real video frame is playing.
