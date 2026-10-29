@@ -6,7 +6,7 @@
 */
 (() => {
   'use strict';
-  const VERSION = 'env-shortcuts-ultron-core44-20261027';
+  const VERSION = 'env-shortcuts-ultron-core45-20261029';
   const PANEL_ID = 'jarvis-environment-shortcuts';
   const environments = [
     { name:'VELVE', subtitle:'GOD’S EYE / GEO CORE', command:'open VELVE environment' },
@@ -55,7 +55,8 @@
       || /^(hey jarvis )?(show|bring me back to|return me to|take me back to) (main jarvis|jarvis)$/.test(value);
   };
 
-  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-ultron-core44-20261027')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
+  const loadUltronCommands=async()=>{try{await loadScript('jarvis-ultron-commands-loader','./jarvis-ultron-commands.js?v=env-shortcuts-ultron-core45-20261029')}catch(e){console.warn('[JARVIS] ULTRON command bridge unavailable',e)}};
+  const loadUltronDigitalTwin=async()=>{try{await loadScript('jarvis-ultron-digital-twin-loader','./jarvis-ultron-digital-twin.js?v=ultron-digital-twin-1.0.0')}catch(e){console.warn('[JARVIS] ULTRON Digital Twin module unavailable',e)}};
   let ultronOpenPromise=null;
   const loadUltron=async()=>{
     if(ultronOpenPromise) return ultronOpenPromise;
@@ -64,8 +65,10 @@
       if (window.ULTRON?.version !== 'ultron-core-rebuild-41') {
         await loadScript('jarvis-ultron-core-loader','./jarvis-ultron.js?v=ultron-core-rebuild-41');
       }
-      if(typeof window.ULTRON?.open==='function') window.ULTRON.open();
+      if(typeof window.ULTRON?.open==='function') await window.ULTRON.open();
       else throw new Error('ULTRON core entry point missing');
+      await loadUltronDigitalTwin();
+      window.JARVIS_ULTRON_DIGITAL_TWIN?.apply?.();
     } catch(error) {
       console.error('[JARVIS] ULTRON core failed to load',error);
       alert('ULTRON could not load. Check your internet connection and try again.');
@@ -90,8 +93,6 @@
     setTimeout(focusMainJarvis,40);
   };
 
-  // Delegated recovery hook: it remains available even if ULTRON rebuilds its
-  // overlay after the normal polling hook has already run.
   const installGlobalUltronCloseRecovery=()=>{
     if(document.__jarvisUltronCloseRecoveryHook)return;
     const handleExit=event=>{
@@ -147,9 +148,6 @@
     return true;
   };
 
-  // The ULTRON command box is a separate input from JARVIS's main composer.
-  // Handle close phrases there directly so they never depend on the optional
-  // command bridge being loaded or on a particular command parser.
   const installUltronCommandInputHook=()=>{
     if(document.__jarvisUltronCommandInputHook)return true;
     const intercept=event=>{
