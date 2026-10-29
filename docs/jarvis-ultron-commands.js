@@ -41,7 +41,7 @@
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.id = 'jarvis-ultron-core-loader';
-          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-49';
+          script.src = './jarvis-ultron.js?v=ultron-core-rebuild-50';
           script.async = true;
           script.onload = resolve;
           script.onerror = reject;
