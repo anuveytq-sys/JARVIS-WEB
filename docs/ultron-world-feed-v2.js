@@ -1,4 +1,4 @@
-/* ULTRON WORLD FEED V3 — curated, globally distributed public live webcams.
+/* ULTRON WORLD FEED V4 — curated, globally distributed public live webcams.
    Camera records are sourced from Famelack's maintained public webcam dataset.
    Only publisher-provided YouTube live embeds are used; no private/IP cameras.
 */
@@ -53,8 +53,8 @@
       if (!/(^|\.)youtube(-nocookie)?\.com$/i.test(u.hostname)) return '';
       const match = u.pathname.match(/\/embed\/([\w-]{6,})/);
       if (!match) return '';
-      return 'https://www.youtube-nocookie.com/embed/' + match[1] +
-        '?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3';
+      return 'https://www.youtube.com/embed/' + match[1] +
+        '?autoplay=1&mute=1&controls=1&playsinline=1&rel=0';
     } catch (_) { return ''; }
   };
 
@@ -116,14 +116,30 @@
       frame = document.createElement('iframe');
       frame.className = 'uc-worldcam-embed';
       frame.title = 'Public live webcam';
-      frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-      frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+      frame.setAttribute('allowfullscreen', '');
+      frame.setAttribute('referrerpolicy', 'origin');
       frame.setAttribute('loading', 'eager');
       panel.appendChild(frame);
     }
     frame.style.visibility = 'visible';
     frame.style.pointerEvents = 'none';
     frame.style.zIndex = '1';
+    // YouTube's documented player viewport minimum is 200x200 CSS px.
+    // The former 104-160px panel was below that limit and could render blank.
+    let sizing = document.getElementById('ultron-world-feed-player-size');
+    if (!sizing) {
+      sizing = document.createElement('style');
+      sizing.id = 'ultron-world-feed-player-size';
+      sizing.textContent = [
+        '#ultron-clean-core .uc-worldcam{width:224px!important;height:224px!important;min-width:224px!important;min-height:224px!important;aspect-ratio:1/1!important}',
+        '#ultron-clean-core .uc-worldcam-embed{display:block!important;width:100%!important;height:calc(100% - 20px)!important;min-width:200px!important;min-height:200px!important;visibility:visible!important;background:#090604!important}',
+        '#ultron-clean-core .uc-worldcam.is-expanded{width:min(88vw,72vh)!important;height:min(88vw,72vh)!important;min-width:224px!important;min-height:224px!important}',
+        '#ultron-clean-core .uc-worldcam.is-expanded .uc-worldcam-embed{height:calc(100% - 30px)!important}',
+        '@media(max-width:600px){#ultron-clean-core .uc-worldcam{top:64px!important;right:15px!important;width:224px!important;height:224px!important}#ultron-clean-core .uc-worldcam-embed{height:calc(100% - 18px)!important;min-height:200px!important}#ultron-clean-core .uc-worldcam.is-expanded{width:min(88vw,72vh)!important;height:min(88vw,72vh)!important}#ultron-clean-core .uc-worldcam.is-expanded .uc-worldcam-embed{height:calc(100% - 24px)!important}}'
+      ].join('\\n');
+      document.head.appendChild(sizing);
+    }
     const head = panel.querySelector('.uc-worldcam-head');
     const place = panel.querySelector('.uc-worldcam-place');
     if (head) { head.style.position = 'relative'; head.style.zIndex = '3'; }
