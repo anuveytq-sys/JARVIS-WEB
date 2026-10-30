@@ -515,7 +515,7 @@ let worldIndex=Math.floor(Math.random()*worldCams.length), worldHls=null, worldC
       const cam=worldEmbedCams[worldEmbedIndex%worldEmbedCams.length];worldEmbedIndex=(worldEmbedIndex+1)%worldEmbedCams.length;
       worldEmbed.src=cam.url;worldEmbed.style.visibility='visible';
       worldPlace.textContent=cam.name;worldLiveBadge.textContent='PUBLIC STREAM';worldLiveBadge.style.opacity='1';
-      window.__ultronWorldEmbedTimer=worldEmbedTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)startWorldEmbed();},45000);
+      window.__ultronWorldEmbedTimer=worldEmbedTimer=setTimeout(()=>{if(active&&worldFrame.isConnected)/* ULTRON_WORLD_FEED_LEGACY_STARTUP_DISABLED */ void 0;},45000);
     };
     const failWorldCam=(reason)=>{
       if(!worldCamLoading&&!worldCamStarted)return;
