@@ -266,7 +266,6 @@
     if (!video) return;
     video.style.display = 'block';
     video.style.width = '100%';
-    video.style.height = 'calc(100% - 20px)';
     video.style.objectFit = 'cover';
     video.style.visibility = 'visible';
     active = true;
