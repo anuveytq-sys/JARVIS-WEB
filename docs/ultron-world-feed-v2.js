@@ -107,7 +107,7 @@
                   String(p.scene_type || '').toLowerCase() === 'traffic' ||
                   typeof p.url !== 'string' || !/^https:\/\//i.test(p.url) || !/\.m3u8(?:[?#]|$)/i.test(p.url)) return [];
               const place = clean(p.display_name || p.name || countryName(code));
-              return [{name:(place + ' · ' + countryName(code)).slice(0,100),url:p.url}];
+              return [{name:(place + ' · ' + countryName(code)).slice(0,100),country:countryName(code),url:p.url}];
             });
           } finally { clearTimeout(timeout); }
         }));
@@ -186,19 +186,11 @@
       if (lastTime >= 0 && now > lastTime + 0.15) {
         liveConfirmed = true;
         if (startTimer) clearTimeout(startTimer);
-        status(clean(cam.name) + ' · ' + countryName(cam.country || '') .trim(),true);
+        status(clean(cam.name),true);
         later(nextCamera,ROTATE_MS);
         lastAdvance = Date.now();
-        monitor = setInterval(() => {
-          if (token !== generation || !active || !video?.isConnected) { clearInterval(monitor); return; }
-          const t = Number(video.currentTime) || 0;
-          if (!video.paused && video.readyState >= 2 && t > lastTime + 0.12) {
-            lastTime = t; lastAdvance = Date.now();
-          } else if (Date.now()-lastAdvance > 9000) fail();
-        },1500);
-      } else {
-        lastTime = now;
       }
+      lastTime = now;
     };
 
     video.muted = true;
@@ -214,6 +206,23 @@
     video.onstalled = () => { if (liveConfirmed) lastAdvance = Date.now()-10000; };
     video.onwaiting = () => { if (liveConfirmed) lastAdvance = Date.now()-10000; };
     startTimer = setTimeout(fail,START_TIMEOUT_MS);
+    monitor = setInterval(() => {
+      if (token !== generation || !active || !video?.isConnected || failed) {
+        clearInterval(monitor);
+        return;
+      }
+      if (!liveConfirmed) {
+        confirm();
+        return;
+      }
+      const t = Number(video.currentTime) || 0;
+      if (!video.paused && video.readyState >= 2 && t > lastTime + 0.12) {
+        lastTime = t;
+        lastAdvance = Date.now();
+      } else if (Date.now() - lastAdvance > 9000) {
+        fail();
+      }
+    },1500);
 
     const tryPlay = () => video.play().catch(() => fail());
     try {
