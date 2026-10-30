@@ -35,7 +35,7 @@ jobs:
           if needle not in s:
               raise SystemExit('Expected legacy ULTRON world-feed startup call was not found; refusing to modify the core.')
 
-          replacement = marker + '\n    /* World Feed V2 owns this panel. Do not start the legacy video/iframe player. */'
+          replacement = marker + ' void 0;'
           s = s.replace(needle, replacement, 1)
           p.write_text(s, encoding='utf-8')
           print('Disabled exactly one legacy world-feed startup call.')
