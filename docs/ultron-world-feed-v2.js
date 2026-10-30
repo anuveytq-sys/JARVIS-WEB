@@ -92,10 +92,10 @@
     if (catalogPromise) return catalogPromise;
     catalogPromise = (async () => {
       const buckets = [];
-      for (let i=0;i<COUNTRIES.length;i+=4) {
-        const batch = await Promise.allSettled(COUNTRIES.slice(i,i+4).map(async code => {
+      for (let i=0;i<COUNTRIES.length;i+=8) {
+        const batch = await Promise.allSettled(COUNTRIES.slice(i,i+8).map(async code => {
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(),6500);
+          const timeout = setTimeout(() => controller.abort(),5000);
           try {
             const response = await fetch(REGISTRY + code + '.json',{signal:controller.signal,cache:'force-cache',credentials:'omit'});
             if (!response.ok) throw new Error('Registry HTTP '+response.status);
