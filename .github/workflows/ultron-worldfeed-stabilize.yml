@@ -1,4 +1,4 @@
-name: Stabilize ULTRON world feed
+name: ULTRON world feed isolation
 
 on:
   push:
@@ -12,143 +12,46 @@ permissions:
   contents: write
 
 jobs:
-  stabilize:
+  isolate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Replace ULTRON feed startup with isolated live-image feed
+      - name: Disable the legacy ULTRON world-player startup
         shell: python
         run: |
           from pathlib import Path
 
           p = Path('docs/jarvis-ultron.js')
           s = p.read_text(encoding='utf-8')
-          marker = '/* ULTRON_SAFE_WORLD_FEED_V2 */'
+          marker = '/* ULTRON_WORLD_FEED_LEGACY_STARTUP_DISABLED */'
+
           if marker in s:
-              print('ULTRON V2 safe feed already present')
+              print('Legacy world feed startup is already disabled.')
               raise SystemExit(0)
 
-          patch = r'''/* ULTRON_SAFE_WORLD_FEED_V2 */
-    const startUltronSafeWorldFeed=()=>{
-      if(!active)return;
-      const panel=document.querySelector('#ultron-clean-core .uc-worldcam');
-      const frame=panel?.querySelector('.uc-worldcam-frame');
-      const embed=panel?.querySelector('.uc-worldcam-embed');
-      const place=panel?.querySelector('.uc-worldcam-place');
-      if(!panel||!frame||!embed||!place)return;
+          needle = 'startWorldEmbed();'
+          if needle not in s:
+              raise SystemExit('Expected legacy ULTRON world-feed startup call was not found; refusing to modify the core.')
 
-      let stopped=false, refreshTimer=null, failTimer=null, requestToken=0;
-      const img=document.createElement('img');
-      img.className='uc-worldcam-frame uc-worldcam-live-image';
-      img.alt='Live public world camera';
-      img.decoding='async';
-      img.loading='eager';
-      img.style.visibility='hidden';
-      img.style.opacity='0';
-      img.style.width='100%';
-      img.style.height='100%';
-      img.style.objectFit='cover';
-      img.style.display='block';
-      img.style.background='#050302';
-      frame.style.display='none';
-      embed.style.display='none';
-      frame.pause?.();
-      frame.removeAttribute('src');
-      frame.load?.();
-      embed.removeAttribute('src');
-      panel.dataset.safeWorldFeed='2';
-      panel.dataset.worldFeedSource='Transport for London JamCams';
-      frame.parentElement?.appendChild(img);
+          replacement = marker + '\n    /* World Feed V2 owns this panel. Do not start the legacy video/iframe player. */'
+          s = s.replace(needle, replacement, 1)
+          p.write_text(s, encoding='utf-8')
+          print('Disabled exactly one legacy world-feed startup call.')
 
-      const stop=()=>{
-        stopped=true;
-        requestToken++;
-        if(refreshTimer)clearTimeout(refreshTimer);
-        if(failTimer)clearTimeout(failTimer);
-        refreshTimer=failTimer=null;
-        img.onload=img.onerror=null;
-        img.removeAttribute('src');
-      };
-
-      const nextRefresh=()=>{
-        if(stopped||!active)return;
-        refreshTimer=setTimeout(load,60000);
-      };
-
-      const fail=()=>{
-        if(stopped||!active)return;
-        if(failTimer)clearTimeout(failTimer);
-        img.style.visibility='hidden';
-        img.style.opacity='0';
-        place.textContent='WORLD CAMERA · UNAVAILABLE';
-        nextRefresh();
-      };
-
-      const showCamera=(cam,token)=>{
-        if(stopped||token!==requestToken||!active)return;
-        if(failTimer)clearTimeout(failTimer);
-        place.textContent=cam.commonName+' · LIVE IMAGE';
-        img.onload=()=>{
-          if(stopped||token!==requestToken||!active)return;
-          img.style.visibility='visible';
-          img.style.opacity='1';
-          const badge=panel.querySelector('.uc-worldcam-live');
-          if(badge)badge.textContent='LIVE';
-          nextRefresh();
-        };
-        img.onerror=()=>fail();
-        img.src=cam.imageUrl+(cam.imageUrl.includes('?')?'&':'?')+'ultron='+Date.now();
-        failTimer=setTimeout(fail,7000);
-      };
-
-      const load=async()=>{
-        if(stopped||!active)return;
-        if(refreshTimer)clearTimeout(refreshTimer);
-        const token=++requestToken;
-        place.textContent='WORLD CAMERA · SCANNING';
-        try{
-          const res=await fetch('https://api.tfl.gov.uk/Place/Type/JamCam',{cache:'no-store'});
-          if(!res.ok)throw new Error('camera catalog '+res.status);
-          const data=await res.json();
-          const cams=(Array.isArray(data)?data:[]).map(c=>{
-            const props=Object.fromEntries((c.additionalProperties||[]).map(p=>[p.key,p.value]));
-            return {commonName:String(c.commonName||'LONDON CAMERA').replace(/\s+/g,' ').trim(),imageUrl:String(props.imageUrl||'').trim(),available:String(props.available||'').toLowerCase()==='true'};
-          }).filter(c=>c.available&&/^https:\/\//i.test(c.imageUrl));
-          if(!cams.length)throw new Error('no available cameras');
-          const cam=cams[Math.floor(Math.random()*Math.min(cams.length,25))];
-          showCamera(cam,token);
-        }catch(_){
-          if(token===requestToken)fail();
-        }
-      };
-
-      window.addEventListener('beforeunload',stop,{once:true});
-      load();
-    };
-    startUltronSafeWorldFeed();
-'''
-
-          if 'startWorldEmbed();' not in s:
-              raise SystemExit('Could not find ULTRON startup call')
-          s=s.replace('startWorldEmbed();',patch.rstrip('\n'),1)
-          p.write_text(s,encoding='utf-8')
-          print('ULTRON startup feed replaced')
-
-      - name: Validate ULTRON JavaScript
+      - name: Validate only the changed ULTRON core
         run: node --check docs/jarvis-ultron.js
 
-      - name: Commit patch
+      - name: Commit the isolated ULTRON change
         shell: bash
         run: |
           if git diff --quiet -- docs/jarvis-ultron.js; then
-            echo 'No patch commit required.'
+            echo 'No core change required.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add docs/jarvis-ultron.js
-          git commit -m 'Fix ULTRON world feed with fail-fast live camera images'
+          git commit -m 'Isolate ULTRON world feed from legacy player'
           git push
