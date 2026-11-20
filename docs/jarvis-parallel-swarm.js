@@ -93,9 +93,9 @@
       });
       document.body.appendChild(panel);
     }
-    panel.textContent = "PARALLEL INTELLIGENCE SWARM // SYNTHESIS\\n\\n" +
-      result.synthesis + "\\n\\nSPECIALIST CONTRIBUTIONS\\n" +
-      result.results.map(item => item.agent + "\\n" + item.analysis).join("\\n\\n");
+    panel.textContent = "PARALLEL INTELLIGENCE SWARM // SYNTHESIS\n\n" +
+      result.synthesis + "\n\nSPECIALIST CONTRIBUTIONS\n" +
+      result.results.map(item => item.agent + "\n" + item.analysis).join("\n\n");
   }
 
   let busy = false;
