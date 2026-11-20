@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: jarvis-pages-v2
   cancel-in-progress: true
 
 env:
