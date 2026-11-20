@@ -74,9 +74,9 @@ return false;}
 
 function any(t,terms){return terms.some(term=>has(t,term));}
 function classify(cmd){const t=norm(cmd);
-if(any(t,["swarm","parallel intelligence","multiple agents","multi agent"])&&any(t,["analyze","review","compare","investigate","research","evaluate","solve","assess"]))return"swarm";
+if(any(t,["swarm","parallel intelligence","multiple agents","multi agent","team of agents","agent team"])&&any(t,["analyze","review","compare","investigate","research","evaluate","solve","assess"]))return"swarm";
 if(any(t,["workflow","automate","automation","orchestrate","sequence","work flow"])&&any(t,["plan","create","build","organize","run","design","prepare","manage","make"]))return"workflow";
-if(any(t,["knowledge","notes","knowledge base","knowledge index","remember","recall","saved note"])&&any(t,["remember","save","store","index","add","search","find","look up","retrieve","recall","show","list","view"]))return"knowledge";
+if(any(t,["knowledge","notes","note","knowledge base","knowledge index","remember","recall","saved note"])&&any(t,["remember","save","store","index","add","search","find","look up","retrieve","recall","show","list","view"]))return"knowledge";
 if(any(t,["radar","watchlist","predictive","monitor","track","watch"])&&any(t,["watch","monitor","track","keep an eye","check","scan","refresh","show","list","stop","unwatch"]))return"radar";
 if(any(t,["simulation","simulate","simulator","calculate","compute","model"])&&Object.values(models).some(m=>m.a.some(a=>has(t,a))))return"simulation";
 return null;}
