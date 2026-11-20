@@ -2,6 +2,8 @@ services:
   - type: web
     name: jarvis-web-ai
     runtime: node
+    branch: main
+    autoDeploy: true
     plan: free
     buildCommand: npm install
     startCommand: node web-server.js
