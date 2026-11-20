@@ -72,12 +72,13 @@ if(remove){const repo=remove[1];put(KEYS.radar,watches().filter(x=>x!==repo));if
 if(/\b(check|scan|refresh|run)\b.*\b(radar|watchlist|watched repos)\b|\b(show|list)\b.*\b(radar|watchlist)\b/.test(t)){const result=await Promise.all(watches().map(repo=>checkRepo(repo,false).catch(e=>({repo,error:e.message}))));panel("PREDICTIVE INTELLIGENCE RADAR // STATUS",result.length?result.map(x=>x.repo+"\n"+(x.error?"Error: "+x.error:"Latest: "+x.message+"\nSHA: "+x.sha.slice(0,12)+"\n"+x.url)).join("\n\n"):"No repositories watched. Try: Watch GitHub repo owner/repository.","radar");return true;}
 return false;}
 
+function any(t,terms){return terms.some(term=>has(t,term));}
 function classify(cmd){const t=norm(cmd);
-if((has(t,"swarm")||t.includes("parallel intelligence")||t.includes("multiple agents"))&&/\b(analy[sz]e|review|compare|investigate|research|evaluate|solve)\b/.test(t))return"swarm";
-if(/\b(workflow|automate|automation|orchestrate|sequence)\b/.test(t)&&/\b(plan|create|build|organize|run|design|prepare|manage)\b/.test(t))return"workflow";
-if(/\b(knowledge|notes|knowledge base|knowledge index|remember|recall)\b/.test(t)&&/\b(remember|save|store|index|add|search|find|look up|retrieve|recall|show|list|view)\b/.test(t))return"knowledge";
-if(/\b(radar|watchlist|predictive|monitor|track)\b/.test(t)&&/\b(watch|monitor|track|keep an eye|check|scan|refresh|show|list|stop|unwatch)\b/.test(t))return"radar";
-if(/\b(simulat|simulation|simulate|calculate|compute|model)\b/.test(t)&&Object.values(models).some(m=>m.a.some(a=>has(t,a))))return"simulation";
+if(any(t,["swarm","parallel intelligence","multiple agents","multi agent"])&&any(t,["analyze","review","compare","investigate","research","evaluate","solve","assess"]))return"swarm";
+if(any(t,["workflow","automate","automation","orchestrate","sequence","work flow"])&&any(t,["plan","create","build","organize","run","design","prepare","manage","make"]))return"workflow";
+if(any(t,["knowledge","notes","knowledge base","knowledge index","remember","recall","saved note"])&&any(t,["remember","save","store","index","add","search","find","look up","retrieve","recall","show","list","view"]))return"knowledge";
+if(any(t,["radar","watchlist","predictive","monitor","track","watch"])&&any(t,["watch","monitor","track","keep an eye","check","scan","refresh","show","list","stop","unwatch"]))return"radar";
+if(any(t,["simulation","simulate","simulator","calculate","compute","model"])&&Object.values(models).some(m=>m.a.some(a=>has(t,a))))return"simulation";
 return null;}
 async function handle(cmd){const k=classify(cmd);if(!k)return false;try{if(k==="simulation")return await runSimulation(cmd);if(k==="workflow")return await workflow(cmd);if(k==="knowledge")return knowledge(cmd);if(k==="radar")return await radar(cmd);return false;}catch(e){panel("JARVIS CAPABILITY // REQUEST FAILED",String(e?.message||e)+"\nNo action was taken.","error");window.speak?.("Capability failed. "+String(e?.message||e));return true;}}
 function attach(){const original=window.sendCommand;if(typeof original!=="function"||original.__jarvisAdvancedCapabilities)return;const wrapped=async function(cmd){if(await handle(cmd))return;return original.apply(this,arguments);};wrapped.__jarvisAdvancedCapabilities=true;window.sendCommand=wrapped;}
