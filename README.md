@@ -216,7 +216,7 @@ See the [initial security review](docs/SECURITY_REVIEW.md) and [manual testing c
 
 The GitHub Pages workflow runs node --check on a set of browser modules, verifies selected project-specific markers, assembles the static site, and deploys it. These checks catch some syntax and packaging errors; they are **not** a complete browser test suite.
 
-The package.json test script is currently a placeholder that exits with an error. Do not interpret it as a passing automated test suite.
+The package.json test script now runs a small Node built-in smoke-test suite covering deterministic simulation calculations, Pages asset wiring, baseline backend protections, and feature documentation. It is not a full browser, integration, load, or live-provider test suite.
 
 Before a release or competition demo:
 
