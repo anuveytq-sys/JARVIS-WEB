@@ -20,7 +20,7 @@ const models={
 pendulum:{a:["pendulum","simple pendulum"],f:"T = 2π√(L/g)",p:{length:1,g:9.81}},
 projectile:{a:["projectile","trajectory","throwing motion"],f:"T = 2v sin(θ)/g; R = v² sin(2θ)/g",p:{speed:20,angle:45,g:9.81}},
 gear:{a:["gear ratio","gears","gearbox"],f:"ω₂ = ω₁ × N₁/N₂",p:{inputRpm:120,driverTeeth:12,drivenTeeth:36}},
-circuit:{a:["ohms law","electric circuit","resistor circuit"],f:"I = V/R; P = VI",p:{voltage:12,resistance:6}},
+circuit:{a:["ohms law","ohm s law","electric circuit","resistor circuit","current","voltage"],f:"I = V/R; P = VI",p:{voltage:12,resistance:6}},
 spring:{a:["spring","hookes law","spring force"],f:"F = kx; E = ½kx²",p:{stiffness:100,displacement:.1}},
 hydraulic:{a:["hydraulic press","pascals principle","hydraulic system"],f:"F₂ = F₁ × A₂/A₁",p:{inputForce:100,inputArea:.01,outputArea:.1}},
 torque:{a:["torque","moment of force"],f:"τ = rF sin(θ)",p:{force:20,arm:.5,angle:90}},
