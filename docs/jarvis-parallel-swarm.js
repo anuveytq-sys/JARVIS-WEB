@@ -28,7 +28,7 @@
   function parseIntent(command) {
     const clean = normalize(command);
     const explicit = /\b(swarm|parallel intelligence|multiple agents|multi agent|specialist agents|coordinate agents|agent team)\b/.test(clean);
-    const fuzzy = fuzzyHas(clean, "swarm") || (fuzzyHas(clean, "parallel") && fuzzyHas(clean, "agents"));
+    const fuzzy = fuzzyHas(clean, "swarm") || (fuzzyHas(clean, "parallel") && (fuzzyHas(clean, "agents") || fuzzyHas(clean, "intelligence")));
     if (!explicit && !fuzzy) return null;
     let query = String(command || "").trim();
     for (const marker of ["parallel intelligence", "multiple agents", "specialist agents", "coordinate agents", "multi agent", "agent team", "swarm"]) {
