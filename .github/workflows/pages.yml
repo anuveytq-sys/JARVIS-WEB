@@ -27,6 +27,7 @@ jobs:
       - name: Validate browser JavaScript
         run: |
           node --check docs/jarvis-web.js
+          node --check docs/jarvis-parallel-swarm.js
           node --check web-server.js
           node --check docs/jarvis-universal-service-router.js
           node --check docs/jarvis-github-access.js
@@ -82,7 +83,7 @@ jobs:
           mkdir -p _site
           cp public/index.html _site/index.html
           for f in \
-            jarvis-universal-service-router.js jarvis-github-access.js jarvis-platform-search.js jarvis-web.js \
+            jarvis-universal-service-router.js jarvis-github-access.js jarvis-platform-search.js jarvis-web.js jarvis-parallel-swarm.js \
             jarvis-youtube-upload.js jarvis-beacon.js jarvis-ui-patch.js jarvis-omni-skills.js jarvis-clap-snap-wake.js \
             jarvis-hand-gestures.js jarvis-camera-fix.js jarvis-video-audio-fix.js jarvis-popup-fix.js jarvis-superpowers.js \
             jarvis-focus-detector.js jarvis-music.js jarvis-velve.js jarvis-velve-fix.js jarvis-velve-stability.js \
@@ -144,7 +145,7 @@ jobs:
           for n in css_names:
               s = re.sub(rf'<link[^>]+{re.escape(n)}\.css[^>]*>\s*','',s)
           s = s.replace('</head>', css+'</head>', 1)
-          scripts = ['jarvis-popup-fix','jarvis-omni-skills','jarvis-advanced-modules','jarvis-power-modules','jarvis-share','jarvis-calling','jarvis-beacon','jarvis-universal-service-router','jarvis-camera-fix','jarvis-video-audio-fix','jarvis-github-access','jarvis-platform-search','jarvis-ui-patch','jarvis-clap-snap-wake','jarvis-hand-gestures','jarvis-web','jarvis-youtube-upload','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','velve-static-satellite-feed','velve-countries','jarvis-velve','jarvis-velve-fix','velve-satellite-upgrade','velve-voice-fix','terranexus','terranexus-ui-fix','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement','jarvis-ultron','jarvis-ultron-commands','jarvis-environment-shortcuts','jarvis-mission-control','ultron-world-feed-v2']
+          scripts = ['jarvis-popup-fix','jarvis-omni-skills','jarvis-advanced-modules','jarvis-power-modules','jarvis-share','jarvis-calling','jarvis-beacon','jarvis-universal-service-router','jarvis-camera-fix','jarvis-video-audio-fix','jarvis-github-access','jarvis-platform-search','jarvis-ui-patch','jarvis-clap-snap-wake','jarvis-hand-gestures','jarvis-web','jarvis-parallel-swarm','jarvis-youtube-upload','jarvis-music','jarvis-focus-detector','jarvis-superpowers','jarvis-velve-stability','velve-static-satellite-feed','velve-countries','jarvis-velve','jarvis-velve-fix','velve-satellite-upgrade','velve-voice-fix','terranexus','terranexus-ui-fix','jarvis-neon-nexus','jarvis-neon-nexus-launcher-fix','jarvis-neon-nexus-command-fix','jarvis-core-3d','jarvis-vision-intelligence','jarvis-vision-intelligence-enhancement','jarvis-ultron','jarvis-ultron-commands','jarvis-environment-shortcuts','jarvis-mission-control','ultron-world-feed-v2']
           for n in scripts:
               s = re.sub(rf'<script[^>]+{re.escape(n)}\.js[^>]*></script>\s*','',s)
           injection = ''.join(f'<script src="./{n}.js?v=pages-{version}"></script>\n' for n in scripts)
