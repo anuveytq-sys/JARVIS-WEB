@@ -76,6 +76,28 @@
     ].join("\n\n"));
     return { results, synthesis };
   }
+  function renderResult(result) {
+    let panel = document.getElementById("jarvis-parallel-swarm-results");
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "jarvis-parallel-swarm-results";
+      Object.assign(panel.style, {
+        position: "fixed", left: "50%", bottom: "18px", transform: "translateX(-50%)",
+        width: "min(92vw, 760px)", maxHeight: "48vh", overflow: "auto",
+        zIndex: "2147483000", padding: "16px", boxSizing: "border-box",
+        color: "#c8faff", background: "rgba(1, 10, 24, .97)",
+        border: "1px solid rgba(0, 225, 255, .75)", borderRadius: "12px",
+        boxShadow: "0 0 28px rgba(0, 190, 255, .22)",
+        font: "13px/1.55 system-ui, sans-serif", whiteSpace: "pre-wrap",
+        overflowWrap: "anywhere"
+      });
+      document.body.appendChild(panel);
+    }
+    panel.textContent = "PARALLEL INTELLIGENCE SWARM // SYNTHESIS\\n\\n" +
+      result.synthesis + "\\n\\nSPECIALIST CONTRIBUTIONS\\n" +
+      result.results.map(item => item.agent + "\\n" + item.analysis).join("\\n\\n");
+  }
+
   let busy = false;
   async function handle(command) {
     const intent = parseIntent(command);
@@ -91,8 +113,9 @@
       const output = await runSwarm(intent.query);
       const result = { task: intent.query, ...output, completedAt: new Date().toISOString() };
       window.__JARVIS_SWARM_LAST_RESULT__ = result;
+      renderResult(result);
       document.dispatchEvent(new CustomEvent("jarvis:swarm-complete", { detail: result }));
-      window.speak?.(output.synthesis);
+      window.speak?.(output.synthesis.slice(0, 1400));
       return true;
     } catch (error) {
       window.speak?.("Parallel Intelligence Swarm could not complete. " + String(error?.message || error));
