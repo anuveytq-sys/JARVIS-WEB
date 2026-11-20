@@ -201,7 +201,7 @@ Because the local backend can run machine commands, only run it on a device you 
 JARVIS-WEB is an evolving experimental project. Its current protections are not a security certification.
 
 - **API keys:** Keep secrets server-side. Rotate any key that may have been exposed and remove secrets from public code and logs.
-- **Hosted endpoint:** Origin checks are not authentication. Requests without an Origin header are accepted by the current middleware, and the process-local rate limit is not shared across instances. Configure provider quotas, alerts, and stronger abuse controls before broad public promotion.
+- **Hosted endpoint:** The Express backend applies a 16 KB JSON body limit, command-length validation, an origin allowlist, per-IP process-local rate limiting, request IDs, baseline security headers, upstream timeouts for BharatCode, and a cap of eight concurrent AI requests. Origin checks are not authentication; requests without an Origin header are accepted for server-to-server compatibility, and process-local limits are not shared across instances. Configure provider quotas, monitoring, and production-grade authentication/abuse controls before broad public promotion.
 - **Local command execution:** The local backend uses shell execution. Keep it local-only and review all command call sites and input handling.
 - **Browser permissions:** Camera, microphone, speech, and related APIs depend on browser support and explicit user permission.
 - **Third-party services:** AI providers, satellite feeds, APIs, browsers, and external integrations may change, become unavailable, or enforce quotas.
