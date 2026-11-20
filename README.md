@@ -38,8 +38,21 @@ JARVIS-WEB is organized as a modular assistant cockpit with a futuristic HUD, a 
 - **AI conversation:** A browser-to-backend text command path for asking questions when the hosted or local AI service is configured.
 - **Voice-oriented interaction:** Browser speech-recognition and speech-related integrations where supported. Microphone access requires permission and browser compatibility.
 - **Command routing:** Modular command and service-routing code intended to direct supported requests toward the appropriate feature or service.
+- **Parallel Intelligence Swarm:** A command-driven multi-agent analysis mode. Four specialist prompts (research, strategy, technical analysis, and critical review) run concurrently through the currently selected JARVIS AI provider; a coordinator then synthesizes the results and highlights disagreement and uncertainty. It does not independently browse the web or verify facts unless those capabilities are separately connected.
 - **Mission and reminder interfaces:** Mission-control and reminder-related modules for organizing assistant workflows. Persistence and execution depend on the specific module and environment.
 - **Sharing and navigation helpers:** Modules for selected navigation, service access, sharing, and workflow shortcuts.
+
+
+### Parallel Intelligence Swarm — command examples
+
+Use the existing JARVIS command box or voice input; no additional button is required. Example commands:
+
+- `Swarm analyze how to design a low-cost solar-powered water monitor.`
+- `Use parallel intelligence to compare three approaches to my project.`
+- `Ask multiple agents to review this system architecture and find weaknesses.`
+- `Run a multi-agent analysis on the feasibility, risks, and roadmap for this idea.`
+
+The swarm launches four independent specialist requests concurrently and then sends their outputs to a coordinator for synthesis. It uses the provider already selected in JARVIS Settings (or the configured hosted backend), so a working AI provider is required. Provider quotas, latency, and network availability apply. A successful AI response is not a substitute for source verification, engineering validation, or professional review.
 
 ### Vision, input, and immersive modules
 
