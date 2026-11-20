@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   SITE_VERSION: ${{ github.sha }}
@@ -96,9 +96,8 @@ jobs:
             jarvis-vision-intelligence-enhancement.js jarvis-environment-shortcuts.js jarvis-ultron.js jarvis-ultron-commands.js \
             jarvis-ultron-digital-twin.js jarvis-calling.js jarvis-advanced-modules.js jarvis-power-modules.js jarvis-mission-control.js jarvis-share.js \
             jarvis-reminders-sw.js ultron-world-feed-v2.js; do cp "docs/$f" "_site/$f"; done
-          for f in jarvis-command-center.css jarvis-velve.css terranexus.css jarvis-neon-nexus.css jarvis-core-3d.css jarvis-vision-intelligence-enhancement.css manifest.webmanifest jarvis-pwa-icon.svg; do cp "docs/$f" "_site/$f"; done
+          for f in jarvis-command-center.css jarvis-velve.css terranexus.css jarvis-neon-nexus.css jarvis-core-3d.css jarvis-vision-intelligence.css jarvis-vision-intelligence-enhancement.css manifest.webmanifest jarvis-pwa-icon.svg; do cp "docs/$f" "_site/$f"; done
           cp docs/velve-countries.js _site/velve-countries.js
-          curl -fsSL https://raw.githubusercontent.com/anuveytq-sys/JARVIS-WEB/5b76480bc0b155fef1e25d57b755e9efa00e3838/docs/jarvis-vision-intelligence.css -o _site/jarvis-vision-intelligence.css
 
           python3 - <<'PY'
           import json, os, re, urllib.request
