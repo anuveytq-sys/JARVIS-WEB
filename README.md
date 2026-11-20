@@ -39,6 +39,10 @@ JARVIS-WEB is organized as a modular assistant cockpit with a futuristic HUD, a 
 - **Voice-oriented interaction:** Browser speech-recognition and speech-related integrations where supported. Microphone access requires permission and browser compatibility.
 - **Command routing:** Modular command and service-routing code intended to direct supported requests toward the appropriate feature or service.
 - **Parallel Intelligence Swarm:** A command-driven multi-agent analysis mode. Four specialist prompts (research, strategy, technical analysis, and critical review) run concurrently through the currently selected JARVIS AI provider; a coordinator then synthesizes the results and highlights disagreement and uncertainty. It does not independently browse the web or verify facts unless those capabilities are separately connected.
+- **Reality Simulator:** Parameter-driven educational calculations for pendulums, projectile motion, gear ratios, Ohm's law, springs, hydraulic systems, torque, wave speed, and material stress. Equations, inputs, defaults, and computed outputs are displayed; these are transparent idealized models, not validated engineering design tools.
+- **Universal Workflow Operator:** Converts natural-language goals into ordered plans with prerequisites, integrations, validation checks, approval gates, and rollback guidance. It does not claim to execute external app/account actions unless an authorized integration is actually connected.
+- **Knowledge Singularity:** A browser-local knowledge index with save/remember and ranked keyword retrieval commands. Entries remain in that browser's local storage; they are not uploaded or synced across devices and do not grant access to private files.
+- **Predictive Intelligence Radar:** Watches public GitHub repositories for new commits and displays change alerts. Polling runs every five minutes while the JARVIS page remains open; it pauses when the page/browser closes and is not a cloud background monitoring service.
 - **Mission and reminder interfaces:** Mission-control and reminder-related modules for organizing assistant workflows. Persistence and execution depend on the specific module and environment.
 - **Sharing and navigation helpers:** Modules for selected navigation, service access, sharing, and workflow shortcuts.
 
@@ -53,6 +57,34 @@ Use the existing JARVIS command box or voice input; no additional button is requ
 - `Run a multi-agent analysis on the feasibility, risks, and roadmap for this idea.`
 
 The swarm launches four independent specialist requests concurrently and then sends their outputs to a coordinator for synthesis. It uses the provider already selected in JARVIS Settings (or the configured hosted backend), so a working AI provider is required. Provider quotas, latency, and network availability apply. A successful AI response is not a substitute for source verification, engineering validation, or professional review.
+
+### Advanced capability command examples
+
+All capabilities use the existing command box or supported voice input—no new launch buttons are added.
+
+**Reality Simulator**
+- `Simulate a pendulum with length 2 metres.`
+- `Calculate projectile motion at speed 18 and angle 35 degrees.`
+- `Model a gear ratio with 18 driver teeth and 54 driven teeth.`
+- `Calculate current for voltage 12 and resistance 4.`
+- `Simulate a hydraulic press with input force 100, input area 0.01 and output area 0.1.`
+
+**Universal Workflow Operator**
+- `Create a workflow to prepare my project for a hackathon submission.`
+- `Plan and validate the steps to publish a new project release.`
+- `Orchestrate a workflow to review my repository and prepare documentation.`
+
+**Knowledge Singularity**
+- `Remember this: my project uses Node.js and GitHub Pages.`
+- `Search my knowledge for GitHub Pages.`
+- `Show my knowledge index.`
+
+**Predictive Intelligence Radar**
+- `Watch GitHub repo owner/repository.`
+- `Check my radar watchlist.`
+- `Stop watching owner/repository.`
+
+The Reality Simulator uses explicit equations and default values when a parameter is omitted. Workflow Operator prepares plans and approval gates; external execution still requires an available, authorized integration. Knowledge storage is local to the browser. Radar currently checks public GitHub commit activity only and only while the page remains open. These boundaries are intentional and are documented rather than presenting planned integrations as working features.
 
 ### Vision, input, and immersive modules
 
