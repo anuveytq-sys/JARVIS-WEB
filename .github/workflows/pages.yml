@@ -106,28 +106,29 @@ jobs:
           url = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json'
           req = urllib.request.Request(url, headers={'User-Agent':'JARVIS-WEB-VELVE-static-snapshot/1.0','Accept':'application/json'})
           try:
-              with urllib.request.urlopen(req, timeout=90) as r:
+              with urllib.request.urlopen(req, timeout=30) as r:
                   raw = json.load(r)
           except Exception as feed_error:
               mirror_url = 'https://raw.githubusercontent.com/satvisorcom/satvisor-data/master/celestrak/json/active.json'
               mirror_req = urllib.request.Request(mirror_url, headers={'User-Agent':'JARVIS-WEB-VELVE-static-snapshot/1.0','Accept':'application/json'})
               try:
-                  with urllib.request.urlopen(mirror_req, timeout=60) as r:
+                  with urllib.request.urlopen(mirror_req, timeout=20) as r:
                       raw = json.load(r)
                   if not isinstance(raw, list) or len(raw) < 200:
                       raise RuntimeError('Satellite mirror returned fewer than 200 records')
               except Exception as mirror_error:
-                  fallback_url = 'https://anuveytq-sys.github.io/JARVIS-WEB/velve-static-satellite-feed.js'
-                  fallback_req = urllib.request.Request(fallback_url, headers={'User-Agent':'JARVIS-WEB-VELVE-static-snapshot/1.0'})
+                  local_feed = Path('docs/velve-static-satellite-feed.js')
                   try:
-                      with urllib.request.urlopen(fallback_req, timeout=30) as r:
-                          text = r.read().decode('utf-8')
+                      text = local_feed.read_text(encoding='utf-8')
                       m = re.search(r'window\.__VELVE_STATIC_SATELLITES\s*=\s*(\[.*\]);', text, re.S)
                       if not m:
-                          raise RuntimeError('Published satellite catalog was not parseable')
+                          raise RuntimeError('Local satellite snapshot was not parseable')
                       raw = json.loads(m.group(1))
-                  except Exception as fallback_error:
-                      raise SystemExit(f'Could not load satellite catalog: {feed_error}; {mirror_error}; {fallback_error}')
+                      if not isinstance(raw, list) or len(raw) < 200:
+                          raise RuntimeError('Local satellite snapshot contains fewer than 200 records')
+                      print('Using committed VELVE satellite snapshot because live feeds were unavailable.')
+                  except Exception as local_error:
+                      raise SystemExit(f'Could not load satellite catalog: {feed_error}; {mirror_error}; {local_error}')
 
           fields = ('OBJECT_NAME','NORAD_CAT_ID','OBJECT_ID','EPOCH','MEAN_MOTION','ECCENTRICITY','INCLINATION','RA_OF_ASC_NODE','ARG_OF_PERICENTER','MEAN_ANOMALY','REV_AT_EPOCH')
           selected, seen = [], set()
