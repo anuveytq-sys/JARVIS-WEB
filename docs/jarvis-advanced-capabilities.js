@@ -83,6 +83,6 @@ return null;}
 async function handle(cmd){const k=classify(cmd);if(!k)return false;try{if(k==="simulation")return await runSimulation(cmd);if(k==="workflow")return await workflow(cmd);if(k==="knowledge")return knowledge(cmd);if(k==="radar")return await radar(cmd);return false;}catch(e){panel("JARVIS CAPABILITY // REQUEST FAILED",String(e?.message||e)+"\nNo action was taken.","error");window.speak?.("Capability failed. "+String(e?.message||e));return true;}}
 function attach(){const original=window.sendCommand;if(typeof original!=="function"||original.__jarvisAdvancedCapabilities)return;const wrapped=async function(cmd){if(await handle(cmd))return;return original.apply(this,arguments);};wrapped.__jarvisAdvancedCapabilities=true;window.sendCommand=wrapped;}
 let tries=0;const wait=()=>{if(typeof window.sendCommand==="function")attach();else if(++tries<150)setTimeout(wait,100);};wait();
-for(const repo of watches()){checkRepo(repo,true).catch(()=>{});timers.set(repo,setInterval(()=>checkRepo(repo,false).catch(()=>{}),300000));}
+for(const repo of watches()){checkRepo(repo,true).catch(()=>{});timers.set(repo,setInterval(()=>checkRepo(repo,false).catch(()=>{}),900000));}
 window.JARVIS_ADVANCED_CAPABILITIES={version:"1.0.0",simulate,checkRepo,workflow,knowledge,radar,listKnowledge:()=>get(KEYS.knowledge,[]),listRadar:watches};
 })();
