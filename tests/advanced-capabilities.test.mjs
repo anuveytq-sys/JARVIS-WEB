@@ -32,6 +32,9 @@ test("advanced capability module exposes deterministic simulation models", async
   const circuit = engine.simulate("simulate resistor circuit voltage 12 resistance 4");
   assert.equal(circuit.id, "circuit");
   assert.match(circuit.out[0], /3 A/);
+  const plainCurrent = engine.simulate("calculate current for voltage 12 and resistance 4");
+  assert.equal(plainCurrent.id, "circuit");
+  assert.match(plainCurrent.out[0], /2 A/);
   assert.equal(engine.simulate("tell me a story"), null);
 });
 
