@@ -51,6 +51,8 @@ test("hosted backend keeps bounded request and concurrency protections", async (
   assert.match(backend, /MAX_ACTIVE_AI_REQUESTS = 8/);
   assert.match(backend, /req\.jarvisRequestId/);
   assert.match(backend, /GEMINI_MODEL/);
+  const browserBridge = await read("docs/jarvis-web.js");
+  assert.match(browserBridge, /https:\/\/jarvis-web-ai-eov6\.onrender\.com/);
 });
 
 test("README documents all five advanced capability families", async () => {
