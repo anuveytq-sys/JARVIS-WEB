@@ -2,7 +2,7 @@
    Displays replies on-screen as well as using the original HUD speech.
    No API keys or secrets are stored in this file. */
 (() => {
-  let API_BASE = (new URLSearchParams(location.search).get("api") || localStorage.getItem("jarvisApiBase") || "").replace(/\/+$/, "");
+  let API_BASE = (new URLSearchParams(location.search).get("api") || localStorage.getItem("jarvisApiBase") || "https://jarvis-web-ai-eov6.onrender.com").replace(/\/+$/, "");
   const originalFetch = window.fetch.bind(window);
 
   // Visible diagnostics and replies: useful on mobile where speech may be silent.
